@@ -1,14 +1,25 @@
-
+using MCV_Module.Event;
 using MCV_Module.UI.Panels;
 
 namespace MCV_Module.Controller
 {
     public class LoadingController : ControllerBase<LoadingPanel>
     {
-        // TODO: M2 实现 —— 加载进度展示
         protected override void OnViewBound()
         {
-            // TODO: M2 实现 —— 绑定 LoadingPanel 更新进度
+            // LoadingPanel 通过 EventBus 自驱动，Controller 负责监听加载完成事件
+            EventBus<SceneLoadedEvent>.Subscribe(OnSceneLoaded);
+        }
+
+        private void OnSceneLoaded(SceneLoadedEvent evt)
+        {
+            // TODO: 加载完成后可执行额外逻辑（如初始化场景内容）
+        }
+
+        protected override void OnDestroy()
+        {
+            base.OnDestroy();
+            EventBus<SceneLoadedEvent>.Unsubscribe(OnSceneLoaded);
         }
     }
 }
