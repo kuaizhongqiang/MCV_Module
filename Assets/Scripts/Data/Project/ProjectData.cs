@@ -124,17 +124,6 @@ namespace MCV_Module.Data.Project
         Test,
 
     }
-    [Serializable]
-    public class TaskDefrojectData : TaskData<TaskDefrojectData>
-    {
-        public override TaskType TaskType => TaskType.None;
-
-        public TaskDefrojectData(string id)
-        {
-            this.id = id;
-            displayName = "任务目的";
-        }
-    }
     // ────────────────────── 内容数据类 ──────────────────────
 
     /// <summary>
