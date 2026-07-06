@@ -1,10 +1,11 @@
+using MCV_Module.GlobalManager;
 using UnityEngine;
 
 namespace MCV_Module.Interactive
 {
     /// <summary>
     /// 可拖拽交互元件 —— InteractiveBase 的 Drag 类型子类。
-    /// 支持 OnDragEnter / OnDragStay / OnDragExit / OnDragUp。
+    /// 使用 GlobalCameraMgr.Camera 统一相机引用。
     /// </summary>
     public class InteractiveDrag : InteractiveBase
     {
@@ -18,7 +19,7 @@ namespace MCV_Module.Interactive
         protected override void MoDownEvent()
         {
             base.MoDownEvent();
-            _cam = Camera.main;
+            _cam = GlobalCameraMgr.Camera;
             _dragStartPosition = transform.position;
             _isDragging = true;
         }
@@ -32,19 +33,14 @@ namespace MCV_Module.Interactive
         protected override void MoMoveEvent(Vector2 delta)
         {
             base.MoMoveEvent(delta);
-
             if (!_isDragging || _cam == null) return;
 
-            // 将鼠标屏幕坐标转换为世界坐标进行拖拽
-            Ray ray = _cam.ScreenPointToRay(Input.mousePosition);
+            Ray ray = _cam.ScreenPointToRay(Mouse.current.position.ReadValue());
             if (Physics.Raycast(ray, out RaycastHit hit, 300f))
             {
                 Vector3 targetPos = hit.point + _dragOffset;
                 if (_useDragConstraint)
-                {
-                    // 约束在原始 Y 轴高度
                     targetPos.y = _dragStartPosition.y;
-                }
                 transform.position = targetPos;
             }
         }

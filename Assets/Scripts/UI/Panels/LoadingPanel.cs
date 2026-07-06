@@ -1,18 +1,17 @@
 using MCV_Module.Event;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace MCV_Module.UI.Panels
 {
     public class LoadingPanel : PanelBase
     {
+        [SerializeField] private Slider _progressSlider;
         [SerializeField] private TextMeshProUGUI _progressText;
-        [SerializeField] private RectTransform _progressBar;
-        [SerializeField] private float _barMaxWidth = 300f;
 
         private void Awake()
         {
-            // 确保初始隐藏
             m_CanvasGroup.alpha = 0;
             m_CanvasGroup.interactable = false;
             m_CanvasGroup.blocksRaycasts = false;
@@ -39,7 +38,6 @@ namespace MCV_Module.UI.Panels
 
             UpdateProgress(evt.Progress);
 
-            // 加载完成
             if (evt.Progress >= 1f)
             {
                 OnInvisible(() => gameObject.SetActive(false));
@@ -48,15 +46,13 @@ namespace MCV_Module.UI.Panels
 
         private void UpdateProgress(float progress)
         {
-            if (_progressText != null)
-                _progressText.text = $"加载中... {Mathf.FloorToInt(progress * 100)}%";
+            float clamped = Mathf.Clamp01(progress);
 
-            if (_progressBar != null)
-            {
-                var size = _progressBar.sizeDelta;
-                size.x = _barMaxWidth * Mathf.Clamp01(progress);
-                _progressBar.sizeDelta = size;
-            }
+            if (_progressSlider != null)
+                _progressSlider.value = clamped;
+
+            if (_progressText != null)
+                _progressText.text = $"加载中... {Mathf.FloorToInt(clamped * 100)}%";
         }
     }
 }
