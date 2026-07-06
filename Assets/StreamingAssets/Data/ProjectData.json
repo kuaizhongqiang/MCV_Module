@@ -1,3 +1,61 @@
 {
-  "clips": []
+  "id": "project",
+  "displayName": "项目数据",
+  "clips": [
+    {
+      "id": "clip_microscope",
+      "displayName": "显微镜使用",
+      "taskPurposeData": {
+        "id": "task_01",
+        "displayName": "实验目的",
+        "speakingData": {
+          "showContent": "掌握显微镜的标准操作流程，了解显微镜各部件功能。",
+          "videoPath": "Videos/microscope_intro.mp4"
+        }
+      },
+      "taskEquipmentData": {
+        "id": "task_02",
+        "displayName": "实验仪器",
+        "equipmentData": {
+          "equipmentName": "光学显微镜",
+          "iconPath": "Icons/microscope"
+        }
+      },
+      "taskPrincipleData": {
+        "id": "task_03",
+        "displayName": "实验原理",
+        "principleData": {
+          "showContent": "光学显微镜利用凸透镜放大原理，物镜和目镜组合实现高倍放大。",
+          "showModelPath": "Models/microscope_cutaway",
+          "videoPath": "Videos/optics_principle.mp4"
+        },
+        "speakingData": {
+          "showContent": "接下来我们学习显微镜的光学成像原理。",
+          "videoPath": ""
+        }
+      },
+      "taskLineConnectionData": null,
+      "taskTrainingData": {
+        "id": "task_05",
+        "displayName": "仿真实验",
+        "tipsData": {
+          "tipText": "1. 安放标本\n2. 调节粗准焦螺旋\n3. 调节细准焦螺旋\n4. 观察记录",
+          "displayDuration": 5.0
+        }
+      },
+      "taskTestData": {
+        "id": "task_06",
+        "displayName": "小测验",
+        "questionClip": {
+          "questions": [
+            { "questionId": "q_01", "questionText": "显微镜中起主要放大作用的是？" },
+            { "questionId": "q_02", "questionText": "调节焦距时应先使用？" }
+          ],
+          "passScore": 60.0
+        }
+      }
+    }
+  ],
+  "currentClip": null,
+  "currentTaskType": 0
 }
