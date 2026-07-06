@@ -10,9 +10,9 @@
 
 | 策略 | PackageType | 管理内容 | 原因 |
 |------|:--:|------|------|
-| **Addressables** | `AA` | 场景（0_Setup、1_Controller、2_UI、N_xxx、99_Loading） | 异步加载、内置进度回调、适合大体积场景 |
+| **Addressables** | `AA` | 实验场景（N_xxx） | 异步加载、内置进度回调、适合大体积按需场景 |
 | **AssetBundle** | `AB` | 模型、预制体、图片 | 手动打包、包体积可控、与 AA 互补 |
-| **Resources** | `Default` | 本包内置资源 | 零配置、适合启动必备资源 |
+| **Resources** | `Default` | 本包内置资源（含 0_Setup、1_Controller、2_UI、99_Loading 场景） | 零配置、适合启动必备资源和常驻场景 |
 
 ## 背景
 
