@@ -4,10 +4,6 @@ using UnityEngine;
 
 namespace MCV_Module.StepSystem
 {
-    /// <summary>
-    /// Condition 工厂 —— 按 ConditionType 创建对应的 Condition 实例。
-    /// 支持 P0S0 快进：重置到工序0步骤0，快速执行到目标步骤。
-    /// </summary>
     public class ConditionFactory : MonoBehaviour
     {
         [SerializeField] private StepDirector _director;
@@ -24,7 +20,7 @@ namespace MCV_Module.StepSystem
             { ConditionType.Finish, typeof(FinishCondition) },
         };
 
-        /// <summary>按配置创建 Condition 组件</summary>
+        /// <summary>按配置创建 Condition 组件，并注入 config 数据</summary>
         public ConditionBase CreateCondition(ConditionConfig config)
         {
             if (config == null) return null;
@@ -35,23 +31,22 @@ namespace MCV_Module.StepSystem
                 if (condition != null)
                 {
                     condition.transform.SetParent(transform);
+                    // 注入 ConditionConfig 数据
+                    condition.TargetId = config.targetId;
+                    condition.ExtraParam = config.extraParam;
                     return condition;
                 }
             }
             return null;
         }
 
-        /// <summary>
-        /// P0S0 快进：重置所有 Condition 状态，快速执行到目标步骤。
-        /// </summary>
+        /// <summary>P0S0 快进</summary>
         public void FastForwardTo(int targetProcessingIndex, int targetStepIndex)
         {
-            // 重置所有 Condition
             var conditions = GetComponentsInChildren<ConditionBase>();
             foreach (var c in conditions)
                 c.ResetCondition();
 
-            // 跳转到目标步骤
             if (_director != null)
                 _director.JumpToStep(targetProcessingIndex, targetStepIndex);
         }

@@ -92,4 +92,12 @@ namespace MCV_Module.Event
 
     /// <summary>所有步骤完成事件 (TODO: M3 实现)</summary>
     public class AllStepsCompletedEvent { }
+
+    /// <summary>步骤超时事件</summary>
+    public class StepTimeoutEvent
+    {
+        public string StepId { get; }
+        public float TimeoutSeconds { get; }
+        public StepTimeoutEvent(string stepId, float timeoutSeconds) { StepId = stepId; TimeoutSeconds = timeoutSeconds; }
+    }
 }
