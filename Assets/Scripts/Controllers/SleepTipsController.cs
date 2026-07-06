@@ -1,5 +1,6 @@
 using MCV_Module.UI.Panels;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace MCV_Module.Controller
 {
@@ -7,11 +8,22 @@ namespace MCV_Module.Controller
     {
         [SerializeField] private float _idleTimeout = 120f;
         private float _idleTimer;
+        private Mouse _mouse;
+        private Keyboard _keyboard;
+
+        protected override void OnViewBound()
+        {
+            _mouse = Mouse.current;
+            _keyboard = Keyboard.current;
+        }
 
         private void Update()
         {
-            // 检测用户活动
-            if (Input.anyKeyDown || Input.GetAxis("Mouse X") != 0 || Input.GetAxis("Mouse Y") != 0)
+            if (_keyboard == null || _mouse == null) return;
+
+            // 检测用户活动（新 InputSystem）
+            if (_keyboard.anyKey.wasPressedThisFrame ||
+                _mouse.delta.ReadValue().sqrMagnitude > 0.01f)
             {
                 _idleTimer = 0f;
                 return;
