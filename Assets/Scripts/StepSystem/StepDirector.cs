@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using MCV_Module.Data.Project;
@@ -7,11 +6,6 @@ using UnityEngine;
 
 namespace MCV_Module.StepSystem
 {
-    /// <summary>
-    /// 步骤执行器 —— 三级驱动引擎。
-    /// 生命周期：Processing → Step → Condition，逐级推进。
-    /// 每步三阶段：Prepare → Waiting → Complete。
-    /// </summary>
     public class StepDirector : MonoBehaviour
     {
         [SerializeField] private List<ProcessingData> _processings = new List<ProcessingData>();
@@ -20,6 +14,7 @@ namespace MCV_Module.StepSystem
         private int _currentStepIndex;
         private StepLifecycle _currentLifecycle = StepLifecycle.Idle;
         private Coroutine _executionCoroutine;
+        private ConditionFactory _factory;
 
         public ProcessingData CurrentProcessing =>
             _processings.Count > _currentProcessingIndex ? _processings[_currentProcessingIndex] : null;
@@ -27,36 +22,40 @@ namespace MCV_Module.StepSystem
             CurrentProcessing?.steps.Count > _currentStepIndex ? CurrentProcessing.steps[_currentStepIndex] : null;
         public StepLifecycle CurrentLifecycle => _currentLifecycle;
         public bool IsRunning => _currentLifecycle != StepLifecycle.Idle;
+        public IReadOnlyList<ProcessingData> Processings => _processings;
 
-        /// <summary>注册到 GlobalStepSystemMgr</summary>
         private void Start()
         {
+            _factory = GetComponentInChildren<ConditionFactory>();
             GlobalStepSystemMgr.Instance.RegisterDirector(this);
         }
 
-        /// <summary>开始执行全部工序</summary>
         public void StartExecution()
         {
             if (_executionCoroutine != null) StopCoroutine(_executionCoroutine);
             _executionCoroutine = StartCoroutine(ExecuteAll());
         }
 
-        /// <summary>跳转到指定步骤（P0S0 快进）</summary>
         public void JumpToStep(int processingIndex, int stepIndex)
         {
             if (_executionCoroutine != null) StopCoroutine(_executionCoroutine);
-
             _currentProcessingIndex = Mathf.Clamp(processingIndex, 0, _processings.Count - 1);
             _currentStepIndex = Mathf.Clamp(stepIndex, 0, CurrentProcessing?.steps.Count - 1 ?? 0);
             _currentLifecycle = StepLifecycle.Idle;
-
             _executionCoroutine = StartCoroutine(ExecuteAll());
         }
 
-        /// <summary>标记当前步骤完成（由 Condition 触发）</summary>
+        /// <summary>标记当前步骤完成</summary>
         public void CompleteCurrentStep()
         {
             if (_currentLifecycle == StepLifecycle.Waiting)
+                _currentLifecycle = StepLifecycle.Complete;
+        }
+
+        /// <summary>跳过当前步骤（无需等待条件满足）</summary>
+        public void SkipCurrentStep()
+        {
+            if (_currentLifecycle == StepLifecycle.Waiting || _currentLifecycle == StepLifecycle.Prepare)
                 _currentLifecycle = StepLifecycle.Complete;
         }
 
@@ -82,6 +81,13 @@ namespace MCV_Module.StepSystem
 
         private IEnumerator ExecuteStep(StepData step)
         {
+            // 在步骤开始时通过 ConditionFactory 创建 Condition
+            if (_factory != null && step.conditions != null)
+            {
+                foreach (var config in step.conditions)
+                    _factory.CreateCondition(config);
+            }
+
             // Phase 1: Prepare
             _currentLifecycle = StepLifecycle.Prepare;
             EventBus<StepPreparedEvent>.Publish(new StepPreparedEvent(step.stepId));
@@ -93,19 +99,26 @@ namespace MCV_Module.StepSystem
 
             if (step.executeType == StepExecuteType.Auto)
             {
-                // 自动执行：直接完成
                 yield return null;
             }
             else
             {
-                // 等待交互：由 Condition 触发 CompleteCurrentStep
                 float elapsed = 0f;
+                bool timedOut = false;
                 while (_currentLifecycle == StepLifecycle.Waiting)
                 {
                     if (step.timeoutSeconds > 0 && elapsed >= step.timeoutSeconds)
+                    {
+                        timedOut = true;
                         break;
+                    }
                     elapsed += Time.deltaTime;
                     yield return null;
+                }
+
+                if (timedOut)
+                {
+                    EventBus<StepTimeoutEvent>.Publish(new StepTimeoutEvent(step.stepId, step.timeoutSeconds));
                 }
             }
 

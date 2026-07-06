@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace MCV_Module.Data.Project
 {
@@ -33,6 +34,14 @@ namespace MCV_Module.Data.Project
         public ConditionType type = ConditionType.Default;
         public string targetId;      // 目标物体/UI ID
         public string extraParam;    // 额外参数（JSON 字符串）
+
+        /// <summary>类型安全地获取 extraParam</summary>
+        public T GetExtraParam<T>() where T : class
+        {
+            if (string.IsNullOrEmpty(extraParam)) return null;
+            try { return UnityEngine.JsonUtility.FromJson<T>(extraParam); }
+            catch { return null; }
+        }
     }
 
     public enum StepExecuteType
