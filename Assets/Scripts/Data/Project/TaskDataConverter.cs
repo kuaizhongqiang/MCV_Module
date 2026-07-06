@@ -6,7 +6,7 @@ namespace MCV_Module.Data.Project
 {
     /// <summary>
     /// 任务数据转换器 —— 在不同表示形式间转换 TaskData。
-    /// TODO: M2 填入完整转换逻辑 —— 参考 Tuanjie DataConvertHelper
+    /// TODO: M4 实现 —— ProjectClip JSON 配置验证完整转换逻辑 —— 参考 Tuanjie DataConvertHelper
     /// </summary>
     public static class TaskDataConverter
     {

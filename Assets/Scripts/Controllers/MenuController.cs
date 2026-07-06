@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using MCV_Module.Data.Project;
 using MCV_Module.GlobalManager;
 using MCV_Module.UI.Panels;
@@ -7,6 +6,8 @@ namespace MCV_Module.Controller
 {
     public class MenuController : ControllerBase<MenuPanel>
     {
+        [SerializeField] private string _experimentScenePrefix = "N_";
+
         protected override void OnViewBound()
         {
             var clip = GlobalDataMgr.GetProjectClip();
@@ -22,8 +23,9 @@ namespace MCV_Module.Controller
             var clip = GlobalDataMgr.GetProjectClip();
             if (clip == null || index >= clip.Tasks.Count) return;
 
-            var task = clip.Tasks[index];
-            // TODO: 跳转到对应 Task 场景
+            // 跳转到对应实验场景
+            string sceneName = $"{_experimentScenePrefix}{clip.id}_{index:D2}";
+            GlobalSceneMgr.Instance.LoadSceneSingle(sceneName);
         }
     }
 }

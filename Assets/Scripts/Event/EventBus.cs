@@ -16,8 +16,8 @@ namespace MCV_Module.Event
     ///
     /// 特点：
     ///   - 泛型 T 承载事件参数，编译时类型安全
-    ///   - 内部以 WeakReference 持有订阅者，防止内存泄漏
-    ///   - Clear() 可在场景切换时重置
+    ///   - 使用强引用 List&lt;Action&lt;T&gt;&gt;，订阅者须在 OnDestroy 中 Unsubscribe
+    ///   - Clear() 可在场景切换时重置所有订阅
     /// </summary>
     public static class EventBus<T> where T : class
     {
