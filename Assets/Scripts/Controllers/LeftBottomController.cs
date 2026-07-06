@@ -1,14 +1,23 @@
-
 using MCV_Module.UI.Panels;
 
 namespace MCV_Module.Controller
 {
     public class LeftBottomController : ControllerBase<LeftBottomPanel>
     {
-        // TODO: M2 实现 —— 任务列表/漫游切换按钮
         protected override void OnViewBound()
         {
-            // TODO: M2 实现 —— 绑定 LeftBottomPanel 事件
+            View.SetTaskToggleCallback(OnTaskToggle);
+            View.SetRoamingToggleCallback(OnRoamingToggle);
+        }
+
+        private void OnTaskToggle()
+        {
+            // TODO: 切换任务列表显示/隐藏
+        }
+
+        private void OnRoamingToggle()
+        {
+            // TODO: 进入/退出漫游模式
         }
     }
 }

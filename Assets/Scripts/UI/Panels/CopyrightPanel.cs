@@ -1,9 +1,21 @@
-
+using TMPro;
 
 namespace MCV_Module.UI.Panels
 {
     public class CopyrightPanel : PanelBase
     {
-        // TODO: M2 实现 —— 版权信息展示
+        [SerializeField] private TextMeshProUGUI _copyrightText;
+
+        public void SetCopyright(string text)
+        {
+            if (_copyrightText != null)
+                _copyrightText.text = text;
+        }
+
+        private void Start()
+        {
+            if (_copyrightText != null && string.IsNullOrEmpty(_copyrightText.text))
+                _copyrightText.text = "Copyright © 2026 MCV_Module";
+        }
     }
 }
