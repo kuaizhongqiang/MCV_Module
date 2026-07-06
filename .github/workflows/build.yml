@@ -1,0 +1,78 @@
+name: Lint & Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    name: Code Quality Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: C# File Inventory
+        run: |
+          echo "=== C# Source Files ==="
+          find Assets -name "*.cs" -not -path "*/Library/*" -not -path "*/Temp/*" | sort
+          CS_COUNT=$(find Assets -name "*.cs" -not -path "*/Library/*" -not -path "*/Temp/*" | wc -l)
+          echo ""
+          echo "Total C# files: $CS_COUNT"
+
+      - name: Validate JSON
+        run: |
+          echo "=== JSON Validation ==="
+          JSON_FILES=$(find Assets/StreamingAssets/Data -name "*.json" 2>/dev/null || true)
+          if [ -z "$JSON_FILES" ]; then
+            echo "No JSON files found in StreamingAssets/Data (skip)"
+            exit 0
+          fi
+          FAILED=0
+          for f in $JSON_FILES; do
+            if python3 -m json.tool "$f" > /dev/null 2>&1; then
+              echo "  OK: $f"
+            else
+              echo "  FAIL: $f"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+          if [ $FAILED -gt 0 ]; then
+            echo ""
+            echo "::error::$FAILED JSON file(s) invalid"
+            exit 1
+          fi
+          echo ""
+          echo "All JSON files valid"
+
+      - name: Check .meta pairing
+        run: |
+          echo "=== .meta Pairing Check ==="
+          # 检查是否有 .cs 文件缺少对应的 .meta 文件
+          MISSING=0
+          find Assets -name "*.cs" | while read f; do
+            if [ ! -f "$f.meta" ]; then
+              echo "::warning::Missing .meta file: $f"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+          if [ $MISSING -gt 0 ]; then
+            echo "::warning::$MISSING .cs files missing .meta pairs"
+          else
+            echo "All .cs files have corresponding .meta files"
+          fi
+
+      - name: Check for common issues
+        run: |
+          echo "=== Common Issue Detection ==="
+          
+          # 检查 Debug.Log 残留
+          DEBUG_LOGS=$(grep -rn "Debug.Log" Assets --include="*.cs" | wc -l)
+          echo "Debug.Log calls: $DEBUG_LOGS (informational, not blocking)"
+          
+          # 检查是否有空的 MonoBehaviour Update
+          EMPTY_UPDATE=$(grep -rn "void Update()" Assets --include="*.cs" | wc -l)
+          echo "Update() declarations: $EMPTY_UPDATE"
