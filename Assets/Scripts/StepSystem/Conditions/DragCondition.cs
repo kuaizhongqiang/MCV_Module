@@ -2,7 +2,6 @@ using UnityEngine;
 
 namespace MCV_Module.StepSystem
 {
-    /// <summary>拖拽条件 —— 将指定物体拖拽到目标位置后满足</summary>
     public class DragCondition : ConditionBase
     {
         [SerializeField] private string _targetObjectId;
@@ -10,28 +9,29 @@ namespace MCV_Module.StepSystem
         [SerializeField] private float _tolerance = 0.5f;
 
         private bool _dragged;
+        private GameObject _targetObject;
+
+        private void Awake()
+        {
+            if (!string.IsNullOrEmpty(_targetObjectId))
+                _targetObject = GameObject.Find(_targetObjectId);
+            else if (!string.IsNullOrEmpty(TargetId))
+                _targetObject = GameObject.Find(TargetId);
+        }
 
         public override bool IsMet() => _dragged;
 
-        public override void ResetCondition()
-        {
-            _dragged = false;
-        }
+        public override void ResetCondition() => _dragged = false;
 
         private void Update()
         {
-            if (_dragged) return;
+            if (_dragged || _targetObject == null) return;
 
-            // 检测目标物体是否到达指定位置
-            GameObject target = GameObject.Find(_targetObjectId);
-            if (target != null)
+            float dist = Vector3.Distance(_targetObject.transform.position, _targetPosition);
+            if (dist <= _tolerance)
             {
-                float dist = Vector3.Distance(target.transform.position, _targetPosition);
-                if (dist <= _tolerance)
-                {
-                    _dragged = true;
-                    Complete();
-                }
+                _dragged = true;
+                Complete();
             }
         }
     }
