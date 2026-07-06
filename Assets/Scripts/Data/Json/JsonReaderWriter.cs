@@ -1,9 +1,11 @@
 
-using UnityEngine;
-using Newtonsoft.Json;
 using System;
+using Newtonsoft.Json;
+using UnityEngine;
 
-public static class JsonReaderWriter 
+namespace MCV_Module.Data.Json
+{
+    public static class JsonReaderWriter
 {
     static string PATH = "Data/";
     static string EXT = ".json";
@@ -48,5 +50,6 @@ public static class JsonReaderWriter
     {
         return Application.streamingAssetsPath + "/" + PATH + name + EXT;
     }
-    
+
+}
 }

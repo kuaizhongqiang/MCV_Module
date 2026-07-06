@@ -72,6 +72,15 @@ public class Setup : MonoBehaviour
             yield return new WaitForSeconds(retryInterval);
         }
 
+        // TODO: M3 — 步骤系统管理器初始化
+        while (!IsGlobalMgrInit<GlobalStepSystemMgr>())
+        {
+            if (retryCount <= 0)
+                break;
+            retryCount--;
+            yield return new WaitForSeconds(retryInterval);
+        }
+
         Jump();
     }
 
