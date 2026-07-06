@@ -6,6 +6,8 @@ public class Setup : MonoBehaviour
 {
     [SerializeField] int retryCount = 5;
     [SerializeField] float retryInterval = 1f;
+    [SerializeField] private string _firstSceneName = "MainMenu";
+
     IEnumerator Start()
     {
         while (!IsGlobalMgrInit<GlobalAudioMgr>())
@@ -86,15 +88,12 @@ public class Setup : MonoBehaviour
 
     void Jump()
     {
-        // TODO : Jump to the scene
-        Debug.Log("Jump to the scene");
+        Debug.Log($"[Setup] 初始化完成，跳转到场景: {_firstSceneName}");
+        GlobalSceneMgr.Instance.LoadSceneSingle(_firstSceneName);
     }
 
     bool IsGlobalMgrInit<T>() where T : SingletonGlobalMgr<T>
     {
-        // TODO : Check if the global manager is initialized
-        return true;
+        return T.Exists && T.Instance.isInit;
     }
 }
-
-
