@@ -13,7 +13,7 @@ namespace MCV_Module.Controller
 
         private void OnSceneLoaded(SceneLoadedEvent evt)
         {
-            // TODO: 加载完成后可执行额外逻辑（如初始化场景内容）
+            // TODO: M3 填入 —— 场景加载完成后的 UI 刷新逻辑
         }
 
         protected override void OnDestroy()
