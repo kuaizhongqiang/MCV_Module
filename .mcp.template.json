@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "agent-memory": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "tencent-agent-memory-mcp-bridge"
+      ],
+      "env": {
+        "BRIDGE_URL": "<your-bridge-url>",
+        "API_KEY": "<your-api-key>",
+        "SENDER": "claude-code"
+      }
+    }
+  }
+}

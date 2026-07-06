@@ -36,6 +36,10 @@ Desktop.ini
 # CodeBuddy team state (NOT documentation/skills)
 .codebuddy/teams/
 
+# MCP server configuration (local credentials, DO NOT commit)
+.mcp.json
+.mcp.json.meta
+
 # Build
 *.apk
 *.aab
