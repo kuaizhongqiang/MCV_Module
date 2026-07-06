@@ -1,9 +1,7 @@
-using MCV_Module.Event;
 using UnityEngine;
 
 namespace MCV_Module.StepSystem
 {
-    /// <summary>完成条件 —— 标记整个流程结束</summary>
     public class FinishCondition : ConditionBase
     {
         private bool _finished;
@@ -13,11 +11,11 @@ namespace MCV_Module.StepSystem
         public override void ResetCondition()
         {
             _finished = false;
+            // OnEnable 会在 ResetCondition 后由重激活触发
         }
 
-        private void Start()
+        private void OnEnable()
         {
-            // Finish 条件自动触发
             _finished = true;
             Complete();
         }
