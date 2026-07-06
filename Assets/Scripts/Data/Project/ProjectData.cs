@@ -25,15 +25,14 @@ namespace MCV_Module.Data.Project
         {
             get
             {
-                return new List<TaskDataBase>()
-                {
-                    taskPurposeData,
-                    taskEquipmentData,
-                    taskPrincipleData,
-                    taskLineConnectionData,
-                    taskTrainingData,
-                    taskTestData
-                };
+                var list = new List<TaskDataBase>();
+                if (taskPurposeData != null) list.Add(taskPurposeData);
+                if (taskEquipmentData != null) list.Add(taskEquipmentData);
+                if (taskPrincipleData != null) list.Add(taskPrincipleData);
+                if (taskLineConnectionData != null) list.Add(taskLineConnectionData);
+                if (taskTrainingData != null) list.Add(taskTrainingData);
+                if (taskTestData != null) list.Add(taskTestData);
+                return list;
             }
             set
             {
