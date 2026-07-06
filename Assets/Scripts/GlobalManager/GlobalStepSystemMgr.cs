@@ -1,26 +1,44 @@
 using System.Collections;
+using System.Collections.Generic;
+using MCV_Module.StepSystem;
+using UnityEngine;
 
 namespace MCV_Module.GlobalManager
 {
     /// <summary>
-    /// 步骤系统全局管理器 —— 管理 StepDirector 的执行生命周期。
-    /// TODO: M3 填入实现 —— 注册到 Setup.cs 初始化管线
+    /// 步骤系统全局管理器 —— 管理所有 StepDirector 实例。
     /// </summary>
     public class GlobalStepSystemMgr : SingletonGlobalMgr<GlobalStepSystemMgr>
     {
         protected GlobalStepSystemMgr() { }
 
+        private readonly List<StepDirector> _directors = new List<StepDirector>();
+
         protected override IEnumerator DelayInit()
         {
-            // TODO: M3 实现 —— 步骤系统初始化
             isInit = true;
             yield break;
         }
 
+        public void RegisterDirector(StepDirector director)
+        {
+            if (!_directors.Contains(director))
+                _directors.Add(director);
+        }
+
+        public void UnregisterDirector(StepDirector director)
+        {
+            if (_directors.Contains(director))
+                _directors.Remove(director);
+        }
+
+        /// <summary>获取所有已注册的 Director</summary>
+        public IReadOnlyList<StepDirector> Directors => _directors;
+
         protected override void OnDestroy()
         {
             base.OnDestroy();
-            // TODO: M3 实现 —— 清理步骤系统状态
+            _directors.Clear();
         }
     }
 }
