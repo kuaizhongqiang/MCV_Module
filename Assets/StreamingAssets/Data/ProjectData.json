@@ -48,8 +48,28 @@
         "displayName": "小测验",
         "questionClip": {
           "questions": [
-            { "questionId": "q_01", "questionText": "显微镜中起主要放大作用的是？" },
-            { "questionId": "q_02", "questionText": "调节焦距时应先使用？" }
+            {
+              "questionId": "q_01",
+              "questionText": "显微镜中起主要放大作用的是？",
+              "questionType": 1,
+              "options": [
+                { "itemText": "目镜", "isCorrect": false },
+                { "itemText": "物镜", "isCorrect": true },
+                { "itemText": "反光镜", "isCorrect": false },
+                { "itemText": "粗准焦螺旋", "isCorrect": false }
+              ]
+            },
+            {
+              "questionId": "q_02",
+              "questionText": "调节焦距时应先使用？",
+              "questionType": 1,
+              "options": [
+                { "itemText": "细准焦螺旋", "isCorrect": false },
+                { "itemText": "粗准焦螺旋", "isCorrect": true },
+                { "itemText": "光圈", "isCorrect": false },
+                { "itemText": "反光镜", "isCorrect": false }
+              ]
+            }
           ],
           "passScore": 60.0
         }
