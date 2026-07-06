@@ -1,0 +1,18 @@
+{
+  "userName": "",
+  "indentyNum": "",
+  "password": "",
+  "userType": 0,
+  "loginTime": "0001-01-01T00:00:00",
+  "lastLoginTime": "0001-01-01T00:00:00",
+  "resultData": {
+    "startTime": "0001-01-01T00:00:00",
+    "endTime": "0001-01-01T00:00:00",
+    "score": 0,
+    "taskScores": [],
+    "id": "",
+    "displayName": ""
+  },
+  "id": "",
+  "displayName": ""
+}

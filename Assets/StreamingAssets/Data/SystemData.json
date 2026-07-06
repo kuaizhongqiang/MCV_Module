@@ -1,0 +1,24 @@
+{
+  "projectInfo": {
+    "projectName": "MCV_Module",
+    "projectEnglishName": "MCV_Module",
+    "version": "1.0.0",
+    "company": "DefaultCompany",
+    "id": "ProjectInfo",
+    "displayName": "软件信息"
+  },
+  "copyRight": {
+    "copyright": "Copyright © 2021 DefaultCompany. All rights reserved.",
+    "isCopyRight": true,
+    "id": "CopyRight",
+    "displayName": "版权信息"
+  },
+  "renderQuality": {
+    "renderQuality": 0,
+    "qualitySetted": false,
+    "id": "RenderQuality",
+    "displayName": "渲染质量"
+  },
+  "id": "",
+  "displayName": ""
+}
