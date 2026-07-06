@@ -1,14 +1,22 @@
-
 using MCV_Module.UI.Panels;
 
 namespace MCV_Module.Controller
 {
     public class DialogController : ControllerBase<DialogPanel>
     {
-        // TODO: M2 实现 —— 确认/取消对话框、事件驱动
         protected override void OnViewBound()
         {
-            // TODO: M2 实现 —— 绑定 DialogPanel 事件
+            // Dialog 由事件驱动，Controller 通过面板 API 触发
+        }
+
+        public void ShowConfirm(string title, string message, System.Action onConfirm)
+        {
+            View.Show(title, message, onConfirm);
+        }
+
+        public void ShowAlert(string title, string message)
+        {
+            View.Show(title, message);
         }
     }
 }
