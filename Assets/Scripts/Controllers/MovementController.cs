@@ -1,11 +1,12 @@
 using MCV_Module.UI.Panels;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace MCV_Module.Controller
 {
     /// <summary>
     /// 漫游 FPS 控制器 —— WASD 移动 + 鼠标视角。
-    /// 严格遵循 MCV：Controller 挂载在场景物体上，数据流单向。
+    /// 使用新 InputSystem，与 GlobalInteractiveMgr 统一。
     /// </summary>
     public class MovementController : ControllerBase<RoamingBottomPanel>
     {
@@ -15,7 +16,9 @@ namespace MCV_Module.Controller
 
         private CharacterController _controller;
         private Camera _playerCamera;
-        private Vector3 _moveInput;
+        private Keyboard _keyboard;
+        private Mouse _mouse;
+        private Vector2 _moveInput;
         private float _pitch;
         private float _yaw;
 
@@ -34,7 +37,9 @@ namespace MCV_Module.Controller
                 _playerCamera = camObj.AddComponent<Camera>();
             }
 
-            // 锁定鼠标
+            _keyboard = Keyboard.current;
+            _mouse = Mouse.current;
+
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
@@ -42,18 +47,23 @@ namespace MCV_Module.Controller
         private void Update()
         {
             if (_controller == null || _playerCamera == null) return;
+            if (_keyboard == null || _mouse == null) return;
 
             HandleLook();
             HandleMove();
+
+            if (_keyboard.escapeKey.wasPressedThisFrame)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
         }
 
         private void HandleLook()
         {
-            float mouseX = Input.GetAxis("Mouse X") * _lookSpeed;
-            float mouseY = Input.GetAxis("Mouse Y") * _lookSpeed;
-
-            _yaw += mouseX;
-            _pitch -= mouseY;
+            Vector2 delta = _mouse.delta.ReadValue() * _lookSpeed * Time.deltaTime;
+            _yaw += delta.x;
+            _pitch -= delta.y;
             _pitch = Mathf.Clamp(_pitch, -_pitchLimit, _pitchLimit);
 
             transform.localRotation = Quaternion.Euler(0, _yaw, 0);
@@ -62,24 +72,15 @@ namespace MCV_Module.Controller
 
         private void HandleMove()
         {
-            float h = Input.GetAxis("Horizontal");
-            float v = Input.GetAxis("Vertical");
+            _moveInput = _keyboard.wasdKey.ReadValue();
 
-            Vector3 move = transform.right * h + transform.forward * v;
+            Vector3 move = transform.right * _moveInput.x + transform.forward * _moveInput.y;
             if (move.magnitude > 1f) move.Normalize();
 
-            // 重力
             if (!_controller.isGrounded)
                 move.y = -9.81f;
 
             _controller.Move(move * _moveSpeed * Time.deltaTime);
-
-            // ESC 释放鼠标
-            if (Input.GetKeyDown(KeyCode.Escape))
-            {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-            }
         }
 
         protected override void OnDestroy()
