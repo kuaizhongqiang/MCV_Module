@@ -8,8 +8,8 @@
 
 | 策略 | PackageType | 内容 | 加载方式 | 配置 |
 |------|:--:|------|------|------|
-| Resources | `Default` | 本包内置资源 | `Resources.Load` | 零配置 |
-| Addressables | `AA` | 场景 | `Addressables.LoadAssetAsync` | Addressables Group |
+| Resources | `Default` | 本包内置资源（含 0_Setup、1_Controller、2_UI、99_Loading 场景） | `Resources.Load` | 零配置 |
+| Addressables | `AA` | 实验场景（N_xxx） | `Addressables.LoadAssetAsync` | Addressables Group |
 | AssetBundle | `AB` | 模型、预制体、图片 | `AssetBundle.LoadFromFile` | 独立打包 |
 
 ## 加载 API
@@ -40,9 +40,11 @@ LoadAsset<T>(key, onSuccess, onFailure):
 
 ## PackageConfigSO
 
+`PackageConfigSO` 为单个资源的 ScriptableObject 配置，`PackageDatabaseSO` 为管理所有 `PackageConfigSO` 清单的数据库（内部字典，`Find(key)` 返回对应 `PackageConfigSO`）。
+
 | 字段 | 说明 |
 |------|------|
-| `key` | 资源唯一标识 |
+| `key` | 资源唯一标识，`PackageDatabaseSO.Find(key)` 的查找键 |
 | `type` | PackageType（Default/AA/AB） |
 | `path` | AA=Addressables key / AB=包内路径 / Default=Resources 相对路径 |
 

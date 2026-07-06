@@ -45,8 +45,7 @@
 ## 架构边界
 
 - `pointGroupRoot` 通过 Inspector 直接挂载到 `StepConditionLineConnect`，Condition 层对 StepDirector 零依赖
-- **LineDraw 三不变**：底层画线渲染逻辑、曲线路径、多点绘制——保留不重写
-- **可配置**：材质、颜色、线宽、端点位置、配对判定逻辑——允许修改
+- **LineDraw 可修改**：划线逻辑、曲线路径、多点绘制——允许修改代码和逻辑（材质、颜色、线宽、端点位置、配对判定均可自由改动）
 
 ## 与交互系统关系
 

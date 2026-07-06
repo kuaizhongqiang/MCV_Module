@@ -49,11 +49,11 @@ GlobalSceneMgr 发命令 → GlobalAddressableMgr.LoadAsset<Scene>(key, onSucces
 
 | 场景 | 编号 | 加载方式 | 说明 |
 |------|:--:|------|------|
-| `0_Setup` | 0 | Default（内置） | 启动入口 |
-| `1_Controller` | 1 | Default（内置） | Controller 层 |
-| `2_UI` | 2 | Default（内置） | 常驻 UI 层 |
+| `0_Setup` | 0 | Builtin（SceneManager） | 启动入口 |
+| `1_Controller` | 1 | Builtin（SceneManager） | Controller 层 |
+| `2_UI` | 2 | Builtin（SceneManager） | 常驻 UI 层 |
 | `N_xxx` | ≥3 | AA（Addressables） | 实验三维场景，按需加载卸载 |
-| `99_Loading` | 99 | Default（内置） | 加载过渡遮挡 |
+| `99_Loading` | 99 | Builtin（SceneManager） | 加载过渡遮挡 |
 
 ## 加载实现
 
