@@ -1,49 +1,48 @@
-
 using System;
 using System.Collections.Generic;
 
 namespace MCV_Module.Data.Project
 {
-    /// <summary>
-    /// 连线数据 —— 连线端子配对、线组定义。
-    /// TODO: M2 填入完整字段 —— 参考 Tuanjie LineConnectionData
-    /// </summary>
     [Serializable]
     public class LineConnectionData
     {
-        // TODO: M2 实现 —— 连线组的集合
         public List<LineGroupData> lineGroups = new List<LineGroupData>();
 
-        // TODO: M2 实现 —— 连线完成触点事件
-        // public UnityEvent onLineConnectionComplete;
+        /// <summary>获取指定线组的配对状态</summary>
+        public bool IsGroupComplete(string groupId)
+        {
+            var group = lineGroups.Find(g => g.groupId == groupId);
+            return group != null && group.isConnected;
+        }
+
+        /// <summary>所有线组是否都已连接</summary>
+        public bool IsAllConnected()
+        {
+            return lineGroups.TrueForAll(g => g.isConnected);
+        }
     }
 
-    /// <summary>
-    /// 线组数据 —— 一组配对端子的定义。
-    /// </summary>
     [Serializable]
     public class LineGroupData
     {
-        // TODO: M2 实现 —— 线组名称 / 编号
         public string groupId;
 
-        // TODO: M2 实现 —— 启动端与目标端
-        // public LineEndpoint startEndpoint;
-        // public LineEndpoint targetEndpoint;
+        /// <summary>启动端命名编码（命名约定: Line_GroupID_Start）</summary>
+        public string startEndpointCode;
 
-        // TODO: M2 实现 —— 是否已连接
+        /// <summary>目标端命名编码（命名约定: Line_GroupID_End）</summary>
+        public string targetEndpointCode;
+
+        /// <summary>是否已连接</summary>
         public bool isConnected;
     }
 
-    /// <summary>
-    /// 端子元素类型（命名编码配对机制）。
-    /// </summary>
     public enum ElementType
     {
         None,
-        // TODO: M2 补充 —— 端子类型枚举值
         Socket,
         Plug,
         Terminal,
+        Wire,
     }
 }
