@@ -1,8 +1,15 @@
+using TMPro;
 
 namespace MCV_Module.UI.Panels
 {
     public class RightUpPanel : PanelBase
     {
-        // TODO: M2 实现 —— 右上角信息/快捷操作
+        [SerializeField] private TextMeshProUGUI _infoText;
+
+        public void SetInfo(string text)
+        {
+            if (_infoText != null)
+                _infoText.text = text;
+        }
     }
 }

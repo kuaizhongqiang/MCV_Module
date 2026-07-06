@@ -1,8 +1,15 @@
+using TMPro;
 
 namespace MCV_Module.UI.Panels
 {
     public class ControlInfoPanel : PanelBase
     {
-        // TODO: M2 实现 —— 操控说明
+        [SerializeField] private TextMeshProUGUI _controlText;
+
+        public void SetControlInfo(string text)
+        {
+            if (_controlText != null)
+                _controlText.text = text;
+        }
     }
 }

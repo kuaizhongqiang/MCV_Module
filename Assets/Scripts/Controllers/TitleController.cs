@@ -1,14 +1,20 @@
-
+using MCV_Module.Event;
+using MCV_Module.GlobalManager;
 using MCV_Module.UI.Panels;
 
 namespace MCV_Module.Controller
 {
     public class TitleController : ControllerBase<TitlePanel>
     {
-        // TODO: M2 实现 —— 标题/描述/进度展示、功能按钮切换
         protected override void OnViewBound()
         {
-            // TODO: M2 实现 —— 绑定 TitlePanel 事件
+            // 默认显示当前任务标题
+            var taskData = GlobalDataMgr.GetTaskData(Data.Project.TaskType.Purpose);
+            if (taskData != null)
+            {
+                View.UpdateTitle(taskData.TaskType);
+                View.SetDescription(taskData.displayName);
+            }
         }
     }
 }
