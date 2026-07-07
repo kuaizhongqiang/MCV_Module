@@ -10,9 +10,7 @@ namespace MCV_Module.UI.Panels
 
         public void ShowQuestion(TaskTestData data)
         {
-            if (data?.QuestionClip == null || data.QuestionClip.questions.Count == 0) return;
-            if (_questionText != null)
-                _questionText.text = data.QuestionClip.questions[0].questionText ?? "（题目待配置）";
+            
         }
     }
 }

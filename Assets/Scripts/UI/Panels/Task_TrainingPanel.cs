@@ -10,9 +10,7 @@ namespace MCV_Module.UI.Panels
 
         public void ShowTraining(TaskTrainingData data)
         {
-            if (data?.TipsData == null) return;
-            if (_tipText != null)
-                _tipText.text = data.TipsData.TipText ?? "（实训待配置）";
+           
         }
     }
 }

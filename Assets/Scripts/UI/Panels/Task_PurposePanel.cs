@@ -10,9 +10,7 @@ namespace MCV_Module.UI.Panels
 
         public void ShowPurpose(TaskPurposeData data)
         {
-            if (data?.SpeakingData == null) return;
-            if (_contentText != null)
-                _contentText.text = data.SpeakingData.ShowContent ?? "（实验目的待配置）";
+            
         }
     }
 }

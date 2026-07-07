@@ -10,9 +10,7 @@ namespace MCV_Module.UI.Panels
 
         public void ShowEquipment(TaskEquipmentData data)
         {
-            if (data?.EquipmentData == null) return;
-            if (_equipmentNameText != null)
-                _equipmentNameText.text = data.EquipmentData.EquipmentName ?? "（仪器待配置）";
+            
         }
     }
 }

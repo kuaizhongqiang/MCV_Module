@@ -10,9 +10,7 @@ namespace MCV_Module.UI.Panels
 
         public void ShowPrinciple(TaskPrincipleData data)
         {
-            if (data?.PrincipleData == null) return;
-            if (_contentText != null)
-                _contentText.text = data.PrincipleData.ShowContent ?? "（实验原理待配置）";
+            
         }
     }
 }

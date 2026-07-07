@@ -16,7 +16,7 @@ namespace MCV_Module.UI.Panels
         private Func<string, bool> _onSubmit;
         private int _attemptCount;
 
-        private void Awake()
+        protected override void Awake()
         {
             if (_submitButton != null)
                 _submitButton.onClick.AddListener(OnSubmitClicked);

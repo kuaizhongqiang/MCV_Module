@@ -36,13 +36,12 @@ namespace MCV_Module.Data.Project
         /// <summary>是否已连接</summary>
         public bool isConnected;
     }
-
+    [Serializable]
     public enum ElementType
     {
         None,
-        Socket,
-        Plug,
-        Terminal,
-        Wire,
+        Power,
+        Fuse,
+        Light,
     }
 }

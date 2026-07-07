@@ -125,66 +125,7 @@ namespace MCV_Module.Data.Project
     }
     // ────────────────────── 内容数据类 ──────────────────────
 
-    /// <summary>
-    /// 口语/表述数据 —— 用在 Purpose / Principle 等需要文本展示的任务。
-    /// TODO: M1a 骨架字段 —— 参考 Tuanjie SpeakingData
-    /// </summary>
-    [Serializable]
-    public class SpeakingData
-    {
-        // TODO: M2 填入 —— 口语/表述内容
-        [SerializeField] private string _showContent;        // 图文内容（支持富文本）
-        [SerializeField] private string _videoPath;          // 关联视频路径
-        public string ShowContent => _showContent;
-        public string VideoPath => _videoPath;
-    }
-
-    /// <summary>
-    /// 仪器数据 —— 实验仪器清单。
-    /// TODO: M1a 骨架字段 —— 参考 Tuanjie EquipmentData
-    /// </summary>
-    [Serializable]
-    public class EquipmentData
-    {
-        // TODO: M2 填入 —— 仪器条目列表
-        // [SerializeField] private List<EquipmentItem> _items;
-
-        // 占位：仪器名称 / 缩略图
-        [SerializeField] private string _equipmentName;
-        [SerializeField] private string _iconPath;
-        public string EquipmentName => _equipmentName;
-        public string IconPath => _iconPath;
-    }
-
-    /// <summary>
-    /// 原理数据 —— 实验原理内容（图文 / 模型 / 视频）。
-    /// TODO: M1a 骨架字段 —— 参考 Tuanjie PrincipleData
-    /// </summary>
-    [Serializable]
-    public class PrincipleData
-    {
-        // TODO: M2 填入 —— 原理说明内容
-        [SerializeField] private string _showContent;        // 图文内容
-        [SerializeField] private string _showModelPath;      // 3D 模型路径
-        [SerializeField] private string _videoPath;          // 视频路径
-        public string ShowContent => _showContent;
-        public string ShowModelPath => _showModelPath;
-        public string VideoPath => _videoPath;
-    }
-
-    /// <summary>
-    /// 提示/指引数据 —— 用于 Training 等需要操作指引的任务。
-    /// TODO: M1a 骨架字段 —— 参考 Tuanjie TipsData
-    /// </summary>
-    [Serializable]
-    public class TipsData
-    {
-        // TODO: M2 填入 —— 提示内容
-        [SerializeField] private string _tipText;                // 提示文字
-        [SerializeField] private float _displayDuration = 3f;    // 显示时长（秒）
-        public string TipText => _tipText;
-        public float DisplayDuration => _displayDuration;
-    }
+    
 
     // ────────────────────── TaskData 子类 ──────────────────────
 
@@ -192,11 +133,6 @@ namespace MCV_Module.Data.Project
     public class TaskPurposeData : TaskData<TaskPurposeData>
     {
         public override TaskType TaskType => TaskType.Purpose;
-
-        // TODO: M1a 补充字段 —— 实验目的数据
-        [SerializeField] private SpeakingData _speakingData;
-        public SpeakingData SpeakingData => _speakingData;
-
         public TaskPurposeData(string id)
         {
             this.id = id;
@@ -207,11 +143,6 @@ namespace MCV_Module.Data.Project
     public class TaskEquipmentData : TaskData<TaskEquipmentData>
     {
         public override TaskType TaskType => TaskType.Equipment;
-
-        // TODO: M1a 补充字段 —— 仪器清单数据
-        [SerializeField] private EquipmentData _equipmentData;
-        public EquipmentData EquipmentData => _equipmentData;
-
         public TaskEquipmentData(string id)
         {
             this.id = id;
@@ -223,12 +154,6 @@ namespace MCV_Module.Data.Project
     {
         public override TaskType TaskType => TaskType.Principle;
 
-        // TODO: M1a 补充字段 —— 原理内容数据
-        [SerializeField] private PrincipleData _principleData;
-        [SerializeField] private SpeakingData _speakingData;
-        public PrincipleData PrincipleData => _principleData;
-        public SpeakingData SpeakingData => _speakingData;
-
         public TaskPrincipleData(string id)
         {
             this.id = id;
@@ -239,11 +164,6 @@ namespace MCV_Module.Data.Project
     public class TaskLineConnectionData : TaskData<TaskLineConnectionData>
     {
         public override TaskType TaskType => TaskType.LineConnection;
-
-        // TODO: M1a 补充字段 —— 连线数据（引用 LineConnectionData）
-        [SerializeField] private LineConnectionData _lineConnectionData;
-        public LineConnectionData LineConnectionData => _lineConnectionData;
-
         public TaskLineConnectionData(string id)
         {
             this.id = id;
@@ -254,11 +174,6 @@ namespace MCV_Module.Data.Project
     public class TaskTrainingData : TaskData<TaskTrainingData>
     {
         public override TaskType TaskType => TaskType.Training;
-
-        // TODO: M1a 补充字段 —— 实训指引数据
-        [SerializeField] private TipsData _tipsData;
-        public TipsData TipsData => _tipsData;
-
         public TaskTrainingData(string id)
         {
             this.id = id;
@@ -269,11 +184,6 @@ namespace MCV_Module.Data.Project
     public class TaskTestData : TaskData<TaskTestData>
     {
         public override TaskType TaskType => TaskType.Test;
-
-        // TODO: M1a 补充字段 —— 测验题目数据
-        [SerializeField] private QuestionClip _questionClip;
-        public QuestionClip QuestionClip => _questionClip;
-
         public TaskTestData(string id)
         {
             this.id = id;

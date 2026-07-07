@@ -8,7 +8,7 @@ namespace MCV_Module.UI.Panels
     {
         [SerializeField] private Button _startButton;
 
-        private void Awake()
+        protected override void Awake()
         {
             if (_startButton != null)
                 _startButton.onClick.AddListener(() =>

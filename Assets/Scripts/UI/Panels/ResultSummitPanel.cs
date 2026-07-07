@@ -14,7 +14,7 @@ namespace MCV_Module.UI.Panels
 
         public event Action OnConfirm;
 
-        private void Awake()
+        protected override void Awake()
         {
             if (_confirmButton != null)
                 _confirmButton.onClick.AddListener(() =>
