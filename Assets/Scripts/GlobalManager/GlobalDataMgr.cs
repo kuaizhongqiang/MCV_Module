@@ -1,5 +1,6 @@
 
 using System.Collections;
+using MCV_Module.Data.Json;
 using MCV_Module.Data.Project;
 using MCV_Module.Data.System;
 using MCV_Module.Data.User;
@@ -20,7 +21,7 @@ namespace MCV_Module.GlobalManager
 
         protected override IEnumerator DelayInit()
         {
-            // WriteJson();
+            WriteJson();
             SystemData = JsonReaderWriter.Read<SystemData>("SystemData", null);
 
             yield break;

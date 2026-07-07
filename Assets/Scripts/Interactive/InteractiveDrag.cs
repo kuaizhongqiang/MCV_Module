@@ -1,5 +1,6 @@
 using MCV_Module.GlobalManager;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace MCV_Module.Interactive
 {

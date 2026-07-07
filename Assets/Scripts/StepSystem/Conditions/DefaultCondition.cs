@@ -7,7 +7,6 @@ namespace MCV_Module.StepSystem
     public class DefaultCondition : ConditionBase
     {
         [SerializeField] private ConditionType _type = ConditionType.Default;
-        public override ConditionType ConditionType => _type;
 
         public override bool IsMet() => true;
     }

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using MCV_Module.Data.Project;
 using MCV_Module.Event;
+using MCV_Module.GlobalManager;
 using UnityEngine;
 
 namespace MCV_Module.StepSystem
@@ -27,7 +28,7 @@ namespace MCV_Module.StepSystem
         private void Start()
         {
             _factory = GetComponentInChildren<ConditionFactory>();
-            GlobalStepSystemMgr.Instance.RegisterDirector(this);
+            // GlobalStepSystemMgr.Instance.RegisterDirector(this);
         }
 
         public void StartExecution()

@@ -97,7 +97,16 @@ namespace MCV_Module.Interactive
             
         }
 
-
+        #region 事件触发（供 GlobalInteractiveMgr 调用）
+        public void InvokeMoEnter() => MoEnter?.Invoke();
+        public void InvokeMoExit() => MoExit?.Invoke();
+        public void InvokeMoClick() => MoClick?.Invoke();
+        public void InvokeMoClickRight() => MoClickRight?.Invoke();
+        public void InvokeMoClickDouble() => MoClickDouble?.Invoke();
+        public void InvokeMoDown() => MoDown?.Invoke();
+        public void InvokeMoUp() => MoUp?.Invoke();
+        public void InvokeMoMove(Vector2 delta) => MoMove?.Invoke(delta);
+        #endregion
 
 
     }

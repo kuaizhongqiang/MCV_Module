@@ -94,6 +94,6 @@ public class Setup : MonoBehaviour
 
     bool IsGlobalMgrInit<T>() where T : SingletonGlobalMgr<T>
     {
-        return T.Exists && T.Instance.isInit;
+        return SingletonGlobalMgr<T>.Exists && SingletonGlobalMgr<T>.Instance.IsInit;
     }
 }

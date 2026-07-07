@@ -1,5 +1,5 @@
-
 using System;
+using System.IO;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -12,13 +12,13 @@ namespace MCV_Module.Data.Json
 
     public static void Write<T>(string name, T data,Action callback)
     {
-        bool fileExist = System.IO.File.Exists(FULL_PATH(name));
-        if(!fileExist) System.IO.Directory.CreateDirectory(PATH);
+        bool fileExist = File.Exists(FULL_PATH(name));
+        if(!fileExist) Directory.CreateDirectory(PATH);
         try
         {
             string path = FULL_PATH(name);
             string json = JsonConvert.SerializeObject(data, Formatting.Indented);
-            System.IO.File.WriteAllText(path, json);
+            File.WriteAllText(path, json);
             callback?.Invoke();
         }
         catch (Exception e)
@@ -33,7 +33,7 @@ namespace MCV_Module.Data.Json
         try
         {
             string path = FULL_PATH(name);
-            string json = System.IO.File.ReadAllText(path);
+            string json = File.ReadAllText(path);
             callback?.Invoke(true);
             return JsonConvert.DeserializeObject<T>(json);
             

@@ -1,6 +1,7 @@
 using MCV_Module.Data.Project;
 using MCV_Module.Event;
 using TMPro;
+using UnityEngine;
 
 namespace MCV_Module.UI.Panels
 {
@@ -9,12 +10,12 @@ namespace MCV_Module.UI.Panels
         [SerializeField] private TextMeshProUGUI _titleText;
         [SerializeField] private TextMeshProUGUI _descriptionText;
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
             EventBus<TaskChangedEvent>.Subscribe(OnTaskChanged);
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
             EventBus<TaskChangedEvent>.Unsubscribe(OnTaskChanged);
         }
