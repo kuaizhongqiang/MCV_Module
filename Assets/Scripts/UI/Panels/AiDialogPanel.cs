@@ -15,7 +15,7 @@ namespace MCV_Module.UI.Panels
 
         public event Action<string> OnSendMessage;
 
-        private void Awake()
+        protected override void Awake()
         {
             if (_sendButton != null)
                 _sendButton.onClick.AddListener(SendMessage);

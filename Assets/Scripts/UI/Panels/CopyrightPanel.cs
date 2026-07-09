@@ -13,7 +13,7 @@ namespace MCV_Module.UI.Panels
                 _copyrightText.text = text;
         }
 
-        private void Start()
+        protected override void Awake()
         {
             if (_copyrightText != null && string.IsNullOrEmpty(_copyrightText.text))
                 _copyrightText.text = "Copyright © 2026 MCV_Module";

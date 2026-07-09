@@ -1,4 +1,6 @@
 using System;
+using MCV_Module.GlobalManager;
+using MCV_Module.UI.Canvas;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -15,7 +17,7 @@ namespace MCV_Module.UI.Panels
         private Action _onConfirm;
         private Action _onCancel;
 
-        private void Awake()
+        protected override void Awake()
         {
             if (_confirmButton != null)
                 _confirmButton.onClick.AddListener(() =>
@@ -36,6 +38,8 @@ namespace MCV_Module.UI.Panels
         {
             if (_titleText != null) _titleText.text = title;
             if (_messageText != null) _messageText.text = message;
+            // 需要进行Layout rebuild
+            LayoutRebuilder.ForceRebuildLayoutImmediate(GlobalUiMgr.GetCanvas<FunctionCanvas>().GetComponent<RectTransform>());
             _onConfirm = onConfirm;
             _onCancel = onCancel;
             SetUIActive(true);

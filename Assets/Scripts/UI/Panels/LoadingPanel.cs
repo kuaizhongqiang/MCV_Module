@@ -9,8 +9,11 @@ namespace MCV_Module.UI.Panels
     {
         [SerializeField] private Slider _progressSlider;
         [SerializeField] private TextMeshProUGUI _progressText;
+        [SerializeField] private TextMeshProUGUI _progressText2;
+        [SerializeField] private RawImage _oldScreenShot;
+        [SerializeField] private RawImage _newScreenShot;
 
-        private void Awake()
+        protected override void Awake()
         {
             m_CanvasGroup.alpha = 0;
             m_CanvasGroup.interactable = false;
@@ -18,12 +21,12 @@ namespace MCV_Module.UI.Panels
             gameObject.SetActive(false);
         }
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
             EventBus<SceneLoadingEvent>.Subscribe(OnSceneLoading);
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
             EventBus<SceneLoadingEvent>.Unsubscribe(OnSceneLoading);
         }
@@ -53,6 +56,9 @@ namespace MCV_Module.UI.Panels
 
             if (_progressText != null)
                 _progressText.text = $"加载中... {Mathf.FloorToInt(clamped * 100)}%";
+            if (_progressText2 != null)
+                _progressText2.text = $"加载中... {Mathf.FloorToInt(clamped * 100)}%";
+            
         }
     }
 }

@@ -10,9 +10,9 @@ namespace MCV_Module.UI
     {
         protected CanvasGroup m_CanvasGroup;
         Coroutine m_Coroutine;
-        [SerializeField] float duration = 0.3f;
-        [SerializeField] bool isShowOnStart = true;
-        public bool isAnimating = false;
+        [SerializeField, Tooltip("显示/隐藏动画时间")] float duration = 0.3f;
+        [SerializeField, Tooltip("是否在启动时显示")] bool isShowOnStart = true;
+        [Tooltip("是否正在动画中")]public bool isAnimating = false;
 
         protected virtual void Awake()
         {

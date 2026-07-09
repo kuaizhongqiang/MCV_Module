@@ -9,9 +9,10 @@ namespace MCV_Module.Controller
             // Dialog 由事件驱动，Controller 通过面板 API 触发
         }
 
-        public void ShowConfirm(string title, string message, System.Action onConfirm)
+        public void ShowConfirm(string title, string message, 
+            System.Action onConfirm, System.Action onCancel)
         {
-            View.Show(title, message, onConfirm);
+            View.Show(title, message, onConfirm, onCancel);
         }
 
         public void ShowAlert(string title, string message)

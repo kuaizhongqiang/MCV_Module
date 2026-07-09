@@ -1,4 +1,5 @@
 using MCV_Module.Data.Project;
+using MCV_Module.UI;
 
 namespace MCV_Module.Event
 {
@@ -15,6 +16,16 @@ namespace MCV_Module.Event
     {
         public string SceneName { get; }
         public SceneLoadedEvent(string sceneName) { SceneName = sceneName; }
+    }
+
+    // ────────────────────── Canvas 切换 ──────────────────────
+
+    public class CanvasSwitchEvent
+    {
+        public CanvasBase ActiveCanvas { get; }
+        public CanvasBase InactiveCanvas { get; }
+        public CanvasSwitchEvent(CanvasBase activeCanvas, CanvasBase inactiveCanvas) 
+        { ActiveCanvas = activeCanvas; InactiveCanvas = inactiveCanvas; }
     }
 
     // ────────────────────── 任务流程 ──────────────────────
