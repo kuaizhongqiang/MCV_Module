@@ -1,0 +1,3 @@
+[submodule "AgentCanvas"]
+	path = AgentCanvas
+	url = https://github.com/kuaizhongqiang/UnityAgentCanvasMCP.git
