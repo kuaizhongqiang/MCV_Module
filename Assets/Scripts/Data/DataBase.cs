@@ -8,5 +8,6 @@ namespace MCV_Module.Data
     {
         public string id;
         public string displayName;
+        public string description = "";  // AgentCanvas: CLI search/embedding text
     }
 }

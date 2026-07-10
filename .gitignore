@@ -45,3 +45,6 @@ Desktop.ini
 *.aab
 *.ipa
 *.app
+# AgentCanvas CLI build artifacts (regenerate with CLI/build.py)
+Assets/StreamingAssets/AgentCanvas/*.exe
+Assets/StreamingAssets/AgentCanvas/.env.example

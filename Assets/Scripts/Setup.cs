@@ -83,6 +83,15 @@ public class Setup : MonoBehaviour
             yield return new WaitForSeconds(retryInterval);
         }
 
+        // AgentCanvas CLI 管理器
+        while (!IsGlobalMgrInit<GlobalCLIMgr>())
+        {
+            if (retryCount <= 0)
+                break;
+            retryCount--;
+            yield return new WaitForSeconds(retryInterval);
+        }
+
         Jump();
     }
 

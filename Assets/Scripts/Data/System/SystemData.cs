@@ -8,6 +8,7 @@ namespace MCV_Module.Data.System
         public ProjectInfo projectInfo = new ProjectInfo();
         public CopyRight copyRight = new CopyRight();
         public RenderQuality renderQuality = new RenderQuality();
+        public CLIConfig cliConfig = new CLIConfig();
     }
 
     [Serializable]
@@ -41,6 +42,15 @@ namespace MCV_Module.Data.System
             copyright = "Copyright © 2021 DefaultCompany. All rights reserved.";
             isCopyRight = true;
         }
+    }
+
+    [Serializable]
+    public class CLIConfig
+    {
+        public bool cliEnabled = true;
+        public bool cliAutoStart = true;
+        public int cliPort = 3748;
+        public string cliToken = "";
     }
 
     [Serializable]
