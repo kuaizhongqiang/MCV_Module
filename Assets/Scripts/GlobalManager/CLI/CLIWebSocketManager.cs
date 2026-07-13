@@ -1,20 +1,23 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Net;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using UnityEngine;
+using EmbedIO;
+using EmbedIO.WebSockets;
 
 namespace MCV_Module.GlobalManager.CLI
 {
     /// <summary>
-    /// WebSocket 管理器 — 处理 WS 客户端连接、维护连接池、推送回执和事件。
+    /// WebSocket 管理器 — EmbedIO WebSocketModule 子类。
+    /// 处理 WS 客户端连接/断开、token 鉴权、连接池维护和回执推送。
     /// </summary>
-    public class CLIWebSocketManager
+    public class CLIWebSocketManager : WebSocketModule
     {
-        private readonly Dictionary<string, WebSocket> _wsClients = new();
+        private readonly string _token;
+        private readonly ConcurrentDictionary<string, IWebSocketContext> _wsClients = new();
         private static readonly Encoding s_Utf8 = new UTF8Encoding(false);
 
         /// <summary>是否有已连接的 WS 客户端</summary>
@@ -28,73 +31,82 @@ namespace MCV_Module.GlobalManager.CLI
         public event Action<string> OnLogWarning;
 
         /// <summary>
-        /// 处理 WebSocket 升级请求。
+        /// 创建 WebSocket 模块。
         /// </summary>
-        public async Task HandleWebSocketAsync(HttpListenerContext ctx, string token, CancellationToken ct)
+        /// <param name="token">可选的鉴权 token，为空时放行所有连接。</param>
+        public CLIWebSocketManager(string token = "")
+            : base("/ws", true) // keepOpen=true 允许服务器主动推送
         {
-            // 验证 token（query 参数）
-            var queryToken = ctx.Request.QueryString["token"];
-            if (!string.IsNullOrEmpty(token) && queryToken != token)
-            {
-                ctx.Response.StatusCode = 401;
-                ctx.Response.Close();
-                return;
-            }
+            _token = token;
+        }
 
-            // Mono HttpListener may not detect IsWebSocketRequest correctly
-            if (!ctx.Request.IsWebSocketRequest)
+        /// <summary>
+        /// 新客户端连接时调用 — 进行 token 鉴权并注册到连接池。
+        /// </summary>
+        protected override async Task OnClientConnectedAsync(IWebSocketContext context)
+        {
+            // Token 鉴权（通过查询参数 ?token=xxx）
+            if (!string.IsNullOrEmpty(_token))
             {
-                var upgradeHeader = ctx.Request.Headers["Upgrade"];
-                if (string.IsNullOrEmpty(upgradeHeader) ||
-                    !"websocket".Equals(upgradeHeader, StringComparison.OrdinalIgnoreCase))
+                var queryToken = ExtractQueryParam(context.RequestUri, "token");
+                if (queryToken != _token)
                 {
-                    ctx.Response.StatusCode = 400;
-                    ctx.Response.Close();
+                    OnLogWarning?.Invoke("[WSManager] WS client rejected: invalid token");
+                    await CloseAsync(context, WebSocketCloseStatus.PolicyViolation, "Unauthorized");
                     return;
                 }
             }
 
-            WebSocketContext wsCtx;
-            try
-            {
-                wsCtx = await ctx.AcceptWebSocketAsync("agentcanvas");
-            }
-            catch (Exception e)
-            {
-                OnLogWarning?.Invoke($"[WSManager] WebSocket upgrade failed: {e.Message}");
-                ctx.Response.StatusCode = 500;
-                ctx.Response.Close();
-                return;
-            }
-
-            var ws = wsCtx.WebSocket;
             var clientId = Guid.NewGuid().ToString("N")[..8];
-            _wsClients[clientId] = ws;
-            OnLog?.Invoke($"[WSManager] WS client connected: {clientId}");
+            context.Items["clientId"] = clientId;
+            _wsClients[clientId] = context;
 
-            await WaitForConnectionClose(ws, clientId, ct);
+            OnLog?.Invoke($"[WSManager] WS client connected: {clientId} (total: {_wsClients.Count})");
         }
 
         /// <summary>
-        /// 向所有连接的 WS 客户端推送命令执行回执。
+        /// 客户端断开连接时调用 — 从连接池中移除。
+        /// </summary>
+        protected override Task OnClientDisconnectedAsync(IWebSocketContext context)
+        {
+            if (context.Items.TryGetValue("clientId", out var idObj) && idObj is string clientId)
+            {
+                _wsClients.TryRemove(clientId, out _);
+                OnLog?.Invoke($"[WSManager] WS client disconnected: {clientId} (remaining: {_wsClients.Count})");
+            }
+
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 收到客户端消息时调用（当前未使用，保持连接活跃）。
+        /// </summary>
+        protected override Task OnMessageReceivedAsync(
+            IWebSocketContext context,
+            byte[] rxBuffer,
+            IWebSocketReceiveResult rxResult)
+        {
+            // 当前不处理来自客户端的消息；可用于 ping/pong 或 future 协议扩展
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// 向所有已连接的 WS 客户端推送命令执行回执。
         /// </summary>
         public async Task PushReceiptAsync(string requestId, string resultJson)
         {
             var payload = $"{{\"requestId\":\"{requestId}\",\"status\":\"completed\",\"data\":{resultJson}}}";
+            var bytes = s_Utf8.GetBytes(payload);
 
             var deadClients = new List<string>();
             foreach (var kvp in _wsClients)
             {
                 try
                 {
-                    if (kvp.Value.State == WebSocketState.Open)
+                    var ctx = kvp.Value;
+                    if (ctx.WebSocket.State == WebSocketState.Open)
                     {
-                        var bytes = s_Utf8.GetBytes(payload);
-                        await kvp.Value.SendAsync(
-                            new ArraySegment<byte>(bytes),
-                            WebSocketMessageType.Text,
-                            true,
-                            CancellationToken.None);
+                        await SendAsync(ctx, bytes, 0, bytes.Length, true);
                     }
                     else
                     {
@@ -108,38 +120,34 @@ namespace MCV_Module.GlobalManager.CLI
             }
 
             foreach (var key in deadClients)
-                _wsClients.Remove(key);
+            {
+                _wsClients.TryRemove(key, out _);
+            }
+
+            if (deadClients.Count > 0)
+            {
+                OnLog?.Invoke($"[WSManager] Cleaned up {deadClients.Count} dead client(s)");
+            }
         }
 
-        private async Task WaitForConnectionClose(WebSocket ws, string clientId, CancellationToken ct)
+        /// <summary>
+        /// 从 URI 查询字符串中提取指定参数的值。
+        /// </summary>
+        private static string ExtractQueryParam(Uri uri, string paramName)
         {
-            try
+            if (uri == null || string.IsNullOrEmpty(uri.Query))
+                return null;
+
+            var query = uri.Query.TrimStart('?');
+            var parts = query.Split('&');
+            foreach (var part in parts)
             {
-                var buffer = new byte[1024];
-                while (ws.State == WebSocketState.Open && !ct.IsCancellationRequested)
-                {
-                    var result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), ct);
-                    if (result.MessageType == WebSocketMessageType.Close)
-                    {
-                        await ws.CloseAsync(
-                            WebSocketCloseStatus.NormalClosure,
-                            "Closing",
-                            CancellationToken.None);
-                        break;
-                    }
-                }
+                var kv = part.Split('=');
+                if (kv.Length == 2 && kv[0].Equals(paramName, StringComparison.OrdinalIgnoreCase))
+                    return Uri.UnescapeDataString(kv[1]);
             }
-            catch (OperationCanceledException) { }
-            catch (WebSocketException) { }
-            catch (Exception e)
-            {
-                OnLogWarning?.Invoke($"[WSManager] WS error ({clientId}): {e.Message}");
-            }
-            finally
-            {
-                _wsClients.Remove(clientId);
-                OnLog?.Invoke($"[WSManager] WS client disconnected: {clientId}");
-            }
+
+            return null;
         }
     }
 }
