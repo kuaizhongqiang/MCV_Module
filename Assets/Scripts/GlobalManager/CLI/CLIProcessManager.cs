@@ -37,12 +37,16 @@ namespace MCV_Module.GlobalManager.CLI
 
             try
             {
+                // 构建后 StreamingAssets 为只读，运行时数据需写入 persistentDataPath
+                string streamingAssetsDir = Path.GetDirectoryName(mcpExePath);
+                string persistentDir = Path.Combine(Application.persistentDataPath, "AgentCanvas");
+
                 _cliProcess = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = mcpExePath,
-                        WorkingDirectory = Path.GetDirectoryName(mcpExePath),
+                        WorkingDirectory = streamingAssetsDir,
                         UseShellExecute = false,
                         CreateNoWindow = true,
                         RedirectStandardInput = true,
@@ -51,6 +55,11 @@ namespace MCV_Module.GlobalManager.CLI
                     },
                     EnableRaisingEvents = true,
                 };
+
+                // 传入环境变量，让 Python 侧知道可写路径和只读数据路径
+                _cliProcess.StartInfo.EnvironmentVariables["STREAMING_ASSETS_PATH"] = persistentDir;
+                _cliProcess.StartInfo.EnvironmentVariables["STREAMING_ASSETS_DATA_PATH"] = streamingAssetsDir;
+                _cliProcess.StartInfo.EnvironmentVariables["PERSISTENT_DATA_PATH"] = Application.persistentDataPath;
 
                 _cliProcess.OutputDataReceived += (_, e) =>
                 {
