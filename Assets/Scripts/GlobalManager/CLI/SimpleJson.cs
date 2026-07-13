@@ -84,8 +84,9 @@ namespace MCV_Module.GlobalManager.CLI
                         }
                         else if (inner[i] == '{' || inner[i] == '[')
                         {
-                            // 嵌套对象/数组 — 跳过
+                            // 嵌套对象/数组 — 捕获为 JSON 字符串
                             char depthChar = inner[i];
+                            int start = i;
                             int depth = 1; i++;
                             while (i < inner.Length && depth > 0)
                             {
@@ -94,7 +95,7 @@ namespace MCV_Module.GlobalManager.CLI
                                 if (depth > 0) i++;
                             }
                             i++;
-                            obj[key.ToString()] = "";
+                            obj[key.ToString()] = inner.Substring(start, i - start);
                         }
                         else
                         {

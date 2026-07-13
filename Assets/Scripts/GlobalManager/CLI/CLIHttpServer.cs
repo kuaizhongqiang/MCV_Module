@@ -8,16 +8,13 @@ using EmbedIO;
 using EmbedIO.Routing;
 using EmbedIO.WebApi;
 using MCV_Module.Data;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using UnityEngine;
 
 namespace MCV_Module.GlobalManager.CLI
 {
     /// <summary>
-    /// CLI HTTP 服务器 — 管理 EmbedIO WebServer 生命周期、请求路由、鉴权、/cmd 和 /data/export 端点。
+    /// CLI HTTP 服务器 — 基于 EmbedIO WebServer，统一管理 HTTP API 和 WebSocket。
     /// 运行在后台线程，通过事件向上层通知命令到达。
-    /// 实现 IDisposable 以确保 IL2CPP 兼容的资源清理。
     /// </summary>
     public class CLIHttpServer : IDisposable
     {
@@ -26,15 +23,11 @@ namespace MCV_Module.GlobalManager.CLI
         private readonly CLIWebSocketManager _wsManager;
         private WebServer _server;
         private bool _disposed;
-        private static readonly Encoding s_Utf8 = new UTF8Encoding(false);
+        internal CLICommandHandler CommandHandler { get; set; }
 
-        /// <summary>服务器是否正在运行</summary>
         public bool IsRunning => _server != null && !_disposed;
 
-        /// <summary>收到新命令时触发</summary>
         public event Action<CommandContext> OnCommandReceived;
-
-        /// <summary>日志回调</summary>
         public event Action<string> OnLog;
         public event Action<string> OnLogWarning;
         public event Action<string> OnLogError;
@@ -46,135 +39,172 @@ namespace MCV_Module.GlobalManager.CLI
             _wsManager = wsManager;
         }
 
-        /// <summary>
-        /// 启动 EmbedIO WebServer，开始监听请求。
-        /// </summary>
         public async Task StartAsync(CancellationToken ct)
         {
             try
             {
                 _server = new WebServer(o => o
                         .WithUrlPrefix($"http://127.0.0.1:{_port}/")
+                        .WithUrlPrefix($"http://localhost:{_port}/")
                         .WithMode(HttpListenerMode.EmbedIO))
                     .WithWebApi("/", m => m
-                        .WithController(() => new CommandController(this))
-                        .WithController(() => new DataExportController(this)))
-                    .WithWebSocket("/ws", m => m.WithModule(() => _wsManager));
+                        .WithController(() => new CommandApiController(this)))
+                    .WithModule(_wsManager);
 
                 _server.StateChanged += (s, e) =>
-                {
                     OnLog?.Invoke($"[CLIHttpServer] State: {e.NewState}");
-                };
 
                 OnLog?.Invoke($"[CLIHttpServer] Starting on port {_port}");
                 await _server.RunAsync(ct);
                 OnLog?.Invoke($"[CLIHttpServer] Server stopped");
             }
-            catch (OperationCanceledException)
-            {
-                // Normal shutdown via cancellation token
-            }
+            catch (OperationCanceledException) { }
             catch (Exception e)
             {
                 OnLogError?.Invoke($"[CLIHttpServer] Failed to start: {e.Message}");
             }
         }
 
-        /// <summary>
-        /// 停止并释放 WebServer。
-        /// </summary>
         public void Stop()
         {
             if (_server != null)
             {
-                try
-                {
-                    _server.Dispose();
-                }
-                catch (Exception e)
-                {
-                    OnLogWarning?.Invoke($"[CLIHttpServer] Stop error: {e.Message}");
-                }
+                try { _server.Dispose(); }
+                catch (Exception e) { OnLogWarning?.Invoke($"[CLIHttpServer] Stop error: {e.Message}"); }
                 _server = null;
             }
         }
 
-        // ── IDisposable ─────────────────────────────────────────
-
         public void Dispose()
         {
-            Dispose(true);
+            if (_disposed) return;
+            Stop();
+            _disposed = true;
             GC.SuppressFinalize(this);
         }
 
-        protected virtual void Dispose(bool disposing)
+        // ── 鉴权 ───────────────────────────────────────────────
+
+        private bool CheckAuth(IHttpContext context)
         {
-            if (_disposed) return;
-            if (disposing)
-            {
-                Stop();
-            }
-            _disposed = true;
-        }
-
-        // ── 内部辅助（由 Controller 使用）────────────────────────
-
-        internal bool CheckAuth(IHttpContext context)
-        {
-            if (string.IsNullOrEmpty(_token))
-                return true; // 无 token 时放行（开发模式）
-
+            if (string.IsNullOrEmpty(_token)) return true;
             var authHeader = context.Request.Headers["Authorization"];
-            if (string.IsNullOrEmpty(authHeader))
-                return false;
-
-            return authHeader == $"Bearer {_token}";
+            return !string.IsNullOrEmpty(authHeader) && authHeader == $"Bearer {_token}";
         }
 
-        internal async Task SendJsonResponse(IHttpContext context, int statusCode, object data)
+        // ── WebApi Controller ──────────────────────────────────
+
+        private class CommandApiController : WebApiController
         {
-            var json = JsonConvert.SerializeObject(data);
-            var bytes = s_Utf8.GetBytes(json);
+            private readonly CLIHttpServer _server;
 
-            context.Response.StatusCode = statusCode;
-            context.Response.ContentType = "application/json; charset=utf-8";
-            context.Response.ContentLength64 = bytes.Length;
-            await context.Response.OutputStream.WriteAsync(bytes, 0, bytes.Length);
+            public CommandApiController(CLIHttpServer server) => _server = server;
+
+            [Route(HttpVerbs.Post, "/cmd")]
+            public async Task ReceiveCommand()
+            {
+                if (!_server.CheckAuth(HttpContext))
+                {
+                    await SendError(401, "Unauthorized");
+                    return;
+                }
+
+                string body = await HttpContext.GetRequestBodyAsStringAsync().ConfigureAwait(false);
+                var request = SimpleJson.Parse(body);
+                if (request == null)
+                {
+                    await SendError(400, "Invalid JSON");
+                    return;
+                }
+
+                string requestId = request.GetString("requestId", "");
+                string command = request.GetString("command", "");
+                string paramsJson = request.GetRaw("params", "{}");
+
+                if (string.IsNullOrEmpty(requestId) || string.IsNullOrEmpty(command))
+                {
+                    await SendError(400, "Missing requestId or command");
+                    return;
+                }
+
+                await SendJson(200, new { requestId, status = "received" });
+
+                var cmdCtx = new CommandContext
+                {
+                    RequestId = requestId,
+                    Command = command,
+                    ParamsJson = paramsJson,
+                    ReceivedAt = DateTime.UtcNow,
+                };
+                _server.OnCommandReceived?.Invoke(cmdCtx);
+            }
+
+            [Route(HttpVerbs.Get, "/data/export")]
+            public async Task GetExportData()
+            {
+                var items = _server.CollectDataExport();
+                await SendJson(200, items);
+            }
+
+            [Route(HttpVerbs.Get, "/result")]
+            public async Task PollResult()
+            {
+                var requestId = HttpContext.Request.QueryString["requestId"];
+                if (string.IsNullOrEmpty(requestId))
+                {
+                    await SendJson(400, new { status = "error", message = "Missing requestId" });
+                    return;
+                }
+
+                var result = _server.CommandHandler?.PollResult(requestId);
+                if (result != null)
+                {
+                    await SendJson(200, new { status = "completed", data = SimpleJson.Parse(result) });
+                }
+                else
+                {
+                    await SendJson(200, new { status = "pending" });
+                }
+            }
+
+            private async Task SendError(int code, string message)
+            {
+                await SendJson(code, new { status = "error", code, message });
+            }
+
+            private async Task SendJson(int statusCode, object data)
+            {
+                var json = SimpleJson.Serialize(data);
+                HttpContext.Response.StatusCode = statusCode;
+                await HttpContext.SendStringAsync(json, "application/json; charset=utf-8",
+                    Encoding.UTF8);
+            }
         }
 
-        internal List<object> CollectDataExport()
+        // ── /data/export 数据收集 ─────────────────────────────
+
+        private List<object> CollectDataExport()
         {
             var items = new List<object>();
-
             try
             {
                 var dataMgrType = Type.GetType("MCV_Module.GlobalManager.GlobalDataMgr");
-                if (dataMgrType != null)
+                if (dataMgrType?.GetProperty("Instance")?.GetValue(null) is var instance && instance != null)
                 {
-                    var instance = dataMgrType.GetProperty("Instance")?.GetValue(null);
-                    if (instance != null)
+                    foreach (var prop in instance.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
                     {
-                        var props = instance.GetType().GetProperties(
-                            BindingFlags.Public | BindingFlags.Instance);
-                        foreach (var prop in props)
+                        if (typeof(DataBase).IsAssignableFrom(prop.PropertyType) && prop.GetValue(instance) is DataBase db)
                         {
-                            if (typeof(DataBase).IsAssignableFrom(prop.PropertyType))
+                            items.Add(new
                             {
-                                var db = prop.GetValue(instance) as DataBase;
-                                if (db != null)
-                                {
-                                    items.Add(new
-                                    {
-                                        id = db.id,
-                                        displayName = db.displayName,
-                                        description = db.description ?? "",
-                                        tag = Array.Empty<string>(),
-                                        data = new { },
-                                        knowledgeOriginal = "",
-                                        templateType = ""
-                                    });
-                                }
-                            }
+                                id = db.id,
+                                displayName = db.displayName,
+                                description = db.description ?? "",
+                                tag = Array.Empty<string>(),
+                                data = new { },
+                                knowledgeOriginal = "",
+                                templateType = ""
+                            });
                         }
                     }
                 }
@@ -183,118 +213,7 @@ namespace MCV_Module.GlobalManager.CLI
             {
                 OnLogWarning?.Invoke($"[CLIHttpServer] Data export error: {e.Message}");
             }
-
             return items;
-        }
-
-        // ── WebApi Controllers ─────────────────────────────────
-
-        /// <summary>
-        /// 处理 POST /cmd — 接收 Agent 命令，解析 JSON 体，触发 OnCommandReceived 事件。
-        /// </summary>
-        private class CommandController : WebApiController
-        {
-            private readonly CLIHttpServer _server;
-
-            public CommandController(CLIHttpServer server)
-            {
-                _server = server;
-            }
-
-            [Route(HttpVerbs.Post, "/cmd")]
-            public async Task ReceiveCommand()
-            {
-                // 鉴权
-                if (!_server.CheckAuth(HttpContext))
-                {
-                    await _server.SendJsonResponse(HttpContext, 401, new
-                    {
-                        status = "error",
-                        code = 401,
-                        message = "Unauthorized"
-                    });
-                    return;
-                }
-
-                // 读取请求体
-                string body;
-                using (var reader = new System.IO.StreamReader(
-                    HttpContext.Request.InputStream, s_Utf8))
-                {
-                    body = await reader.ReadToEndAsync();
-                }
-
-                // 解析 JSON
-                JObject request;
-                try
-                {
-                    request = JObject.Parse(body);
-                }
-                catch (JsonReaderException)
-                {
-                    await _server.SendJsonResponse(HttpContext, 400, new
-                    {
-                        status = "error",
-                        code = 400,
-                        message = "Invalid JSON"
-                    });
-                    return;
-                }
-
-                string requestId = request.Value<string>("requestId") ?? "";
-                string command = request.Value<string>("command") ?? "";
-                string paramsJson = request.Value<string>("params") ?? "{}";
-
-                if (string.IsNullOrEmpty(requestId) || string.IsNullOrEmpty(command))
-                {
-                    await _server.SendJsonResponse(HttpContext, 400, new
-                    {
-                        status = "error",
-                        code = 400,
-                        message = "Missing requestId or command"
-                    });
-                    return;
-                }
-
-                // 立即回复 received
-                await _server.SendJsonResponse(HttpContext, 200, new
-                {
-                    requestId,
-                    status = "received"
-                });
-
-                // 通知上层处理命令
-                var cmdCtx = new CommandContext
-                {
-                    RequestId = requestId,
-                    Command = command,
-                    ParamsJson = paramsJson,
-                    ReceivedAt = DateTime.UtcNow,
-                };
-
-                _server.OnCommandReceived?.Invoke(cmdCtx);
-            }
-        }
-
-        /// <summary>
-        /// 处理 GET /data/export — 导出 GlobalDataMgr 中所有 DataBase 派生属性的简明信息。
-        /// </summary>
-        private class DataExportController : WebApiController
-        {
-            private readonly CLIHttpServer _server;
-
-            public DataExportController(CLIHttpServer server)
-            {
-                _server = server;
-            }
-
-            [Route(HttpVerbs.Get, "/data/export")]
-            public async Task GetExportData()
-            {
-                // 数据导出不要求鉴权（或可按需开启）
-                var items = _server.CollectDataExport();
-                await _server.SendJsonResponse(HttpContext, 200, items);
-            }
         }
     }
 }

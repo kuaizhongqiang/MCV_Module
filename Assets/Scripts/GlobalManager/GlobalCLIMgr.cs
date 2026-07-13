@@ -68,6 +68,7 @@ namespace MCV_Module.GlobalManager
                 setStatus: status => SetAgentStatus(status)
             );
             _httpServer = new CLIHttpServer(_port, _token, _wsManager);
+            _httpServer.CommandHandler = _commandHandler;
             _processManager = new CLIProcessManager();
 
             // 注册日志回调

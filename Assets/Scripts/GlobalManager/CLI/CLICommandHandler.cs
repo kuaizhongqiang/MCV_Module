@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -14,6 +15,8 @@ namespace MCV_Module.GlobalManager.CLI
         private readonly Action<string, string> _onResult;          // (requestId, resultJson)
         private readonly Action<string, string> _onCommandExecuted; // (command, requestId)
         private readonly Action<string> _setStatus;                 // AgentStatus 更新
+        private readonly ConcurrentDictionary<string, string> _results = new();
+        private readonly int _maxResults = 100;
 
         /// <summary>待处理的命令数</summary>
         public int PendingCount => _pendingCommands.Count;
@@ -149,6 +152,7 @@ namespace MCV_Module.GlobalManager.CLI
                 }
 
                 _onResult(ctx.RequestId, resultJson);
+                StoreResult(ctx.RequestId, resultJson);
                 _onCommandExecuted?.Invoke(ctx.Command, ctx.RequestId);
                 TotalExecuted++;
             }
@@ -176,6 +180,25 @@ namespace MCV_Module.GlobalManager.CLI
         {
             _pendingCommands.Clear();
             _setStatus("idle");
+        }
+
+        /// <summary>Store a command result for HTTP polling (Editor mode WS fallback).</summary>
+        public void StoreResult(string requestId, string resultJson)
+        {
+            _results[requestId] = resultJson;
+            // Trim old entries to prevent memory leak
+            if (_results.Count > _maxResults)
+            {
+                var oldest = _results.Keys.OrderBy(k => k).FirstOrDefault();
+                if (oldest != null) _results.TryRemove(oldest, out _);
+            }
+        }
+
+        /// <summary>Poll and consume a command result by requestId.</summary>
+        public string PollResult(string requestId)
+        {
+            _results.TryRemove(requestId, out var result);
+            return result;
         }
 
         // ── 命令处理程序 ───────────────────────────────────────
