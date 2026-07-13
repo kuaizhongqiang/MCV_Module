@@ -111,4 +111,28 @@ namespace MCV_Module.Event
         public float TimeoutSeconds { get; }
         public StepTimeoutEvent(string stepId, float timeoutSeconds) { StepId = stepId; TimeoutSeconds = timeoutSeconds; }
     }
+
+    // ────────────────────── CLI / AgentCanvas ──────────────────────
+
+    /// <summary>Agent 状态变化事件（idle / thinking / searching / rendering）</summary>
+    public class AgentStatusChangedEvent
+    {
+        public string Status { get; }
+        public AgentStatusChangedEvent(string status) { Status = status; }
+    }
+
+    /// <summary>CLI 子进程状态事件</summary>
+    public class CLIProcessStatusEvent
+    {
+        public bool IsRunning { get; }
+        public CLIProcessStatusEvent(bool isRunning) { IsRunning = isRunning; }
+    }
+
+    /// <summary>Agent 命令执行完成事件</summary>
+    public class CommandExecutedEvent
+    {
+        public string Command { get; }
+        public string RequestId { get; }
+        public CommandExecutedEvent(string command, string requestId) { Command = command; RequestId = requestId; }
+    }
 }
