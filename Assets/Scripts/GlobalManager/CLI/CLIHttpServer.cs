@@ -51,6 +51,8 @@ namespace MCV_Module.GlobalManager.CLI
             {
                 _httpListener = new HttpListener();
                 _httpListener.Prefixes.Add($"http://localhost:{_port}/");
+                _httpListener.Prefixes.Add($"http://127.0.0.1:{_port}/");
+                _httpListener.Prefixes.Add($"http://[::1]:{_port}/");
                 _httpListener.Start();
                 OnLog?.Invoke($"[CLIHttpServer] HTTP server started on port {_port}");
 

@@ -41,11 +41,17 @@ namespace MCV_Module.GlobalManager.CLI
                 return;
             }
 
+            // Mono HttpListener may not detect IsWebSocketRequest correctly
             if (!ctx.Request.IsWebSocketRequest)
             {
-                ctx.Response.StatusCode = 400;
-                ctx.Response.Close();
-                return;
+                var upgradeHeader = ctx.Request.Headers["Upgrade"];
+                if (string.IsNullOrEmpty(upgradeHeader) ||
+                    !"websocket".Equals(upgradeHeader, StringComparison.OrdinalIgnoreCase))
+                {
+                    ctx.Response.StatusCode = 400;
+                    ctx.Response.Close();
+                    return;
+                }
             }
 
             WebSocketContext wsCtx;
