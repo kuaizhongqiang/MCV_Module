@@ -57,7 +57,7 @@ namespace MCV_Module.GlobalManager.CLI
             WebSocketContext wsCtx;
             try
             {
-                wsCtx = await ctx.AcceptWebSocketAsync(null);
+                wsCtx = await ctx.AcceptWebSocketAsync("agentcanvas");
             }
             catch (Exception e)
             {
