@@ -1,0 +1,609 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   AgentCanvas Design System — Design Tokens & Component Styles
+   ═══════════════════════════════════════════════════════════════════════════
+   Aesthetic direction:  Educational Laboratory — warm, inviting, scientific.
+   Combines the precision of a modern IDE with the approachability of
+   a well-worn lab notebook. Deep teal accents against ivory backgrounds,
+   with amber highlights for interactive elements.
+
+   USS ≠ CSS — see ui-toolkit skill for USS-specific constraints:
+   - No calc(), var(), em, rem, vh, rgba(), box-shadow
+   - display only supports flex/none
+   - text-align → -unity-text-align
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Design Tokens ────────────────────────────────────────────────────────
+   These are NOT CSS variables — they are documentation of the color/spacing
+   system. Actual values are hardcoded per-selector (USS limitation).
+   ───────────────────────────────────────────────────────────────────────────
+   Color Palette:
+     Primary Deep Teal:    #0D7377
+     Primary Teal Light:   #14A3A8
+     Accent Amber:         #F0A500
+     Accent Amber Light:   #FCCB4A
+     Success Green:        #2DA77A
+     Error Red:            #D64545
+     Background Ivory:     #F5F0E8
+     Surface White:        #FFFFFF
+     Surface Warm:         #FDF8F0
+     Text Primary:         #2C2C2C
+     Text Secondary:       #6B6B6B
+     Border Light:         #E0D8CC
+     Border Medium:        #C4B8A8
+   ─────────────────────────────────────────────────────────────────────── */
+
+/* ── Root Container ──────────────────────────────────────────────────────── */
+
+#agent-canvas-root {
+    background-color: #F5F0E8;
+    color: #2C2C2C;
+    font-size: 15px;
+    flex-grow: 1;
+}
+
+/* ── Shared Element Base ────────────────────────────────────────────────── */
+
+.agent-element {
+    margin-bottom: 10px;
+    border-radius: 8px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LAYOUT: 3 种布局的容器样式
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* free_stack — 自由堆积，允许溢出滚动 */
+.agent-layout-free_stack {
+    overflow: hidden;
+    position: absolute;
+}
+
+.agent-layout-free_stack:hover {
+    overflow: auto;
+}
+
+/* waterfall — 条目瀑布流，交替底色 */
+.agent-layout-waterfall {
+    flex-direction: column;
+    padding: 12px;
+}
+
+.agent-layout-waterfall .agent-element:nth-child(even) {
+    background-color: #FDF8F0;
+}
+
+.agent-layout-waterfall .agent-element:nth-child(odd) {
+    background-color: #FFFFFF;
+}
+
+/* three_column — 三栏分区 */
+.agent-layout-three_column {
+    flex-direction: row;
+    padding: 8px;
+}
+
+.agent-column-left,
+.agent-column-center,
+.agent-column-right {
+    padding: 10px;
+    flex-grow: 1;
+    flex-basis: 0;
+}
+
+.agent-column-center {
+    border-left-width: 1px;
+    border-right-width: 1px;
+    border-left-color: #E0D8CC;
+    border-right-color: #E0D8CC;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ELEMENT: title — 页面主标题
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-title {
+    margin-bottom: 16px;
+    padding: 14px 18px;
+    background-color: #FFFFFF;
+    border-left-width: 4px;
+    border-left-color: #0D7377;
+    border-radius: 4px;
+}
+
+.agent-title-text {
+    font-size: 26px;
+    -unity-font-style: bold;
+    color: #0D7377;
+    -unity-text-align: middle-left;
+    letter-spacing: 0.5px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ELEMENT: subtitle_text — 小标题 + 正文
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-subtitle-text {
+    padding: 12px 16px;
+    background-color: #FFFFFF;
+    border-radius: 8px;
+}
+
+.agent-subtitle-title {
+    font-size: 19px;
+    -unity-font-style: bold;
+    color: #0D7377;
+    margin-bottom: 6px;
+    letter-spacing: 0.3px;
+}
+
+.agent-subtitle-content {
+    font-size: 14px;
+    color: #4A4A4A;
+    white-space: normal;
+    line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ELEMENT: image — 单张图片
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-image {
+    padding: 8px;
+    background-color: #FFFFFF;
+    border-radius: 8px;
+    border-color: #E0D8CC;
+    border-width: 1px;
+}
+
+.agent-image-element {
+    flex-grow: 1;
+    min-height: 140px;
+    border-radius: 4px;
+}
+
+.agent-image-caption {
+    font-size: 12px;
+    color: #6B6B6B;
+    -unity-text-align: middle-center;
+    margin-top: 6px;
+    -unity-font-style: italic;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ELEMENT: image_text — 图文组合
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-image-text {
+    padding: 12px;
+    background-color: #FFFFFF;
+    border-radius: 8px;
+    flex-direction: row;
+}
+
+.agent-image-text-image {
+    min-height: 100px;
+    border-radius: 4px;
+    border-color: #E0D8CC;
+    border-width: 1px;
+}
+
+.agent-image-text-content {
+    padding-left: 12px;
+}
+
+.agent-image-text-title {
+    font-size: 17px;
+    -unity-font-style: bold;
+    color: #0D7377;
+    margin-bottom: 6px;
+}
+
+.agent-image-text-body {
+    font-size: 13px;
+    color: #4A4A4A;
+    white-space: normal;
+    line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ELEMENT: choice — 选择题
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-choice {
+    padding: 16px;
+    background-color: #FFFFFF;
+    border-radius: 10px;
+    border-color: #E0D8CC;
+    border-width: 1px;
+}
+
+.agent-choice-question {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: #2C2C2C;
+    margin-bottom: 12px;
+}
+
+.agent-choice-options {
+    margin-bottom: 10px;
+}
+
+/* RadioButton 容器内的选项标签 */
+.agent-choice-options .unity-radio-button__label {
+    font-size: 14px;
+    color: #2C2C2C;
+}
+
+.agent-choice-options .unity-radio-button__checkmark-background {
+    background-color: #FFFFFF;
+    border-color: #C4B8A8;
+    border-width: 2px;
+}
+
+/* 选中态 */
+.agent-choice-options .unity-radio-button__checkmark-background.checked {
+    background-color: #14A3A8;
+    border-color: #0D7377;
+}
+
+.agent-choice-submit {
+    background-color: #F0A500;
+    color: #2C2C2C;
+    border-radius: 6px;
+    padding: 8px 24px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    align-self: flex-start;
+    border-width: 0;
+}
+
+/* hover / active — via USS pseudo-classes (Unity 2023.1+) */
+.agent-choice-submit:hover {
+    background-color: #FCCB4A;
+}
+
+.agent-choice-submit:active {
+    background-color: #E09500;
+    scale: 0.96;
+}
+
+/* 正确/错误反馈 */
+.agent-choice-correct {
+    background-color: #E8F5E9;
+    border-color: #2DA77A;
+    border-width: 2px;
+}
+
+.agent-choice-incorrect {
+    background-color: #FFEBEE;
+    border-color: #D64545;
+    border-width: 2px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ELEMENT: fill — 填空题
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-fill {
+    padding: 16px;
+    background-color: #FFFFFF;
+    border-radius: 10px;
+    border-color: #E0D8CC;
+    border-width: 1px;
+}
+
+.agent-fill-question {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: #2C2C2C;
+    margin-bottom: 12px;
+}
+
+.agent-fill-input {
+    margin-bottom: 10px;
+}
+
+.agent-fill-input .unity-base-text-field__label {
+    font-size: 14px;
+    color: #6B6B6B;
+}
+
+.agent-fill-input .unity-base-text-field__input {
+    font-size: 15px;
+    color: #2C2C2C;
+    background-color: #FDF8F0;
+    border-color: #C4B8A8;
+    border-width: 1px;
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+.agent-fill-input .unity-base-text-field__input:focus {
+    border-color: #14A3A8;
+    border-width: 2px;
+}
+
+.agent-fill-submit {
+    background-color: #F0A500;
+    color: #2C2C2C;
+    border-radius: 6px;
+    padding: 8px 24px;
+    font-size: 15px;
+    -unity-font-style: bold;
+    align-self: flex-start;
+    border-width: 0;
+}
+
+.agent-fill-submit:hover {
+    background-color: #FCCB4A;
+}
+
+.agent-fill-submit:active {
+    background-color: #E09500;
+    scale: 0.96;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ELEMENT: model — 3D 模型展示
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-model {
+    padding: 12px;
+    background-color: #FFFFFF;
+    border-radius: 10px;
+    min-height: 220px;
+}
+
+.agent-model-label {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: #0D7377;
+    margin-bottom: 8px;
+}
+
+.agent-model-viewport {
+    background-color: #F0EDE4;
+    border-color: #D0C8B8;
+    border-width: 2px;
+    border-radius: 6px;
+    flex-grow: 1;
+    -unity-text-align: middle-center;
+    color: #A09888;
+    font-size: 13px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ELEMENT: video — 视频播放
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-video {
+    padding: 12px;
+    background-color: #FFFFFF;
+    border-radius: 10px;
+    min-height: 200px;
+}
+
+.agent-video-label {
+    font-size: 15px;
+    -unity-font-style: bold;
+    color: #0D7377;
+    margin-bottom: 8px;
+}
+
+.agent-video-player {
+    background-color: #1E1E24;
+    border-radius: 6px;
+    flex-grow: 1;
+    -unity-text-align: middle-center;
+    color: #6B6B6B;
+    font-size: 13px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ELEMENT: button — 单个按钮
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-button {
+    padding: 6px;
+}
+
+.agent-button-element {
+    background-color: #14A3A8;
+    color: #FFFFFF;
+    border-radius: 8px;
+    padding: 10px 28px;
+    font-size: 16px;
+    -unity-font-style: bold;
+    align-self: flex-start;
+    border-width: 0;
+}
+
+.agent-button-element:hover {
+    background-color: #0D7377;
+}
+
+.agent-button-element:active {
+    background-color: #0A5C5F;
+    scale: 0.95;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ELEMENT: button_list — 按钮列表
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-button-list {
+    padding: 10px;
+    background-color: #FFFFFF;
+    border-radius: 10px;
+}
+
+.agent-button-list-title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    color: #0D7377;
+    margin-bottom: 8px;
+}
+
+.agent-button-list-item {
+    background-color: #FDF8F0;
+    color: #2C2C2C;
+    border-color: #E0D8CC;
+    border-width: 1px;
+    border-radius: 8px;
+    padding: 10px 20px;
+    margin-bottom: 6px;
+    -unity-text-align: middle-center;
+    font-size: 14px;
+}
+
+.agent-button-list-item:hover {
+    background-color: #14A3A8;
+    color: #FFFFFF;
+    border-color: #0D7377;
+}
+
+.agent-button-list-item:active {
+    background-color: #0D7377;
+    scale: 0.97;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   FEEDBACK: result.show 交互反馈
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-feedback {
+    margin-top: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+}
+
+.agent-result-correct {
+    background-color: #E8F5E9;
+    color: #1B5E20;
+    font-size: 14px;
+    white-space: normal;
+    border-left-width: 4px;
+    border-left-color: #2DA77A;
+}
+
+.agent-result-incorrect {
+    background-color: #FFEBEE;
+    color: #B71C1C;
+    font-size: 14px;
+    white-space: normal;
+    border-left-width: 4px;
+    border-left-color: #D64545;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MARKDOWN: 富文本解析
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.agent-markdown {
+    padding: 8px;
+    white-space: normal;
+}
+
+.agent-markdown-h1 {
+    font-size: 23px;
+    -unity-font-style: bold;
+    margin-bottom: 10px;
+    color: #0D7377;
+    border-bottom-width: 2px;
+    border-bottom-color: #E0D8CC;
+    padding-bottom: 6px;
+}
+
+.agent-markdown-h2 {
+    font-size: 19px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+    color: #14A3A8;
+}
+
+.agent-markdown-h3 {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+    color: #2C2C2C;
+}
+
+.agent-markdown-paragraph {
+    font-size: 14px;
+    color: #4A4A4A;
+    white-space: normal;
+    margin-bottom: 6px;
+    line-height: 1.6;
+}
+
+.agent-markdown-list-item {
+    margin-bottom: 3px;
+    padding-left: 10px;
+    flex-direction: row;
+}
+
+.agent-markdown-bullet {
+    font-size: 14px;
+    color: #F0A500;
+    min-width: 18px;
+    -unity-text-align: middle-center;
+}
+
+.agent-markdown-text {
+    font-size: 14px;
+    color: #4A4A4A;
+    white-space: normal;
+    line-height: 1.5;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   ANIMATIONS: 页面过渡 & 元件进入
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* 页面淡入 — 通过 opacity 过渡 */
+.agent-page-enter {
+    opacity: 0;
+}
+
+.agent-page-enter-active {
+    opacity: 1;
+}
+
+/* 元件逐个进入的错开延迟 — 在 C# 侧通过 animation-delay 设置 */
+.agent-element-stagger {
+    opacity: 0;
+    translate: 0 12px;
+}
+
+/* 反馈区域的展开动画 */
+.agent-feedback-expand {
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.agent-feedback-expand-active {
+    opacity: 1;
+    max-height: 200px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   GLOBAL: Scrollbar styling
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: #C4B8A8;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: #A09888;
+}
+
+::-webkit-scrollbar-track {
+    background-color: #F5F0E8;
+}
