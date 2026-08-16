@@ -91,7 +91,11 @@ namespace MCV_Module.UI
         {
             string panelPath = "UI/" + panelName;
             GameObject prefab = Resources.Load<GameObject>(panelPath);
-            if (prefab == null) return null;
+            if (prefab == null)
+            {
+                Debug.LogError($"[CanvasBase] 面板 Prefab 不存在：Resources/{panelPath}（请用 MCV/创建/UI Panel 生成器生成）");
+                return null;
+            }
             GameObject go = Instantiate(prefab, transform);
             go.name = panelName;
             PanelBase panel = go.GetComponent<PanelBase>();
