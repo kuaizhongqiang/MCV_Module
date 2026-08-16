@@ -4,6 +4,9 @@
   "displayName": "MCV Module",
   "description": "MCV 框架业务域（虚拟仿真实验教学模块）：Steps/Logic/Controllers、UI 具体实现（Components/Panels/UICanvas/Tools）、元件交互（Objects/Interactives/Elements）与连线管理（ElementManagerBase）。",
   "unity": "2022.3",
+  "testables": [
+    "MCV.Module.Tests"
+  ],
   "keywords": [
     "mcv",
     "module",
