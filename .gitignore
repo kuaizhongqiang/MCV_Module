@@ -1,0 +1,16 @@
+# Unity 宿主工程产物 —— 仓库只含框架包，不含宿主项目内容
+Library/
+Temp/
+Logs/
+UserSettings/
+*.csproj
+*.sln
+*.user
+*.suo
+.vs/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# 包内 .meta 保留提交（与宿主嵌入式状态一致的 GUID 引用）

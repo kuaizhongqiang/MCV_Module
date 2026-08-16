@@ -1,0 +1,19 @@
+{
+  "name": "com.mcv.core",
+  "version": "0.1.0",
+  "displayName": "MCV Core",
+  "description": "MCV 框架核心（基础设施）：Singleton/Event/Interfaces/Models/Utils、UI 基类（UIBase/CanvasBase/PanelBase/ComponentBase）、交互基类（ObjectBase/InteractiveBase）与纯管理器（Global*Mgr）。零业务代码，可独立复用。",
+  "unity": "2022.3",
+  "keywords": [
+    "mcv",
+    "framework",
+    "core"
+  ],
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1",
+    "com.unity.ugui": "1.0.0",
+    "com.unity.inputsystem": "1.11.2",
+    "com.unity.cinemachine": "2.10.7",
+    "com.unity.addressables": "1.22.3"
+  }
+}
