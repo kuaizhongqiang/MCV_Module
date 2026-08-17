@@ -27,5 +27,13 @@ namespace MCV_Module.Utils
         {
             if (VerboseEnabled) Debug.LogFormat(format, args);
         }
+
+        /// <summary>带模块标记的详细日志（可开关）。便于按模块过滤日志。</summary>
+        /// <param name="tag">模块标记，如 "AddrMgr" / "StepMgr"。</param>
+        /// <param name="message">日志内容。</param>
+        public static void Tagged(string tag, object message)
+        {
+            if (VerboseEnabled) Debug.Log($"[{tag}] {message}");
+        }
     }
 }
