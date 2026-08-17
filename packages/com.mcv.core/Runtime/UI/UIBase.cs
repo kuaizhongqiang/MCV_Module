@@ -102,5 +102,15 @@ namespace MCV_Module.UI
             }
         }
         #endregion
+
+        #region 工具方法
+        public static void ClearChildren(Transform parent)
+        {
+            for (int i = parent.childCount - 1; i >= 0; i--)
+            {
+                Destroy(parent.GetChild(i).gameObject);
+            }
+        }
+        #endregion
     }
 }
