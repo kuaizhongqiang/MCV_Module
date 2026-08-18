@@ -8,16 +8,18 @@ using UnityEngine.Networking;
 namespace MCV_Module.Net
 {
     /// <summary>
-    /// AiServer(单 EXE) 的 Unity 客户端 —— 由 GlobalAiMgr 控制。
+    /// AiServer(单 EXE) 的 Unity 客户端 —— 纯协议层，由 GlobalAiMgr 控制。
     ///
-    /// 职责:
-    ///   - 拉起 StreamingAssets/AiServer/AiServer.exe 并轮询 /health 直到就绪
-    ///     (Standalone/Editor; WebGL 只能连远程, 不做拉起)
+    /// ⚠️ 本文件编入 MCV.AiClient.dll（预编译 DLL）：公共类型/方法变更必须
+    ///    在 /bare 改源码 → 重建 DLL → 同步交付形态；禁止直接修改 DLL。
+    ///
+    /// 职责（纯协议，跨平台，无进程操作）:
     ///   - 统一协议对话: POST /v1/chat/completions (流式 SSE / 非流式)
-    ///   - 退出时优雅关闭 /v1/shutdown + 兜底 Kill
+    ///   - 就绪探测: GET /health（轮询；"拉起 EXE"由宿主通过 tryLaunch 回调注入）
+    ///   - 日志拉取: GET /v1/logs
+    ///   - 请求鉴权头: X-Auth-Name / X-Auth-Token
     ///
-    /// 注意: py 交付物只有 AiServer.exe 一个文件, 密钥/端口/模型全部内嵌在 EXE 里,
-    ///   Unity 侧不需要也不应该读取任何配置文件; 端口固定 8765(可由 --port 参数覆盖)。
+    /// 进程管理（拉起/关闭 EXE）见 MCV_Module.Managers.AiServerProcess（留源码，含 #if !UNITY_WEBGL）。
     /// </summary>
     public class AiServerClient
     {
@@ -35,10 +37,7 @@ namespace MCV_Module.Net
         /// <summary>上游对话请求超时(秒), 与 EXE 内嵌 timeout_seconds 一致</summary>
         const int REQUEST_TIMEOUT = 600;
 
-        /// <summary>
-        /// 客户端鉴权名称 —— 必须与 EXE 内嵌白名单(.env CLIENT_WHITELIST)中一组一致。
-        /// 鉴权方式: 每个请求携带 X-Auth-Name + X-Auth-Token 头。
-        /// </summary>
+        /// <summary>客户端鉴权名称 —— 必须与 EXE 内嵌白名单(.env CLIENT_WHITELIST)中一组一致。</summary>
         public const string AuthName = "asdf";
 
         /// <summary>客户端鉴权令牌 —— 必须与 EXE 内嵌白名单(.env CLIENT_WHITELIST)中一组一致</summary>
@@ -46,9 +45,6 @@ namespace MCV_Module.Net
 
         bool _launching;
         bool _ready;
-#if !UNITY_WEBGL
-        System.Diagnostics.Process _process;
-#endif
 
         /// <summary>服务是否已就绪(health 通过)</summary>
         public bool IsReady { get { return _ready; } }
@@ -71,19 +67,14 @@ namespace MCV_Module.Net
             uwr.SetRequestHeader("X-Auth-Token", AuthToken);
         }
 
-        /// <summary>EXE 完整路径(StreamingAssets/AiServer/AiServer.exe)</summary>
-        public static string ExePath
-        {
-            get { return Application.streamingAssetsPath + "/AiServer/AiServer.exe"; }
-        }
-
         // ───────────────────────── 生命周期 ─────────────────────────
 
         /// <summary>
-        /// 确保服务就绪: 已运行则直接通过; 否则拉起 EXE 并轮询 /health。
-        /// 可被多处调用, 内部保证只拉起一次。WebGL 下不做拉起, 仅探测远程服务。
+        /// 确保服务就绪: 已就绪则直接通过; 否则轮询 /health, 未就绪时调用 tryLaunch（由宿主拉起 EXE）。
+        /// 可被多处调用, 内部保证只回调 tryLaunch 一次。WebGL 下 tryLaunch 由宿主实现为 no-op, 仅探测远程服务。
         /// </summary>
-        public IEnumerator EnsureReadyAsync(Action<bool> onReady, float timeoutSeconds = 15f)
+        /// <param name="tryLaunch">需要拉起进程时回调（宿主提供; 幂等）</param>
+        public IEnumerator EnsureReadyAsync(Action tryLaunch, Action<bool> onReady, float timeoutSeconds = 15f)
         {
             if (_ready)
             {
@@ -108,11 +99,7 @@ namespace MCV_Module.Net
                 if (!_launching)
                 {
                     _launching = true;
-#if !UNITY_WEBGL
-                    LaunchProcess();
-#else
-                    // WebGL 无法拉起本地进程, 仅等待远程服务
-#endif
+                    tryLaunch?.Invoke();
                 }
                 yield return new WaitForSeconds(0.25f);
             }
@@ -147,78 +134,10 @@ namespace MCV_Module.Net
             }
         }
 
-#if !UNITY_WEBGL
-        void LaunchProcess()
+        /// <summary>标记服务已停止（宿主关闭进程后调用, 使后续 EnsureReadyAsync 重新探测）</summary>
+        public void MarkStopped()
         {
-            string exe = ExePath;
-            if (!System.IO.File.Exists(exe))
-            {
-                Debug.LogError($"[AiServerClient] 未找到 AiServer EXE: {exe} (请先运行 unity-ai-server/build.bat 打包)");
-                return;
-            }
-
-            try
-            {
-                var psi = new System.Diagnostics.ProcessStartInfo
-                {
-                    FileName = exe,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    Arguments = $"--host {Host} --port {Port} --parent-pid {System.Diagnostics.Process.GetCurrentProcess().Id}",
-                };
-                _process = System.Diagnostics.Process.Start(psi);
-                Debug.Log($"[AiServerClient] 已拉起 AiServer (port {Port})");
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[AiServerClient] 启动 EXE 失败: {e.Message}");
-            }
-        }
-#endif
-
-        /// <summary>同步关闭(OnApplicationQuit 时调用, 协程在退出时不会继续跑)</summary>
-        public void ShutdownNow()
-        {
-#if !UNITY_WEBGL
-            try
-            {
-                var req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(BaseUrl + "/v1/shutdown");
-                req.Method = "POST";
-                req.Timeout = 1500;
-                req.Headers["X-Auth-Name"] = AuthName;
-                req.Headers["X-Auth-Token"] = AuthToken;
-                using (var resp = (System.Net.HttpWebResponse)req.GetResponse()) { }
-            }
-            catch (Exception)
-            {
-                // 服务可能已不在, 忽略
-            }
-            KillProcess();
-#endif
             _ready = false;
-        }
-
-        /// <summary>兜底强杀进程(WebGL 下为空操作)</summary>
-        public void KillProcess()
-        {
-#if !UNITY_WEBGL
-            try
-            {
-                if (_process != null && !_process.HasExited)
-                {
-                    _process.Kill();
-                    _process.WaitForExit(2000);
-                }
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"[AiServerClient] 关闭进程失败: {e.Message}");
-            }
-            finally
-            {
-                _process = null;
-            }
-#endif
         }
 
         /// <summary>拉取 EXE 最近日志(排障用, 需鉴权)。成功时回调日志文本, 失败回调错误描述。</summary>

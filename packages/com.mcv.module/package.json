@@ -13,7 +13,7 @@
     "experiment"
   ],
   "dependencies": {
-    "com.mcv.core": "0.1.2",
+    "com.mcv.core": "0.1.3",
     "com.unity.ugui": "1.0.0",
     "com.unity.textmeshpro": "3.0.7",
     "com.unity.inputsystem": "1.11.2"

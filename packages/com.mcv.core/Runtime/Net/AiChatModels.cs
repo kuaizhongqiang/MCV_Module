@@ -1,6 +1,9 @@
 using System;
 using Newtonsoft.Json;
 
+// ⚠️ 本文件编入 MCV.AiClient.dll（预编译 DLL）：公共类型变更必须
+//    在 /bare 改源码 → 重建 DLL → 同步交付形态；禁止直接修改 DLL。
+
 namespace MCV_Module.Net
 {
     // ───────────────────────── 请求 ─────────────────────────

@@ -14,6 +14,10 @@ namespace MCV_Module.Managers
     ///   - 通过 AiServerClient 与 EXE 走统一协议对话(流式/非流式, 支持 reasoning)
     ///   - 应用退出时关闭 EXE(优雅 /v1/shutdown + 兜底 Kill)
     ///
+    /// 分层:
+    ///   - AiServerClient（MCV.AiClient.dll, 纯协议）: 鉴权/对话/日志
+    ///   - AiServerProcess（本程序集源码）: EXE 拉起/关闭（#if !UNITY_WEBGL）
+    ///
     /// 用法(任意脚本):
     ///   GlobalAiMgr.Instance.Ask("你好", result => { ... });
     ///   GlobalAiMgr.Instance.AskStream("你好", chunk => {...}, result => {...});
@@ -24,8 +28,11 @@ namespace MCV_Module.Managers
         /// <summary>服务启动就绪等待超时(秒)</summary>
         [SerializeField, Header("AiServer 就绪超时(秒)")] float readyTimeoutSeconds = 15f;
 
-        /// <summary>由 GlobalAiMgr 控制的通讯客户端</summary>
+        /// <summary>由 GlobalAiMgr 控制的通讯客户端（纯协议，编入 MCV.AiClient.dll）</summary>
         public AiServerClient Client { get; private set; }
+
+        /// <summary>EXE 宿主进程管理（留源码，含 #if !UNITY_WEBGL）</summary>
+        AiServerProcess _process;
 
         /// <summary>EXE 是否已就绪(health 通过)</summary>
         public bool IsServerReady { get { return Client != null && Client.IsReady; } }
@@ -40,6 +47,7 @@ namespace MCV_Module.Managers
         protected override IEnumerator DelayInit()
         {
             Client = new AiServerClient();
+            _process = new AiServerProcess(Client);
 
             // 注意: 这里不等待服务就绪, 置 isInit 后立即返回,
             // 避免阻塞 Setup 启动链 —— AI 服务就绪是异步的, 由 EnsureServerReady 后台完成。
@@ -51,8 +59,8 @@ namespace MCV_Module.Managers
 
         protected override void OnApplicationQuit()
         {
-            if (Client != null)
-                Client.ShutdownNow();
+            if (_process != null)
+                _process.ShutdownNow();
             base.OnApplicationQuit();
         }
         #endregion
@@ -61,7 +69,7 @@ namespace MCV_Module.Managers
         /// <summary>后台拉起并等待 AiServer 就绪(可重复调用, 幂等)</summary>
         public IEnumerator EnsureServerReadyAsync()
         {
-            yield return Client.EnsureReadyAsync(ok =>
+            yield return Client.EnsureReadyAsync(_process.TryLaunch, ok =>
             {
                 if (!ok)
                     Debug.LogWarning($"[GlobalAiMgr] AiServer 未就绪, 可稍后调用 EnsureServerReadyAsync 重试");
@@ -111,7 +119,7 @@ namespace MCV_Module.Managers
             Action<AiChatResult> onDone, Action<string> onError = null)
         {
             bool ready = false;
-            yield return Client.EnsureReadyAsync(r => ready = r, readyTimeoutSeconds);
+            yield return Client.EnsureReadyAsync(_process.TryLaunch, r => ready = r, readyTimeoutSeconds);
             if (!ready)
             {
                 onError?.Invoke("AiServer 未就绪: " + Client.BaseUrl);
