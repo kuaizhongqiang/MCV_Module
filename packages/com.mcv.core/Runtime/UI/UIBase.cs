@@ -8,14 +8,14 @@ namespace MCV_Module.UI
     public abstract class UIBase : MonoBehaviour
     {
         protected CanvasGroup canvasGroup;
-        Coroutine ActiveAnimCoroutine;
-        bool isAnimating = false;
+        protected Coroutine ActiveAnimCoroutine;
+        protected bool isAnimating = false;
         [Header("初始状态"),Tooltip("是否在实例化时显示")]
         [SerializeField] bool isActiveOnInstance = true;
         [Header("交互状态"), Tooltip("是否可交互")]
         [SerializeField] bool isInteractable = true;
         [Header("动画时间"), Tooltip("显示动画时间")]
-        [SerializeField] float animTime = 0.3f;
+        [SerializeField] protected float animTime = 0.3f;
 
         protected virtual void Awake()
         {
@@ -35,7 +35,7 @@ namespace MCV_Module.UI
         /// 设置UI显示
         /// </summary>
         /// <param name="isActive"></param>
-        public void SetUIActive(bool isActive)
+        public virtual void SetUIActive(bool isActive)
         {
             if (isAnimating)
             {
@@ -54,7 +54,7 @@ namespace MCV_Module.UI
         /// 设置UI显示并立即
         /// </summary>
         /// <param name="isActive"></param>
-        public void SetUIActiveImmediately(bool isActive)
+        public virtual void SetUIActiveImmediately(bool isActive)
         {
             if (isAnimating)
             {

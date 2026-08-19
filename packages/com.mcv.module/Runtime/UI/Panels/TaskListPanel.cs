@@ -1,8 +1,10 @@
+using System.Collections;
 using System.Collections.Generic;
 using MCV_Module.Event;
 using MCV_Module.Models;
 using MCV_Module.Models.Project;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
 namespace MCV_Module.UI.Panels
@@ -12,6 +14,9 @@ namespace MCV_Module.UI.Panels
         [SerializeField] Transform taskToggleParent;
         ProjectClip currentProjectClip;
         List<Toggle> taskToggles = new List<Toggle>();
+        readonly float hideYFloat = -130f;
+        bool isActiveNow = true;
+        bool m_TargetActive = true;   // 当前动画/静止所朝向的目标状态，用于防重复触发
 
         protected override void Awake()
         {
@@ -23,7 +28,20 @@ namespace MCV_Module.UI.Panels
             }
             taskToggles.Clear();
             taskToggles.AddRange(taskToggleParent.GetComponentsInChildren<Toggle>());
+
+            m_TargetActive = isActiveNow;
+            ActiveState(isActiveNow);
         }
+
+        // 测试方法
+        // void Update()
+        // {
+        //     if (Keyboard.current.escapeKey.wasPressedThisFrame)
+        //     {
+        //         SetUIActive(!isActiveNow);
+        //         isActiveNow = !isActiveNow;
+        //     }
+        // }
 
         /// <summary>
         /// 由 Controller 在每次面板绑定后调用：按项目的任务列表装配 Toggle，
@@ -81,5 +99,71 @@ namespace MCV_Module.UI.Panels
                 SetToggleState(taskToggles[i], tasks[i].TaskType == taskType);
             }
         }
+
+        #region 覆盖Active方法
+        public override void SetUIActive(bool isActive)
+        {
+            // 已是目标状态（静止或正在动画前往），不重复触发，避免 switch alpha 出现 0-1-0 抖动
+            if (isActive == m_TargetActive) return;
+
+            m_TargetActive = isActive;
+            if (ActiveAnimCoroutine != null)
+            {
+                StopCoroutine(ActiveAnimCoroutine);
+            }
+            ActiveAnimCoroutine = StartCoroutine(OverrideAnimCoroutine(isActive));
+        }
+
+        public override void SetUIActiveImmediately(bool isActive)
+        {
+            m_TargetActive = isActive;
+            if (ActiveAnimCoroutine != null)
+            {
+                StopCoroutine(ActiveAnimCoroutine);
+            }
+
+            ActiveState(isActive);
+        }
+
+        void ActiveState(bool isActive)
+        {
+            if (canvasGroup != null)
+            {
+                canvasGroup.interactable = isActive;
+                canvasGroup.blocksRaycasts = isActive;
+                canvasGroup.alpha = isActive ? 1 : 0;
+            }
+
+            float targetY = isActive ? 0 : hideYFloat;
+            var layoutRect = taskToggleParent.GetComponent<RectTransform>();
+            Vector2 targetPos = new Vector2(layoutRect.anchoredPosition.x, targetY);
+            layoutRect.anchoredPosition = targetPos;
+        }
+
+        IEnumerator OverrideAnimCoroutine(bool isActive)
+        {
+            isAnimating = true;
+            float time = 0f;
+            float currentLayoutAlpha = canvasGroup != null ? canvasGroup.alpha : (isActive ? 0 : 1);
+            float targetLayoutAlpha = isActive ? 1 : 0;
+            float targetY = isActive ? 0 : hideYFloat; 
+            Vector2 currentPos = taskToggleParent.GetComponent<RectTransform>().anchoredPosition;
+            Vector2 targetPos = new Vector2(currentPos.x, targetY);
+            while (time < animTime)
+            {
+                time += Time.deltaTime;
+                float t = time / animTime;
+                taskToggleParent.GetComponent<RectTransform>().anchoredPosition = Vector2.Lerp(currentPos, targetPos, t);
+                if (canvasGroup != null)
+                    canvasGroup.alpha = Mathf.Lerp(currentLayoutAlpha, targetLayoutAlpha, t);
+                yield return null;
+            }
+
+            ActiveState(isActive);
+
+            ActiveAnimCoroutine = null;
+            isAnimating = false;
+        }
+        #endregion
     }
 }

@@ -205,4 +205,57 @@ namespace MCV_Module.Event
             StepIndex = stepIndex;
         }
     }
+
+    // ── 对话框事件（DialogPanel / DialogController 事件驱动）──────────────
+
+    /// <summary>
+    /// 打开对话框请求事件（业务/步骤/交互系统发布，DialogController 订阅并显示）。
+    /// 订阅方：DialogController。
+    /// 结构：标题 + 文字 + 两个按钮（确认/取消），按钮可按 ShowConfirm/ShowCancel 决定显隐。
+    /// </summary>
+    public class DialogRequestEvent
+    {
+        /// <summary>对话框标题</summary>
+        public string Title;
+        /// <summary>正文内容</summary>
+        public string Content;
+        /// <summary>确认按钮文案（默认「确认」）</summary>
+        public string ConfirmLabel;
+        /// <summary>取消按钮文案（默认「取消」）</summary>
+        public string CancelLabel;
+        /// <summary>是否显示确认按钮（false 时仅文字无按钮）</summary>
+        public bool ShowConfirm;
+        /// <summary>是否显示取消按钮（false 时隐藏取消按钮）</summary>
+        public bool ShowCancel;
+
+        public DialogRequestEvent(string title, string content,
+            bool showConfirm = true, bool showCancel = true,
+            string confirmLabel = "确认", string cancelLabel = "取消")
+        {
+            Title = title;
+            Content = content;
+            ShowConfirm = showConfirm;
+            ShowCancel = showCancel;
+            ConfirmLabel = confirmLabel;
+            CancelLabel = cancelLabel;
+        }
+    }
+
+    /// <summary>
+    /// 对话框结果事件（用户操作后由 DialogController 发布，业务系统订阅）。
+    /// Confirmed 为 true 表示点击了确认按钮，false 表示点击了取消按钮。
+    /// </summary>
+    public class DialogResultEvent
+    {
+        /// <summary>本次结果对应的请求标题（用于区分并发对话框）</summary>
+        public string Title;
+        /// <summary>是否点击确认（取消为 false）</summary>
+        public bool Confirmed;
+
+        public DialogResultEvent(string title, bool confirmed)
+        {
+            Title = title;
+            Confirmed = confirmed;
+        }
+    }
 }

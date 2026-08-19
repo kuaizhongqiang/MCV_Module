@@ -24,9 +24,13 @@ namespace MCV_Module.UI.Panels
         [SerializeField] InputField inputField;
         [SerializeField] Button summitBtn;
         [SerializeField] Text infoText;
+        [SerializeField] Transform modelSwitchToggleParent;
 
         AiBubbleStructBase currentBubble;
         bool hasReasoning;
+        const string ToggleListModelPath = "UI/ModelListToggle";
+        Dictionary<string,string> providerModelDict = new Dictionary<string, string>();
+        Dictionary<string,Toggle> toggleDict = new Dictionary<string, Toggle>();
 
         /// <summary>用户提交输入时触发(携带文本), 由 Controller 订阅。先清后加, 避免重复订阅。</summary>
         public event Action<string> OnSendRequested;
@@ -219,6 +223,19 @@ namespace MCV_Module.UI.Panels
         }
         #endregion
 
+        #region 模型切换
+        // 考虑到多种事件驱动切换，所以将表现层/交互层和逻辑层分开
+        public void SetModelToggle(Toggle toggle, bool isOn)
+        {
+            
+        }
+
+        void OnModelToggleChanged(Toggle toggle,bool isOn)
+        {
+            
+        }
+        #endregion
+        
         #region 工具方法
         T CreateBubble<T>() where T : AiBubbleStructBase
         {
@@ -230,6 +247,17 @@ namespace MCV_Module.UI.Panels
 
             bubbleList.Add(bubble);
             return bubble as T;
+        }
+
+        Toggle CreateModelListToggle(string providerName, string modelName)
+        {
+            GameObject prefab = Resources.Load<GameObject>(ToggleListModelPath);
+            if (prefab == null) return null;
+            GameObject go = Instantiate(prefab, modelSwitchToggleParent);
+            go.name = providerName + " - " + modelName;
+            Toggle toggle = go.GetComponent<Toggle>();
+
+            return toggle;
         }
         #endregion
     }
