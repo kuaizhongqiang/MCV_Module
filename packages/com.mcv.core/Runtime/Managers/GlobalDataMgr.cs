@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using MCV_Module.Models;
 using MCV_Module.Models.Project;
 using MCV_Module.Models.System;
@@ -12,11 +13,13 @@ namespace MCV_Module.Managers
     {
         #region 参数
         [SerializeField, Header("系统数据")] SystemData systemData = new SystemData();
+        [SerializeField, Header("目录数据")] MenuData menuData = new MenuData();
         [SerializeField, Header("内容数据")] ProjectData projectData = new ProjectData();
         [SerializeField, Header("用户数据")] UserData userData = new UserData();
         [SerializeField, Header("语言数据")] LanguageData languageData = new LanguageData();
 
         public SystemData SystemData { get => systemData; set => systemData = value; }
+        public MenuData MenuData { get => menuData; set => menuData = value; }
         public ProjectData ProjectData { get => projectData; set => projectData = value; }
         public UserData UserData { get => userData; set => userData = value; }
         public LanguageData LanguageData { get => languageData; set => languageData = value; }
@@ -84,6 +87,37 @@ namespace MCV_Module.Managers
             }
             return null;
         }
+
+        #region 菜单数据
+        /// <summary>
+        /// 获取目录数据。
+        /// </summary>
+        public static MenuData GetMenuData()
+        {
+            return GlobalDataMgr.Instance.MenuData;
+        }
+
+        /// <summary>
+        /// 获取根菜单列表。
+        /// </summary>
+        public static List<MenuClip> GetRootMenus()
+        {
+            MenuData menuData = GetMenuData();
+            return menuData != null ? menuData.GetRootClips() : new List<MenuClip>();
+        }
+
+        /// <summary>
+        /// 获取指定菜单的子菜单列表。
+        /// </summary>
+        public static List<MenuClip> GetChildMenus(MenuClip parent)
+        {
+            MenuData menuData = GetMenuData();
+            return menuData != null && parent != null
+                ? menuData.GetChildClips(parent)
+                : new List<MenuClip>();
+        }
+        #endregion
+
         #endregion
 
         #region 私有方法

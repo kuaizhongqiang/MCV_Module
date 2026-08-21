@@ -6,6 +6,190 @@ using UnityEngine;
 namespace MCV_Module.Models.Project
 {
     [Serializable]
+    public class MenuData
+    {
+        public List<MenuClip> clips = new List<MenuClip>();
+
+        #region 工厂方法
+        /// <summary>
+        /// 获取根菜单
+        /// </summary>
+        /// <returns></returns>
+        public List<MenuClip> GetRootClips()
+        {
+            var list = new List<MenuClip>();
+            foreach (var clip in clips)
+            {
+                if (clip.parentId == null)
+                {
+                    list.Add(clip);
+                }
+            }
+            return list;
+        }
+        /// <summary>
+        /// 获取子菜单 
+        /// </summary>
+        /// <param name="parentClip"> 父菜单数据 </param>
+        /// <returns></returns>
+        public List<MenuClip> GetChildClips(MenuClip parentClip)
+        {
+            var list = new List<MenuClip>();
+            foreach (var clip in clips)
+            {
+                if (clip.parentId == parentClip.id)
+                {
+                    list.Add(clip);
+                }
+            }
+            return list;
+        }
+        /// <summary>
+        /// 获取子菜单
+        /// </summary>
+        /// <param name="parentId"> 父菜单ID </param>
+        /// <returns></returns>
+        public List<MenuClip> GetChildClips(string parentId)
+        {
+            var list = new List<MenuClip>();
+            foreach (var clip in clips)
+            {
+                if (clip.parentId == parentId)
+                {
+                    list.Add(clip);
+                }
+            }
+            return list;
+
+        }
+        /// <summary>
+        /// 获取父菜单
+        /// </summary>
+        /// <param name="childClip"> 子菜单数据 </param>
+        /// <returns></returns>
+        public MenuClip GetParentClip(MenuClip childClip)
+        {
+            foreach (var clip in clips)
+            {
+                if (clip.id == childClip.parentId)
+                {
+                    return clip;
+                }
+            }
+            return null;
+
+        }
+        /// <summary>
+        /// 获取父菜单
+        /// </summary>
+        /// <param name="childId"> 子菜单ID </param>
+        /// <returns>父菜单；找不到（根菜单或无此ID）返回 null </returns>
+        public MenuClip GetParentClip(string childId)
+        {
+            var child = GetClip(childId);
+            if (child == null)
+            {
+                return null;
+            }
+            return GetParentClip(child);
+        }
+        /// <summary>
+        /// 获取菜单
+        /// </summary>
+        /// <param name="clipId"> 菜单ID </param>
+        /// <returns></returns>
+        public MenuClip GetClip(string clipId)
+        {
+            foreach (var clip in clips)
+            {
+                if (clip.id == clipId)
+                {
+                    return clip;
+                }
+            }
+            return null;
+        }
+        
+        /// <summary>
+        /// 获取菜单在其所属层级（同 parentId）中的索引，而不是整体数组的索引。
+        /// 找不到时返回 -1。
+        /// </summary>
+        /// <param name="clipId"> 菜单ID </param>
+        /// <returns></returns>
+        public int GetClipIndex(string clipId)
+        {
+            var target = GetClip(clipId);
+            if (target == null)
+            {
+                return -1;
+            }
+            return GetClipIndex(target);
+        }
+
+        /// <summary>
+        /// 获取菜单在其所属层级（同 parentId）中的索引，而不是整体数组的索引。
+        /// 找不到时返回 -1。
+        /// </summary>
+        /// <param name="clip"> 菜单数据 </param>
+        /// <returns></returns>
+        public int GetClipIndex(MenuClip clip)
+        {
+            if (clip == null)
+            {
+                return -1;
+            }
+            int index = 0;
+            foreach (var sibling in clips)
+            {
+                if (sibling.parentId == clip.parentId)
+                {
+                    if (sibling == clip)
+                    {
+                        return index;
+                    }
+                    index++;
+                }
+            }
+            return -1;
+        }
+
+        /// <summary>
+        /// 判断菜单是否含有子菜单。
+        /// </summary>
+        /// <param name="clip"> 菜单数据 </param>
+        /// <returns>有子菜单返回 true；无子菜单或参数为 null 返回 false </returns>
+        public bool HasChildren(MenuClip clip)
+        {
+            if (clip == null)
+            {
+                return false;
+            }
+            foreach (var item in clips)
+            {
+                if (item.parentId == clip.id)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        #endregion
+    }
+    [Serializable]
+    public class MenuClip : DataBase
+    {
+        public string parentId;          // 便于创建结构性数据
+        public ProjectClip clip;         // 绑定项目数据
+
+        public MenuClip() { }
+        public MenuClip(string id, string displayName)
+        {
+            this.id = id;
+            this.displayName = displayName;
+        }
+    }
+    
+    [Serializable]
     public class ProjectData
     {
         public List<ProjectClip> clips = new List<ProjectClip>();

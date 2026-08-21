@@ -1,6 +1,6 @@
 {
   "name": "com.mcv.module",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "displayName": "MCV Module",
   "description": "MCV 框架业务域（虚拟仿真实验教学模块）：Steps/Logic/Controllers、UI 具体实现（Components/Panels/UICanvas/Tools）、元件交互（Objects/Interactives/Elements）与连线管理（ElementManagerBase）。",
   "unity": "2022.3",
@@ -13,7 +13,7 @@
     "experiment"
   ],
   "dependencies": {
-    "com.mcv.core": "0.1.4",
+    "com.mcv.core": "0.1.5",
     "com.unity.ugui": "1.0.0",
     "com.unity.textmeshpro": "3.0.7",
     "com.unity.inputsystem": "1.11.2"
