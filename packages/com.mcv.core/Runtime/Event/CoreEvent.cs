@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using MCV_Module.Models;
 using MCV_Module.Models.Project;
+using MCV_Module.Models.User;
 using MCV_Module.Objects.Interactives;
 using UnityEngine;
 
@@ -84,6 +85,23 @@ namespace MCV_Module.Event
     {
         public string SceneName { get; }
         public SceneLoadedEvent(string sceneName) { SceneName = sceneName; }
+    }
+
+    // ── 登录事件 ──────────────────────────────────────────────
+
+    /// <summary>
+    /// 登录通过事件数据（白名单验证通过后由 LoginController 发布。
+    /// 「登录成功后的执行」暂为空：后续业务在此订阅做场景切换等处理）。
+    /// </summary>
+    public class LoginSuccessEvent
+    {
+        /// <summary>登录用户信息（含用户名/用户类型/登录时间）</summary>
+        public UserData User;
+
+        public LoginSuccessEvent(UserData user)
+        {
+            User = user;
+        }
     }
 
     // ── UI 状态事件 ──────────────────────────────────────────

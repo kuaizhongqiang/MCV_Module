@@ -14,3 +14,6 @@ UserSettings/
 Thumbs.db
 
 # 包内 .meta 保留提交（与宿主嵌入式状态一致的 GUID 引用）
+
+# 工具配置（忽略不删除，与 .com-unity-codely.json 同先例）
+.codely-cli/

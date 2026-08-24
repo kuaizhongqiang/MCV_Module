@@ -1,0 +1,19 @@
+{
+    "name": "MCV.Input",
+    "rootNamespace": "",
+    "references": [
+        "MCV.Core",
+        "UnityEngine.UI",
+        "Unity.InputSystem",
+        "Cinemachine"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

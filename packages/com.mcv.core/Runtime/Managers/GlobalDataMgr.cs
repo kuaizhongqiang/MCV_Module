@@ -88,6 +88,35 @@ namespace MCV_Module.Managers
             return null;
         }
 
+        #region 登录
+        /// <summary>
+        /// 登录白名单验证。
+        /// 【暂空】当前直接返回 true（通过），后续在此接入账号密码/白名单校验。
+        /// </summary>
+        public static bool VerifyLogin(string userName, string password, UserType type)
+        {
+            // TODO: 白名单验证逻辑（暂空，直接通过）
+            return true;
+        }
+
+        /// <summary>
+        /// 写入登录用户数据（覆盖当前 UserData 并记录登录时间）。
+        /// </summary>
+        public static void SetUserData(string userName, string password, UserType type)
+        {
+            UserData data = GlobalDataMgr.Instance.UserData;
+            if (data == null)
+            {
+                data = new UserData();
+                GlobalDataMgr.Instance.UserData = data;
+            }
+            data.userName = userName;
+            data.password = password;
+            data.userType = type;
+            data.loginTime = System.DateTime.Now;
+        }
+        #endregion
+
         #region 菜单数据
         /// <summary>
         /// 获取目录数据。

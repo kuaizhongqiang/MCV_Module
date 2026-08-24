@@ -109,15 +109,6 @@ namespace MCV_Module.UI
         {
             return CreatePanel(typeof(T).Name) as T;
         }
-
-        public static void ClearChildren(Transform parent)
-        {
-            for (int i = parent.childCount - 1; i >= 0; i--)
-            {
-                Destroy(parent.GetChild(i).gameObject);
-            }
-        }
-
         public void LayoutRebuild()
         {
             Canvas.ForceUpdateCanvases();
