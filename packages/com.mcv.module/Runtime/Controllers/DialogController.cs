@@ -6,8 +6,10 @@ namespace MCV_Module.Controller
     /// <summary>
     /// 对话框控制器 —— 协调 DialogPanel 与业务系统。
     ///
+    /// 显示触发：DialogRequestEvent 的显示统一由 DialogEventDispatcher（Event 层专门处理器）
+    ///   经 GlobalUIMgr → 激活 Canvas → GetPanel&lt;DialogPanel&gt; 链路处理，本控制器不再订阅。
+    ///
     /// 订阅：
-    ///   EventBus&lt;DialogRequestEvent&gt; —— 任意系统请求打开对话框
     ///   DialogPanel 的 OnConfirm / OnCancel —— 用户操作
     ///
     /// 发布：
@@ -23,8 +25,6 @@ namespace MCV_Module.Controller
 
             View.OnConfirm += HandleConfirm;
             View.OnCancel += HandleCancel;
-
-            EventBus<DialogRequestEvent>.Subscribe(OnDialogRequested);
         }
 
         protected override void OnDestroy()
@@ -34,17 +34,9 @@ namespace MCV_Module.Controller
                 View.OnConfirm -= HandleConfirm;
                 View.OnCancel -= HandleCancel;
             }
-            EventBus<DialogRequestEvent>.Unsubscribe(OnDialogRequested);
         }
 
         #region 事件处理
-        /// <summary>外部系统请求打开对话框</summary>
-        void OnDialogRequested(DialogRequestEvent request)
-        {
-            if (View == null) return;
-            View.Show(request);
-        }
-
         /// <summary>确认按钮点击</summary>
         void HandleConfirm()
         {

@@ -31,6 +31,11 @@ namespace MCV_Module.UI.Tools
         public bool IsVisible { get; private set; }
         #endregion
 
+        #region 事件
+        /// <summary>子目录按钮被点击时触发（上报选中的菜单），由 MenuPanel 订阅并转发给 Controller。</summary>
+        public event Action<MenuClip> OnDetailSelected;
+        #endregion
+
         /// <summary>
         /// 静止（吸附完成）时调用：以中心选中的父菜单为准刷新并显示子目录。
         /// 内容变化才重建按钮；统一播放显示动画。返回协程由 MenuPanel 启动。
@@ -120,7 +125,17 @@ namespace MCV_Module.UI.Tools
                     labelText.text = clip.displayName;
                 }
             }
-            return go.GetComponent<Button>();
+            Button btn = go.GetComponent<Button>();
+            BindClick(btn, clip, (c) => OnDetailSelected?.Invoke(c));
+            return btn;
+        }
+
+        /// <summary>子目录按钮挂载点击监听：点击上报选中的菜单（MenuPanel 转发给 Controller 处理进入任务等）。</summary>
+        static void BindClick(Button btn, MenuClip clip, Action<MenuClip> callback)
+        {
+            if (btn == null) return;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(() => callback?.Invoke(clip));
         }
 
         /// <summary>子目录按钮显隐动画协程。true 淡入放大，false 淡出缩小。</summary>

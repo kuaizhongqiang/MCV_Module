@@ -276,4 +276,12 @@ namespace MCV_Module.Event
             Confirmed = confirmed;
         }
     }
+
+    /// <summary>
+    /// 应用退出请求事件（业务系统确认「退出」后发布，由常驻管理器如 GlobalSceneMgr 订阅并执行最终退出）。
+    /// 区别于直接调用 Application.Quit()，走事件总线便于统一收口（资源清理 / 进程退出顺序控制）。
+    /// </summary>
+    public class AppQuitEvent
+    {
+    }
 }

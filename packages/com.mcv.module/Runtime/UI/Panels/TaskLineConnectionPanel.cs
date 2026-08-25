@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace MCV_Module.UI.Panel
+namespace MCV_Module.UI.Panels
 {
     /// <summary>电路连接任务面板（占位实现，模仿 TaskPurposePanel）。</summary>
     public class TaskLineConnectionPanel : TaskPanelBase

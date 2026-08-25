@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using MCV_Module.Models.Project;
 
-namespace MCV_Module.UI.Panel
+namespace MCV_Module.UI.Panels
 {
     /// <summary>实验原理任务面板（占位实现，模仿 TaskPurposePanel）。</summary>
     public class TaskPrinciplePanel : TaskPanelBase

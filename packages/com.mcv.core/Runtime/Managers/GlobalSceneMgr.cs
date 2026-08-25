@@ -33,6 +33,8 @@ namespace MCV_Module.Managers
         {
             // 事件驱动场景切换（强引用，OnDestroy 必须退订）
             EventBus<SceneSwitchRequestEvent>.Subscribe(OnSceneSwitchRequested);
+            // 应用退出统一出口（经 AppQuitEvent 事件收口，OnDestroy 必须退订）
+            EventBus<AppQuitEvent>.Subscribe(OnAppQuitRequested);
             isInit = true;
             yield break;
         }
@@ -41,6 +43,7 @@ namespace MCV_Module.Managers
         {
             base.OnDestroy();
             EventBus<SceneSwitchRequestEvent>.Unsubscribe(OnSceneSwitchRequested);
+            EventBus<AppQuitEvent>.Unsubscribe(OnAppQuitRequested);
         }
         #endregion
 
@@ -85,6 +88,27 @@ namespace MCV_Module.Managers
         void OnSceneSwitchRequested(SceneSwitchRequestEvent e)
         {
             SwitchScene(e.SceneName);
+        }
+
+        /// <summary>
+        /// 应用退出统一出口：收到 AppQuitEvent 后先做资源清理（Assets 出口），再执行真正退出。
+        /// 清理经 GlobalAddressableMgr.UnloadAllBundles / ClearAssetCache，避免退出时资源未释放。
+        /// </summary>
+        void OnAppQuitRequested(AppQuitEvent e)
+        {
+            // Assets 出口：卸载全部 AB 包并清空资源缓存
+            if (GlobalAddressableMgr.Exists && GlobalAddressableMgr.Instance != null)
+            {
+                GlobalAddressableMgr.Instance.UnloadAllBundles(true);
+                GlobalAddressableMgr.Instance.ClearAssetCache();
+            }
+
+            // 最终退出：Editor 下停止播放，真机下退出应用
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.isPlaying = false;
+#else
+            Application.Quit();
+#endif
         }
 
         private IEnumerator LoadScenesAdditiveAsync(string[] sceneNames)

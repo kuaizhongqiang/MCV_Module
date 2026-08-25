@@ -27,14 +27,15 @@ namespace MCV_Module.UI.Panels
         RectTransform m_SwitchRect;
 
         // 这些按钮之后插入一个分隔对象
-        static readonly HashSet<string> SpacingAfter = new HashSet<string> { "ExitBtn", "MuteBtn" };
+        static readonly HashSet<string> SpacingAfter = new HashSet<string> { "BackBtn", "MuteBtn" };
         static readonly string[] DefaultBtnNames =
         {
-            "ExitBtn", "SettingBtn", "MuteBtn",
+            "BackBtn", "ExitBtn", "SettingBtn", "MuteBtn",
             "ResourcePanelBtn", "SummitBtn", "RecordBtn"
         };
 
         public event Action OnFunctionExitClick;
+        public event Action OnFunctionBackClick;
         public event Action OnFunctionSettingClick;
         public event Action OnFunctionResourcePanelClick;
         public event Action OnFunctionSummitClick;
@@ -172,6 +173,7 @@ namespace MCV_Module.UI.Panels
             switch (btnName)
             {
                 case "ExitBtn":          return () => OnFunctionExitClick?.Invoke();
+                case "BackBtn":          return () => OnFunctionBackClick?.Invoke();
                 case "SettingBtn":       return () => OnFunctionSettingClick?.Invoke();
                 case "MuteBtn":          return () => OnFunctionMuteClick?.Invoke();
                 case "ResourcePanelBtn": return () => OnFunctionResourcePanelClick?.Invoke();
@@ -217,6 +219,7 @@ namespace MCV_Module.UI.Panels
             switch (btnName)
             {
                 case "ExitBtn":          return "退出";
+                case "BackBtn":          return "返回";
                 case "SettingBtn":       return "设置";
                 case "MuteBtn":          return "静音";
                 case "ResourcePanelBtn": return "资源";

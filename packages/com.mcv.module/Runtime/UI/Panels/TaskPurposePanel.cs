@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace MCV_Module.UI.Panel
+namespace MCV_Module.UI.Panels
 {
     public class TaskPurposePanel : TaskPanelBase
     {

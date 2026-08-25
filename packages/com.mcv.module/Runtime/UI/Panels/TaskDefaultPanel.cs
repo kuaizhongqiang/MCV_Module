@@ -1,7 +1,7 @@
 
 using MCV_Module.Models;
 
-namespace MCV_Module.UI.Panel
+namespace MCV_Module.UI.Panels
 {
     public class TaskDefaultPanel : TaskPanelBase
     {

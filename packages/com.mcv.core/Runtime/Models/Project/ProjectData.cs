@@ -227,7 +227,8 @@ namespace MCV_Module.Models.Project
     public class MenuClip : DataBase
     {
         public string parentId;          // 便于创建结构性数据
-        public ProjectClip clip;         // 绑定项目数据
+        public string projectId;         // 绑定的项目 id（从 ProjectData.clips 查询，数据源单一）；为空时回退 clip 直接引用
+        public ProjectClip clip;         // 绑定项目数据（旧字段，可空）
 
         public MenuClip() { }
         public MenuClip(string id, string displayName)

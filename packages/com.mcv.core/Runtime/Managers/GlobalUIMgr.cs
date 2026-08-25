@@ -4,7 +4,6 @@ using MCV_Module.Event;
 using MCV_Module.Models;
 using MCV_Module.Singleton;
 using MCV_Module.UI;
-using MCV_Module.UI.Panel;
 using MCV_Module.UI.Panels;
 using UnityEngine;
 
@@ -39,15 +38,21 @@ namespace MCV_Module.Managers
             // 状态事件驱动 Canvas 初始化（强引用，OnDestroy 必须退订）
             EventBus<SceneStateChangeEventData>.Subscribe(OnSceneStateChanged);
             EventBus<TaskTypeChangeEventData>.Subscribe(OnTaskTypeChanged);
+            // 登录成功 → 进入 Menu（登录→菜单导航断点的监听方，常驻订阅）
+            EventBus<LoginSuccessEvent>.Subscribe(OnLoginSuccess);
             yield return null;
+            // GlobalUIMgr 就绪后，启动对话框专门处理逻辑（依赖激活 Canvas 与 GetPanel 链路）
+            DialogEventDispatcher.Initialize();
             isInit = true;
         }
 
         protected override void OnDestroy()
         {
             base.OnDestroy();
+            DialogEventDispatcher.Shutdown();
             EventBus<SceneStateChangeEventData>.Unsubscribe(OnSceneStateChanged);
             EventBus<TaskTypeChangeEventData>.Unsubscribe(OnTaskTypeChanged);
+            EventBus<LoginSuccessEvent>.Unsubscribe(OnLoginSuccess);
         }
         #endregion
 
@@ -64,6 +69,8 @@ namespace MCV_Module.Managers
 
         public static void UnregisterCanvas(CanvasBase canvas)
         {
+            // 单例已销毁（退出 Play / 场景切换）时直接返回，避免 Canvas.OnDestroy 空引用
+            if (!Exists || Instance == null) return;
             string name = canvas.GetType().ToString();
             if (Instance.canvasDict.ContainsKey(name))
             {
@@ -79,6 +86,35 @@ namespace MCV_Module.Managers
                 return Instance.canvasDict[name] as T;
             }
             return null;
+        }
+
+        /// <summary>获取当前激活（正在展示）的 Canvas。状态切换时由 OnSceneStateChanged 维护。</summary>
+        public static CanvasBase GetActiveCanvas()
+        {
+            if (!Exists || Instance == null) return null;
+            return Instance.m_ActiveCanvas;
+        }
+
+        /// <summary>获取当前 SceneState（导航状态机的当前态，供退出/返回等逻辑判断）。未就绪返回 Setup。</summary>
+        public static SceneState GetCurrentState()
+        {
+            if (!Exists || Instance == null) return SceneState.Setup;
+            return Instance.m_CurrentState;
+        }
+
+        /// <summary>获取当前任务类型（供返回文案等使用）。未就绪返回 None。</summary>
+        public static TaskType GetCurrentTaskType()
+        {
+            if (!Exists || Instance == null) return TaskType.None;
+            return Instance.m_CurrentTaskType;
+        }
+
+        /// <summary>在当前激活的 Canvas 上获取（必要时懒加载创建）指定面板。</summary>
+        public static T GetPanelOnActiveCanvas<T>() where T : PanelBase
+        {
+            var canvas = GetActiveCanvas();
+            if (canvas == null) return null;
+            return canvas.GetPanel<T>();
         }
 
         public static T GetPanel<T>() where T : PanelBase
@@ -119,6 +155,13 @@ namespace MCV_Module.Managers
             m_ActiveCanvas = target;
             target.SetUIActiveImmediately(true);
             target.Init(e.State, TaskType.None);
+        }
+
+        /// <summary>登录成功：进入 Menu 状态（LoginSuccessEvent 唯一监听方，常驻订阅，不会随 Canvas 销毁）。</summary>
+        void OnLoginSuccess(LoginSuccessEvent e)
+        {
+            EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(SceneState.Menu));
+            Debug.Log("[GlobalUIMgr] 登录成功，进入菜单界面");
         }
 
         /// <summary>TaskType 变化：记录当前任务类型并只重建当前 UI Canvas 的任务面板。</summary>

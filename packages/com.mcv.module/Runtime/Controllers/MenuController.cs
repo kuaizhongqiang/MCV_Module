@@ -1,6 +1,8 @@
 using System.Collections.Generic;
 using MCV_Module.Controller;
+using MCV_Module.Event;
 using MCV_Module.Managers;
+using MCV_Module.Models;
 using MCV_Module.Models.Project;
 using MCV_Module.UI.Panels;
 using UnityEngine;
@@ -173,9 +175,54 @@ namespace MCV_Module.Controllers
             }
             else
             {
-                // 最终选中（叶子菜单），预留后续动作
-                Debug.Log($"[MenuController] 选中菜单：{clip.displayName} (id={clip.id})");
+                // 最终选中（叶子菜单）→ 进入对应项目任务（默认进入 UI 状态）
+                EnterTask(clip);
             }
+        }
+
+        /// <summary>
+        /// 叶子菜单 → 进入任务：解析绑定的项目，写入当前项目，选第一个激活的任务，
+        /// 先切状态（SceneState.UI）再发任务类型事件（GlobalUIMgr 据此重建任务面板，TaskListController 同步状态）。
+        /// 事件驱动：发布方只管发，监听方 GlobalUIMgr / TaskListController 均为常驻对象。
+        /// </summary>
+        void EnterTask(MenuClip menuClip)
+        {
+            if (menuClip == null)
+            {
+                return;
+            }
+
+            // 解析项目：优先 clip 直接引用；否则按 projectId 从 ProjectData 查询
+            ProjectClip project = menuClip.clip;
+            if (project == null && !string.IsNullOrEmpty(menuClip.projectId))
+            {
+                project = GlobalDataMgr.GetProjectClip(menuClip.projectId);
+            }
+            if (project == null)
+            {
+                Debug.LogWarning($"[MenuController] 菜单「{menuClip.displayName}」未绑定项目（clip / projectId 均为空），无法进入任务");
+                return;
+            }
+
+            // 写入当前项目（任务面板 / 任务列表从此读取）
+            GlobalDataMgr.Instance.ProjectData.currentClip = project;
+
+            // 过滤未激活任务，取第一个启用项作为默认进入的任务
+            TaskType firstActive = TaskType.None;
+            foreach (var task in project.Tasks)
+            {
+                if (task.TaskActive)
+                {
+                    firstActive = task.TaskType;
+                    break;
+                }
+            }
+
+            // 先切状态（当前默认全部进入 UI 状态），再发任务类型（GlobalUIMgr.OnTaskTypeChanged 重建任务面板）
+            EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(SceneState.UI));
+            EventBus<TaskTypeChangeEventData>.Publish(new TaskTypeChangeEventData(project, firstActive));
+
+            Debug.Log($"[MenuController] 进入项目「{project.displayName}」，默认任务 {firstActive}");
         }
 
         /// <summary>当前选中菜单在当前层级列表中的索引；取不到返回 0。</summary>

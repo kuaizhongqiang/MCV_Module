@@ -6,7 +6,7 @@ using MCV_Module.Managers;
 using MCV_Module.Event;
 using MCV_Module.Models;
 
-namespace MCV_Module.UI.Panel
+namespace MCV_Module.UI.Panels
 {
     /// <summary>实验仪器任务面板（占位实现，模仿 TaskPurposePanel）。</summary>
     public class TaskEquipmentPanel : TaskPanelBase

@@ -99,6 +99,10 @@ namespace MCV_Module.UI.Panels
             detailLogic.detailParent = detailParent;
             detailLogic.btnPrefabPath = MenuDetailBtnPath;
             detailLogic.animDuration = detailAnimDuration;
+
+            // 子目录按钮点击 → 转发给 Controller（进入任务等）
+            detailLogic.OnDetailSelected -= OnDetailSelected;
+            detailLogic.OnDetailSelected += OnDetailSelected;
         }
 
         protected override void OnDestroy()
@@ -162,6 +166,12 @@ namespace MCV_Module.UI.Panels
         #endregion
 
         #region 事件方法
+        /// <summary>子目录按钮选中：转发给 Controller（进入任务等）。</summary>
+        void OnDetailSelected(MenuClip clip)
+        {
+            OnMenuSelected?.Invoke(clip);
+        }
+
         void OnScrollStep()
         {
             RefreshLayout();
