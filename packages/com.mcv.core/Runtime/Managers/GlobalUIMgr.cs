@@ -144,7 +144,7 @@ namespace MCV_Module.Managers
         }
         #endregion
 
-        #region 静态数据
+        #region 界面内容注入AI 提示词
 /*
         这里主要是UI界面的数据注入到AI的每轮提示词中，让AI明确当前用户在干嘛
 */
