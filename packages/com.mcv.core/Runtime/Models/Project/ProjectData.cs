@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Newtonsoft.Json;
 
 namespace MCV_Module.Models.Project
 {
@@ -174,6 +175,53 @@ namespace MCV_Module.Models.Project
             return false;
         }
         #endregion
+    
+        /// <summary>
+        /// 返回菜单数据的 JSON 描述, 体现 id / parentId 的层级结构。
+        ///
+        /// id / parentId 意义:
+        ///   - id:       每个菜单项的唯一标识。
+        ///   - parentId: 指向父菜单的 id; parentId 为 null 表示根菜单, 否则表示该菜单是
+        ///                parentId 对应菜单的子菜单。
+        /// 这里把扁平的 clips 列表还原为树形结构输出, 便于展示菜单层级关系。
+        /// </summary>
+        public string MenuDataDescription()
+        {
+            var tree = new List<MenuNodeDto>();
+            foreach (var root in GetRootClips())
+            {
+                if (root != null)
+                    tree.Add(BuildNode(root));
+            }
+            return JsonConvert.SerializeObject(tree, Formatting.Indented);
+        }
+
+        /// <summary>递归构建某个菜单节点及其所有子节点(树形)。</summary>
+        MenuNodeDto BuildNode(MenuClip clip)
+        {
+            var node = new MenuNodeDto
+            {
+                id = clip.id,
+                displayName = clip.displayName,
+                parentId = clip.parentId,
+            };
+            foreach (var child in GetChildClips(clip.id))
+            {
+                if (child != null)
+                    node.children.Add(BuildNode(child));
+            }
+            return node;
+        }
+
+        /// <summary>菜单树节点 DTO（用于 JSON 序列化, 保留 parentId 以体现父引用）。</summary>
+        [Serializable]
+        class MenuNodeDto
+        {
+            [JsonProperty("id")] public string id;
+            [JsonProperty("displayName")] public string displayName;
+            [JsonProperty("parentId")] public string parentId;
+            [JsonProperty("children")] public List<MenuNodeDto> children = new List<MenuNodeDto>();
+        }
     }
     [Serializable]
     public class MenuClip : DataBase
@@ -195,16 +243,28 @@ namespace MCV_Module.Models.Project
         public List<ProjectClip> clips = new List<ProjectClip>();
         [NonSerialized] public ProjectClip currentClip = null;
         [NonSerialized] public TaskType currentTaskType = TaskType.None;
+
+        public string ProjectDescription()
+        {
+            string result = "";
+            foreach (var clip in clips)
+            {
+                result += clip.ProjectClipDescription();
+            }
+
+            return result;
+        }
     }
     [Serializable]
     public class ProjectClip : DataBase
     {
-        [SerializeField] TaskPurposeData taskPurposeData;
-        [SerializeField] TaskEquipmentData taskEquipmentData;
-        [SerializeField] TaskPrincipleData taskPrincipleData;
-        [SerializeField] TaskLineConnectionData taskLineConnectionData;
-        [SerializeField] TaskTrainingData taskTrainingData;
-        [SerializeField] TaskTestData taskTestData;
+        [SerializeField, JsonProperty("taskPurposeData")] TaskPurposeData taskPurposeData;
+        [SerializeField, JsonProperty("taskEquipmentData")] TaskEquipmentData taskEquipmentData;
+        [SerializeField, JsonProperty("taskPrincipleData")] TaskPrincipleData taskPrincipleData;
+        [SerializeField, JsonProperty("taskLineConnectionData")] TaskLineConnectionData taskLineConnectionData;
+        [SerializeField, JsonProperty("taskTrainingData")] TaskTrainingData taskTrainingData;
+        [SerializeField, JsonProperty("taskTestData")] TaskTestData taskTestData;
+        [JsonIgnore]
         public List<TaskDataBase> Tasks
         {
             get
@@ -280,12 +340,70 @@ namespace MCV_Module.Models.Project
         {
             return GetTaskData<T>(taskType);
         }
+    
+        public string ProjectClipDescription()
+        {
+            string result = "";
+            int count = 0;
+            foreach (var item in Tasks)
+            {
+                if (item.TaskActive)
+                {
+                    result += $"{item.TaskDataDescription()}\n";
+                    count++;
+                }
+            }
+
+            result += $"{displayName}模块共{count}个任务";
+            for (int i = 0; i < Tasks.Count; i++)
+            {
+                if (Tasks[i].TaskActive)
+                {
+                    result += $"{i + 1}. {Tasks[i].TaskDataDescription()}\n";
+                }
+            }
+
+            return result;
+        }
     }
 
     [Serializable]
     public abstract class TaskDataBase : DataBase
     {
         public abstract TaskType TaskType { get; }
+
+        /// <summary>该任务是否启用(在项目任务列表中激活显示)。由具体任务数据实现。</summary>
+        public abstract bool TaskActive { get; }
+
+        public string TaskDataDescription()
+        {
+            string result = "";
+            result += $"{displayName}：{TaskDesc(TaskType)}";
+
+            return result;
+        }
+
+        static string TaskDesc(TaskType taskType)
+        {
+            switch (taskType)
+            {
+                case TaskType.Purpose:
+                    return "任务目的用于展示每个实训任务的学习意义，并展示一个核心实验器材的三维模型动画";
+                case TaskType.Equipment:
+                    return "实验仪器用于展示每个实训任务所使用的实验器材，通过一个列表多个按钮点击切换更新主要画面中的模型，可以通过鼠标控制展示模型的姿态与尺寸";
+                case TaskType.Principle:
+                    return "实验原理用于展示每个实训任务所使用的实验原理，实验原理是通过多个视频展示实训的原理，可以通过列表切换";
+                case TaskType.LineConnection:
+                    return "电路连接用于开放性接线交互，分步骤引导学生依次拖拽导线连接电路元件：先连接电源与主干，再按序接入各元件并完成回路，每步由系统即时校验接线是否正确并给出反馈，帮助学生按规范步骤掌握连接方法与排查接线错误";
+                case TaskType.Training:
+                    return "仿真实验提供一个可交互的虚拟实验环境，按引导步骤带领学生逐步操作：先准备与检查器材，再分步执行实验、观察现象并记录数据，每步完成后再进入下一步，在不接触真实设备的情况下安全、有序地完成实训操作";
+                case TaskType.Test:
+                    return "小测验通过一组选择题检验学生对本次实训知识点的掌握程度，即时反馈作答正确与否，帮助学生巩固与自测学习效果";
+                default:
+                    return "空任务类型，暂无任务描述";
+
+            }
+        }
     }
 
     [Serializable]
@@ -293,6 +411,7 @@ namespace MCV_Module.Models.Project
     {        
         protected bool taskActive = true;
         public override TaskType TaskType => TaskType.None;
+        public override bool TaskActive => taskActive;
     }
     // ────────────────────── 内容数据类 ──────────────────────
 
@@ -314,7 +433,6 @@ namespace MCV_Module.Models.Project
     [Serializable]
     public class TaskPurposeData : TaskData<TaskPurposeData>
     {
-        public bool TaskActive => taskActive;
         public override TaskType TaskType => TaskType.Purpose;
         public string contentText;
         public string prefabKey;
@@ -327,7 +445,6 @@ namespace MCV_Module.Models.Project
     [Serializable]
     public class TaskEquipmentData : TaskData<TaskEquipmentData>
     {
-        public bool TaskActive => taskActive;
         public override TaskType TaskType => TaskType.Equipment;
         public List<EquipmentStruct> equipmentStructs = new List<EquipmentStruct>();
         public TaskEquipmentData(string id)
@@ -339,7 +456,6 @@ namespace MCV_Module.Models.Project
     [Serializable]
     public class TaskPrincipleData : TaskData<TaskPrincipleData>
     {
-        public bool TaskActive => taskActive;
         public override TaskType TaskType => TaskType.Principle;   
         public List<PrincipleStruct> principleStructs = new List<PrincipleStruct>();     
 
@@ -352,7 +468,6 @@ namespace MCV_Module.Models.Project
     [Serializable]
     public class TaskLineConnectionData : TaskData<TaskLineConnectionData>
     {
-        public bool TaskActive => taskActive;
         public override TaskType TaskType => TaskType.LineConnection;
         public string prefabKey;
         public TaskLineConnectionData(string id)
@@ -364,7 +479,6 @@ namespace MCV_Module.Models.Project
     [Serializable]
     public class TaskTrainingData : TaskData<TaskTrainingData>
     {
-        public bool TaskActive => taskActive;
         public override TaskType TaskType => TaskType.Training;
         public string prefabKey;
         public TaskTrainingData(string id)
@@ -376,7 +490,6 @@ namespace MCV_Module.Models.Project
     [Serializable]
     public class TaskTestData : TaskData<TaskTestData>
     {
-        public bool TaskActive => taskActive;
         public override TaskType TaskType => TaskType.Test;
         public List<QuestionClip> questionClips = new List<QuestionClip>();
         public TaskTestData(string id)

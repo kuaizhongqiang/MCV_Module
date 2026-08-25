@@ -166,10 +166,51 @@ namespace MCV_Module.Net
             }
         }
 
+        // ───────────────────────── 预热 ─────────────────────────
+
+        /// <summary>
+        /// 发送预热请求(AiMgr 启动时调用)。传 session_id + system/portable 提示词,
+        /// EXE 记住提示词并组织预热轮发送上游; 完成后回调 AiWarmupResult(warmupDone=true)。
+        /// </summary>
+        public IEnumerator WarmupAsync(AiWarmupRequest request, Action<AiWarmupResult> onDone, Action<string> onError = null)
+        {
+            using (var uwr = new UnityWebRequest(BaseUrl + "/v1/warmup", UnityWebRequest.kHttpVerbPOST))
+            {
+                uwr.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(request, _jsonSettings)));
+                uwr.downloadHandler = new DownloadHandlerBuffer();
+                uwr.timeout = REQUEST_TIMEOUT;
+                uwr.SetRequestHeader("Content-Type", "application/json");
+                ApplyAuthHeaders(uwr);
+
+                yield return uwr.SendWebRequest();
+
+                if (uwr.result == UnityWebRequest.Result.Success)
+                {
+                    try
+                    {
+                        var resp = JsonConvert.DeserializeObject<AiWarmupResult>(uwr.downloadHandler.text);
+                        if (resp != null)
+                            onDone?.Invoke(resp);
+                        else
+                            onError?.Invoke("预热响应解析失败: " + uwr.downloadHandler.text);
+                    }
+                    catch (Exception e)
+                    {
+                        onError?.Invoke("预热响应解析异常: " + e.Message);
+                    }
+                }
+                else
+                {
+                    onError?.Invoke(HttpErrorText(uwr));
+                }
+            }
+        }
+
         // ───────────────────────── 对话 ─────────────────────────
 
         /// <summary>
-        /// 发送对话请求(统一协议)。stream=true 走 SSE, 逐段回调 onDelta;
+        /// 发送对话请求(统一协议)。Unity 纯前台, 传 session_id + user_text, 拼接在 EXE。
+        /// stream=true 走 SSE, 逐段回调 onDelta;
         /// 结束后回调 onDone(AiChatResult 已累积 content/reasoningContent)。
         /// </summary>
         public IEnumerator ChatAsync(AiChatRequest request, Action<AiChatChunk> onDelta,

@@ -49,7 +49,25 @@ namespace MCV_Module.Managers
             });
             yield return new WaitUntil(() => langLoaded);
 
-            WriteJson();
+            // 目录数据：加载后 AI 预热才能拿到【当前目录结构】描述
+            bool menuLoaded = false;
+            yield return JsonReaderWriter.ReadAsync<MenuData>("MenuData", (data, ok) =>
+            {
+                if (ok && data != null) MenuData = data;
+                menuLoaded = true;
+            });
+            yield return new WaitUntil(() => menuLoaded);
+
+            // 内容数据：加载后 AI 预热才能拿到【当前学习内容】描述
+            bool projectLoaded = false;
+            yield return JsonReaderWriter.ReadAsync<ProjectData>("ProjectData", (data, ok) =>
+            {
+                if (ok && data != null) ProjectData = data;
+                projectLoaded = true;
+            });
+            yield return new WaitUntil(() => projectLoaded);
+
+            // WriteJson();
 
             // P5 修复既有缺陷：原实现未置 isInit=true，导致 Setup 启动链等待 15s 超时
             isInit = true;

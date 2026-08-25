@@ -137,10 +137,24 @@ namespace MCV_Module.UI.Panels
             currentBubble?.SetText(text);
         }
 
+        /// <summary>设置助手正文(纯文本, 流式中途用, 不做 markdown 转换)。</summary>
+        public void SetAssistantTextPlain(string text)
+        {
+            if (!(currentBubble is AiAssistantBubbleStruct)) CreateAssistantBubble();
+            (currentBubble as AiAssistantBubbleStruct)?.SetTextPlain(text);
+        }
+
         public void SetAssistantReasoningText(string text)
         {
             if (!(currentBubble is AiAssistantBubbleStruct)) CreateAssistantBubble();
             (currentBubble as AiAssistantBubbleStruct)?.SetReasoningText(text);
+        }
+
+        /// <summary>设置助手思考(纯文本, 流式中途用, 不做 markdown 转换)。</summary>
+        public void SetAssistantReasoningTextPlain(string text)
+        {
+            if (!(currentBubble is AiAssistantBubbleStruct)) CreateAssistantBubble();
+            (currentBubble as AiAssistantBubbleStruct)?.SetReasoningTextPlain(text);
         }
         #endregion
 
@@ -155,15 +169,19 @@ namespace MCV_Module.UI.Panels
             (currentBubble as AiAssistantBubbleStruct)?.SetReasoningBubbleActive(false);
         }
 
-        /// <summary>追加正文增量(流式逐段调用)</summary>
+        /// <summary>
+        /// 追加正文增量(流式中途逐段调用)。只用纯文本显示, 不做 markdown 转换,
+        /// 避免 md 标记(如 **、<br>)在流式不完整时错乱/闪烁。流式完成后由
+        /// <see cref="FinalizeAssistantReply"/> 一次性做 markdown 转换。
+        /// </summary>
         public void AppendAssistantContent(string delta)
         {
             if (string.IsNullOrEmpty(delta)) return;
             assistantContent.Append(delta);
-            SetAssistantText(assistantContent.ToString());
+            SetAssistantTextPlain(assistantContent.ToString());
         }
 
-        /// <summary>追加思考增量(流式逐段调用); 首个增量到达时自动展开思考区</summary>
+        /// <summary>追加思考增量(流式中途逐段调用, 纯文本); 首个增量到达时自动展开思考区</summary>
         public void AppendAssistantReasoning(string delta)
         {
             if (string.IsNullOrEmpty(delta)) return;
@@ -173,7 +191,26 @@ namespace MCV_Module.UI.Panels
                 (currentBubble as AiAssistantBubbleStruct)?.SetReasoningBubbleActive(true);
             }
             assistantReasoning.Append(delta);
-            SetAssistantReasoningText(assistantReasoning.ToString());
+            SetAssistantReasoningTextPlain(assistantReasoning.ToString());
+        }
+
+        /// <summary>
+        /// 流式完成: 对累积的完整正文/思考做一次 markdown → RichText 转换并设置。
+        /// 这是核心转换时机 —— 等流式输出完成后一次性转换, 避免中途标记不完整。
+        /// </summary>
+        public void FinalizeAssistantReply()
+        {
+            if (!(currentBubble is AiAssistantBubbleStruct)) return;
+            // 正文: 累积的完整内容一次转换
+            if (assistantContent.Length > 0)
+            {
+                SetAssistantText(assistantContent.ToString());
+            }
+            // 思考: 累积的完整内容一次转换
+            if (assistantReasoning.Length > 0)
+            {
+                SetAssistantReasoningText(assistantReasoning.ToString());
+            }
         }
         #endregion
 

@@ -34,6 +34,11 @@ namespace MCV_Module.UI.Tools
             go.name = BubbleName;
 
             content = GetText(go.transform);
+            // 纯文本渲染: 关闭 RichText 解析, 确保任何 <xxx> 标签按普通文本原样显示(不做任何格式转换)
+            if (content != null)
+            {
+                content.supportRichText = false;
+            }
             return go;
         }
 
@@ -43,12 +48,12 @@ namespace MCV_Module.UI.Tools
         }
 
         /// <summary>
-        /// 设置气泡正文文本。
+        /// 设置气泡正文文本 —— 纯文本, 不做任何 markdown/RichText 转换。
+        /// 渲染格式由系统提示词约束 AI 直接输出纯文本(不再处理 md/json/html 标签)。
         /// </summary>
         public void SetText(string text)
         {
             if (content == null) return;
-            if (content.text == text) return;
             if (bubble == null)
             {
                 bubble = CreateBubble();
@@ -58,9 +63,15 @@ namespace MCV_Module.UI.Tools
                     content = GetText(bubble.transform);
                 }
             }
-
+            if (content.text == text) return;
             content.text = text;
             RebuildLayout();
+        }
+
+        /// <summary>设置气泡正文(纯文本)。与 SetText 等价, 保留为流式逐段调用的清晰入口。</summary>
+        public void SetTextPlain(string text)
+        {
+            SetText(text);
         }
 
         protected void RebuildLayout()
@@ -151,6 +162,10 @@ namespace MCV_Module.UI.Tools
             SetText(text);
         }
 
+        /// <summary>
+        /// 设置思考文本 —— 纯文本, 不做任何 markdown/RichText 转换。
+        /// 渲染格式由系统提示词约束 AI 直接输出纯文本(不再处理 md/json/html 标签)。
+        /// </summary>
         public void SetReasoningText(string text)
         {
             if (reasoningContent == null && bubble != null)
@@ -162,6 +177,12 @@ namespace MCV_Module.UI.Tools
             if (reasoningContent.text == text) return;
             reasoningContent.text = text;
             RebuildLayout();
+        }
+
+        /// <summary>设置思考文本(纯文本)。与 SetReasoningText 等价, 保留为流式逐段调用的清晰入口。</summary>
+        public void SetReasoningTextPlain(string text)
+        {
+            SetReasoningText(text);
         }
     }
 }

@@ -17,13 +17,15 @@ namespace MCV_Module.Managers
     {
         #region 参数
         Dictionary<string, CanvasBase> canvasDict = new Dictionary<string, CanvasBase>();
-
         SceneState m_CurrentState = SceneState.Setup;
         CanvasBase m_ActiveCanvas;
 
         [Header("初始状态"), Tooltip("UI 就绪后自动发布的初始 SceneState（状态系统落地前引导）")]
         [SerializeField] SceneState m_InitialState = SceneState.Start;
+        [SerializeField] TaskType m_InitialTaskType = TaskType.None;
         bool m_InitialStatePublished = false;
+
+
         #endregion
 
         #region 生命周期
@@ -133,6 +135,38 @@ namespace MCV_Module.Managers
         {
             yield return null; // 等所有 Canvas 注册完成再发布
             EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(m_InitialState));
+        }
+        #endregion
+
+        #region 静态数据
+        public static string CurrentStateDescription()
+        {
+            string result = "";
+            result += "当前处于：" + SceneStateDescription(Instance.m_InitialState) + "\n";
+            result += "当前任务：" + Instance.m_InitialTaskType.ToString() + "\n";
+            return result;
+        }
+
+        static string SceneStateDescription(SceneState state)
+        {
+            switch (state)
+            {
+                case SceneState.Setup:
+                    return "初始化界面，无法操作";
+                case SceneState.Start:
+                    return "欢迎界面，可以点击进入按钮进入";
+                case SceneState.Login:
+                    return "登录界面，三种登录形式，游客/学生/教师，其中游客不需要账户密码即可登录";
+                case SceneState.Menu:
+                    return "菜单界面，可以根据所需进入对应模块进行学习";
+                case SceneState.UI:
+                    return "UI界面，主要进行平面交互";
+                case SceneState.Roaming:
+                    return "漫游界面，主要进行三维交互";
+                default:
+                    return "未知";
+
+            }
         }
         #endregion
     }

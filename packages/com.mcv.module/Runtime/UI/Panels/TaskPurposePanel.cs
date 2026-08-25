@@ -7,6 +7,17 @@ namespace MCV_Module.UI.Panel
     {
         [SerializeField] Text titleText;
         [SerializeField] Text contentText;
-        [SerializeField] string showModelKey = "";
+
+        public void Init(string title, string content)
+        {
+            titleText.text = title;
+            contentText.text = content;
+        }
+
+        public void SetText(string title, string content)
+        {
+            titleText.text = title;
+            contentText.text = content;
+        }
     }
 }

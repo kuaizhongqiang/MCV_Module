@@ -10,10 +10,15 @@ namespace MCV_Module.Controllers
     /// <summary>
     /// AI 对话控制器 —— 面板与 GlobalAiMgr 之间的调度层。
     ///
+    /// 分层原则(Unity 是纯前台):
+    ///   - Unity 只负责: 显示气泡、接收用户输入、把 user_text 交给 GlobalAiMgr。
+    ///   - 上下文拼接/历史/token 截断/预热 全部在 AiServer(EXE), Unity 不做任何拼接。
+    ///
     /// 职责:
     ///   - 订阅面板 OnSendRequested 事件(先清后加, 面板每次重建会重新绑定)
     ///   - 发送 -> 用户气泡 + 助手气泡(流式: 思考/正文逐段回填)
     ///   - 忙碌态控制、错误提示、AiServer 未就绪自动重试
+    ///   - 【预热门控】GlobalAiMgr.IsWarmupDone 完成前禁止用户输入。
     ///
     /// 注意: Controller 常驻(ControllerRoot), 跨场景不销毁; 面板每次初始化都会重新 Bind。
     /// </summary>
@@ -25,16 +30,30 @@ namespace MCV_Module.Controllers
         /// <summary>是否有请求进行中</summary>
         bool busy;
 
+        /// <summary>等待预热完成的协程引用(防止重复启动)</summary>
+        Coroutine warmupWaitCoroutine;
+
         protected override void OnViewBound()
         {
             // 先清后加, 避免面板重建后重复订阅
             View.OnSendRequested -= HandleSend;
             View.OnSendRequested += HandleSend;
 
-            View.SetInputInteractable(!busy);
+            // 预热门控: 预热完成前禁止输入
+            if (!IsWarmupDone())
+            {
+                View.SetInputInteractable(false);
+                View.SetInfoText("系统初始化中，请稍候…");
+                StartWaitWarmupOnce();
+            }
+            else
+            {
+                View.SetInputInteractable(!busy);
+            }
+
             if (!View.HasMessage)
             {
-                View.AddSystemMessage("你好，我是电路实验助手。可以问我电路原理、实验步骤或接线问题。");
+                View.AddSystemMessage("你好，我是你的电路智能教师。可以问我电路原理、实验步骤或接线问题。");
             }
         }
 
@@ -44,7 +63,53 @@ namespace MCV_Module.Controllers
             {
                 View.OnSendRequested -= HandleSend;
             }
+            if (warmupWaitCoroutine != null)
+            {
+                StopCoroutine(warmupWaitCoroutine);
+                warmupWaitCoroutine = null;
+            }
             base.OnDestroy();
+        }
+
+        // ───────────────────────── 预热门控 ─────────────────────────
+
+        /// <summary>当前是否已允许用户输入(服务就绪 + 预热完成 + 非忙碌)。</summary>
+        bool IsWarmupDone()
+        {
+            var mgr = GlobalAiMgr.Instance;
+            return mgr != null && mgr.IsWarmupDone;
+        }
+
+        /// <summary>启动等待预热完成的协程(仅一次)。预热完成后恢复输入。</summary>
+        void StartWaitWarmupOnce()
+        {
+            if (warmupWaitCoroutine != null) return;
+            warmupWaitCoroutine = StartCoroutine(WaitWarmupAndEnableInput());
+        }
+
+        IEnumerator WaitWarmupAndEnableInput()
+        {
+            // 轮询等待预热完成(预热是异步后台进行)
+            int guard = 0;
+            while (!IsWarmupDone() && guard < 300) // 最多等 30 秒(0.1s 间隔)
+            {
+                yield return new WaitForSeconds(0.1f);
+                guard++;
+            }
+
+            warmupWaitCoroutine = null;
+            if (View == null) yield break;
+
+            if (IsWarmupDone())
+            {
+                View.SetInfoText("");
+                View.SetInputInteractable(!busy);
+            }
+            else
+            {
+                View.SetInfoText("AI 服务初始化失败，请稍后重试。");
+                View.SetInputInteractable(false);
+            }
         }
 
         // ───────────────────────── 发送流程 ─────────────────────────
@@ -54,6 +119,12 @@ namespace MCV_Module.Controllers
             if (busy)
             {
                 View.SetInfoText("正在思考中，请稍候…");
+                return;
+            }
+
+            if (!IsWarmupDone())
+            {
+                View.SetInfoText("系统初始化中，请稍候…");
                 return;
             }
 
@@ -68,10 +139,14 @@ namespace MCV_Module.Controllers
 
         /// <summary>
         /// 执行一次对话。AiServer 未就绪时最多重试 MAX_RETRY 次(每次间隔 1 秒)。
+        /// 只传 session_id + user_text 给 GlobalAiMgr, 历史拼接在 EXE。
         /// </summary>
         IEnumerator RunChat(string userText, int retriesLeft)
         {
-            yield return GlobalAiMgr.Instance.AskStream(userText,
+            var mgr = GlobalAiMgr.Instance;
+            var request = new AiChatRequest(mgr.SessionId, userText, stream: true);
+
+            yield return mgr.ChatAsync(request,
                 onDelta: chunk =>
                 {
                     if (View == null) return;
@@ -83,6 +158,8 @@ namespace MCV_Module.Controllers
                 onDone: result =>
                 {
                     if (View == null) return;
+                    // 流式结束: 对累积的完整正文/思考一次性做 markdown 转换（核心转换时机）
+                    View.FinalizeAssistantReply();
                     Finish(result.success, result.success ? "" : result.error);
                 },
                 onError: error =>
@@ -111,7 +188,7 @@ namespace MCV_Module.Controllers
         void Finish(bool success, string message)
         {
             busy = false;
-            View.SetInputInteractable(true);
+            View.SetInputInteractable(!busy);
             View.SelectInput();
 
             if (success)
@@ -126,7 +203,7 @@ namespace MCV_Module.Controllers
             }
         }
 
-        /// <summary>拉取 AiServer 最近日志并打到 Unity Console(不黑箱, 快速定位 py 侧问题)</summary>
+        /// <summary>拉取 AiServer 最近日志并打到 Unity Console(不黑箱, 快速定位问题)</summary>
         IEnumerator DumpServerLogs()
         {
             yield return GlobalAiMgr.Instance.FetchServerLogsAsync(15, text =>
