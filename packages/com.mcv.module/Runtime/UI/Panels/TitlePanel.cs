@@ -1,4 +1,5 @@
 using System.Collections;
+using MCV_Module.Utils;
 using MCV_Module.Managers;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -23,7 +24,7 @@ namespace MCV_Module.UI.Panels
 
             if (titleText == null || icoImage == null)
             {
-                Debug.LogError($"[TitlePanel] 缺少必要组件", this);
+                Log.Error($"[TitlePanel] 缺少必要组件", this);
                 return;
             }
             m_LayoutGroup = GetComponent<HorizontalLayoutGroup>();

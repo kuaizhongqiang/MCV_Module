@@ -1,4 +1,5 @@
 using System.Collections;
+using MCV_Module.Utils;
 using System.Collections.Generic;
 using MCV_Module.Interfaces;
 using MCV_Module.Managers;
@@ -95,7 +96,7 @@ namespace MCV_Module.Objects.Interactives.Elements
 
             if (lineDrawData.width <= 0 || lineDrawData.sectionSegments < 1)
             {
-                Debug.LogWarning($"{name}: lineDrawData 未配置完整，跳过绘制");
+                Log.Warning($"{name}: lineDrawData 未配置完整，跳过绘制");
                 DestroyLine();
                 return;
             }

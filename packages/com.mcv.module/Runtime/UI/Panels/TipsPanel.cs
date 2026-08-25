@@ -1,5 +1,6 @@
 
 using UnityEngine;
+using MCV_Module.Utils;
 using UnityEngine.UI;
 
 namespace MCV_Module.UI.Panels
@@ -17,7 +18,7 @@ namespace MCV_Module.UI.Panels
             base.Awake();
             if (tipsText == null)
             {
-                Debug.LogError("需要手动挂载组件");
+                Log.Error("需要手动挂载组件");
                 return;
             }
             tipsText.text = "";

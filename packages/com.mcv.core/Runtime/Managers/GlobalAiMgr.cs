@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using MCV_Module.Net;
 using MCV_Module.Singleton;
@@ -147,11 +148,11 @@ namespace MCV_Module.Managers
 
             if (!ready)
             {
-                Debug.LogWarning("[GlobalAiMgr] AiServer 未就绪, 预热未执行, 可稍后调用 EnsureReadyAndWarmupAsync 重试");
+                Log.Warning("[GlobalAiMgr] AiServer 未就绪, 预热未执行, 可稍后调用 EnsureReadyAndWarmupAsync 重试");
                 yield break;
             }
 
-            Debug.Log($"[GlobalAiMgr] AiServer 就绪: {Client.BaseUrl}");
+            Log.Info($"[GlobalAiMgr] AiServer 就绪: {Client.BaseUrl}");
 
             // 服务就绪后执行预热（若尚未完成）
             if (!IsWarmupDone)
@@ -220,25 +221,25 @@ namespace MCV_Module.Managers
             request.systemPrompt = SystemPrompt;
             request.portablePrompt = GlobalUIMgr.CurrentStateDescription() + PortablePrompt;
 
-            Debug.Log("[GlobalAiMgr] 启动预热中…(不显示回复)");
-            Debug.Log($"[GlobalAiMgr] 系统提示词 ： {SystemPrompt}");
+            Log.Info("[GlobalAiMgr] 启动预热中…(不显示回复)");
+            Log.Info($"[GlobalAiMgr] 系统提示词 ： {SystemPrompt}");
             yield return Client.WarmupAsync(request,
                 onDone: result =>
                 {
                     if (result != null && result.warmupDone)
                     {
                         IsWarmupDone = true;
-                        Debug.Log($"[GlobalAiMgr] 启动预热完成 (session={result.sessionId})");
+                        Log.Info($"[GlobalAiMgr] 启动预热完成 (session={result.sessionId})");
                     }
                     else
                     {
-                        Debug.LogWarning("[GlobalAiMgr] 预热响应异常, IsWarmupDone 保持 false");
+                        Log.Warning("[GlobalAiMgr] 预热响应异常, IsWarmupDone 保持 false");
                         IsWarmupDone = false;
                     }
                 },
                 onError: err =>
                 {
-                    Debug.LogError($"[GlobalAiMgr] 启动预热失败: {err}");
+                    Log.Error($"[GlobalAiMgr] 启动预热失败: {err}");
                     IsWarmupDone = false;
                 });
         }

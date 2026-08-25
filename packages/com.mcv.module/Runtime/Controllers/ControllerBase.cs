@@ -1,5 +1,6 @@
 
 using MCV_Module.Interfaces;
+using MCV_Module.Utils;
 using MCV_Module.Managers;
 using MCV_Module.UI;
 using UnityEngine;
@@ -43,7 +44,7 @@ namespace MCV_Module.Controller
             }
             else
             {
-                Debug.LogError($"[{ControllerName}] 绑定面板类型不匹配：期望 {typeof(TView).Name}，实际 {panel.GetType().Name}");
+                Log.Error($"[{ControllerName}] 绑定面板类型不匹配：期望 {typeof(TView).Name}，实际 {panel.GetType().Name}");
             }
         }
 

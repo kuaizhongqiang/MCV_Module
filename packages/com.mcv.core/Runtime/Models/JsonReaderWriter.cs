@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using System.IO;
 using Newtonsoft.Json;
@@ -32,7 +33,7 @@ namespace MCV_Module.Models
         }
         catch (Exception e)
         {
-            Debug.LogError(e.Message);
+            Log.Error(e.Message);
         }
     }
 #endif
@@ -49,7 +50,7 @@ namespace MCV_Module.Models
         }
         catch (Exception e)
         {
-            Debug.LogError(e.Message);
+            Log.Error(e.Message);
             callback?.Invoke(false);
             return default(T);
         }
@@ -77,13 +78,13 @@ namespace MCV_Module.Models
                 }
                 catch (Exception e)
                 {
-                    Debug.LogError($"[JsonReaderWriter] JSON 解析失败 [{name}]: {e.Message}");
+                    Log.Error($"[JsonReaderWriter] JSON 解析失败 [{name}]: {e.Message}");
                     callback?.Invoke(default, false);
                 }
             }
             else
             {
-                Debug.LogError($"[JsonReaderWriter] 读取失败: {path}, {uwr.error}");
+                Log.Error($"[JsonReaderWriter] 读取失败: {path}, {uwr.error}");
                 callback?.Invoke(default, false);
             }
         }

@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using UnityEngine;
 using UnityEngine.Video;
 
@@ -44,7 +45,7 @@ namespace MCV_Module.UI.Tools
             };
             errorHandler = (vp, msg) =>
             {
-                Debug.LogError($"[VideoTool] 视频预加载失败: {path}, error={msg}");
+                Log.Error($"[VideoTool] 视频预加载失败: {path}, error={msg}");
                 vp.prepareCompleted -= prepareHandler;
                 vp.errorReceived -= errorHandler;
                 onComplete();

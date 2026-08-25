@@ -1,4 +1,5 @@
 using MCV_Module.Controller;
+using MCV_Module.Utils;
 using MCV_Module.Event;
 using MCV_Module.Models;
 using MCV_Module.UI.Panels;
@@ -24,7 +25,7 @@ namespace MCV_Module.Controllers
         {
             // 进入登录界面（事件驱动，发布方只管发；监听方 GlobalUIMgr 为常驻对象）
             EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(SceneState.Login));
-            Debug.Log("[StartController] 开始按钮点击，进入登录界面");
+            Log.Info("[StartController] 开始按钮点击，进入登录界面");
         }
     }
 }

@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using System.Collections.Generic;
 using MCV_Module.Event;
@@ -39,7 +40,7 @@ namespace MCV_Module.Managers
                 }
                 else
                 {
-                    Debug.LogWarning("没有找到音频：" + audioEffectType.ToString());
+                    Log.Warning("没有找到音频：" + audioEffectType.ToString());
                 }
             }
 

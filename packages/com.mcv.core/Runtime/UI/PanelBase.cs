@@ -1,5 +1,6 @@
 
 using System.Collections.Generic;
+using MCV_Module.Utils;
 using System.Reflection;
 using MCV_Module.Managers;
 using UnityEngine;
@@ -35,7 +36,7 @@ namespace MCV_Module.UI
                 }
                 else
                 {
-                    Debug.LogError($"[PanelBase] 未找到 [RequireController] 指定 Controller：{controllerName}，面板 {GetType().Name} 未绑定");
+                    Log.Error($"[PanelBase] 未找到 [RequireController] 指定 Controller：{controllerName}，面板 {GetType().Name} 未绑定");
                 }
                 return;
             }
@@ -55,7 +56,7 @@ namespace MCV_Module.UI
             }
             else
             {
-                Debug.LogWarning($"[PanelBase] 未找到对应 Controller：{controllerNameLegacy}，面板 {GetType().Name} 未绑定");
+                Log.Warning($"[PanelBase] 未找到对应 Controller：{controllerNameLegacy}，面板 {GetType().Name} 未绑定");
             }
         }
 

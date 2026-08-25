@@ -1,5 +1,6 @@
 
 using System;
+using MCV_Module.Utils;
 using System.Collections.Generic;
 using MCV_Module.Controllers;
 using MCV_Module.Models;
@@ -48,7 +49,7 @@ namespace MCV_Module.UI.Panels
                 tipsTextLabel == null ||  userNameInputField == null || passwordInputField == null ||
                 userTypeDropdown == null)
             {
-                Debug.LogError($"[LoginPanel] 缺少必要组件", this);
+                Log.Error($"[LoginPanel] 缺少必要组件", this);
                 return;
             }
 

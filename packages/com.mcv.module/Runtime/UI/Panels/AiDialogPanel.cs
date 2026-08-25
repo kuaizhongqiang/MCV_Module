@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections.Generic;
 using System.Text;
 using MCV_Module.UI.Tools;
@@ -44,7 +45,7 @@ namespace MCV_Module.UI.Panels
             base.Awake();
             if (bubbleParent == null)
             {
-                Debug.LogError("AiDialogPanel: 需要手动挂载 bubbleParent！");
+                Log.Error("AiDialogPanel: 需要手动挂载 bubbleParent！");
                 return;
             }
 

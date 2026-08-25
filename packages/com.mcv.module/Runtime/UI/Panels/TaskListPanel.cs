@@ -1,6 +1,8 @@
 using System.Collections;
+using MCV_Module.Utils;
 using System.Collections.Generic;
 using MCV_Module.Event;
+using MCV_Module.Managers;
 using MCV_Module.Models;
 using MCV_Module.Models.Project;
 using UnityEngine;
@@ -23,7 +25,7 @@ namespace MCV_Module.UI.Panels
             base.Awake();
             if (taskToggleParent == null)
             {
-                Debug.LogError($"[TaskListPanel] 缺少必要组件", this);
+                Log.Error($"[TaskListPanel] 缺少必要组件", this);
                 return;
             }
             taskToggles.Clear();
@@ -77,6 +79,10 @@ namespace MCV_Module.UI.Panels
         void TaskToggleOnValueChanged(TaskType type)
         {
             if (currentProjectClip == null) return;
+
+            // 若点击的就是当前正在展示的任务类型，则直接返回，不重复切换
+            if (type == GlobalUIMgr.GetCurrentTaskType()) return;
+
             EventBus<TaskTypeChangeEventData>.Publish(new TaskTypeChangeEventData(currentProjectClip, type));
         }
 
@@ -87,6 +93,7 @@ namespace MCV_Module.UI.Panels
         void SetToggleState(Toggle toggle, bool isOn)
         {
             if (toggle == null) return;
+            toggle.SetIsOnWithoutNotify(isOn);
         }
 
         /// <summary>按任务类型刷新整个列表的显示状态（仅显示，不发布事件）。</summary>

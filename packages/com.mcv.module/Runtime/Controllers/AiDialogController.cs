@@ -1,4 +1,5 @@
 using System.Collections;
+using MCV_Module.Utils;
 using MCV_Module.Controller;
 using MCV_Module.Managers;
 using MCV_Module.Net;
@@ -229,7 +230,7 @@ namespace MCV_Module.Controllers
             else
             {
                 View.SetInfoText("出错了：" + message);
-                Debug.LogError($"[AiDialog] AI 请求失败: {message}");
+                Log.Error($"[AiDialog] AI 请求失败: {message}");
                 StartCoroutine(DumpServerLogs());
             }
         }
@@ -240,7 +241,7 @@ namespace MCV_Module.Controllers
             yield return GlobalAiMgr.Instance.FetchServerLogsAsync(15, text =>
             {
                 if (!string.IsNullOrEmpty(text))
-                    Debug.LogError("[AiDialog] AiServer 最近日志:\n" + text);
+                    Log.Error("[AiDialog] AiServer 最近日志:\n" + text);
             });
         }
     }

@@ -17,8 +17,9 @@ namespace MCV_Module.Models.Project
             description = "这是一个问题数据";
             questionText = "这是一个问题数据的提干";
             questionType = QuestionType.SingleChoice;
-            options.Add(new QuestionItem() { itemText = "选项1", isCorrect = true });
-            options.Add(new QuestionItem() { itemText = "选项2", isCorrect = false });
+            // 注意：不要在这里向 options 填充默认选项。
+            // Newtonsoft 反序列化时对已初始化集合是「追加」而非「替换」，若构造函数塞默认项，
+            // JSON 往返（ToJson→FromJson）后会出现「默认项 + 数据项」的重复。
         }
     }
 
@@ -32,7 +33,8 @@ namespace MCV_Module.Models.Project
             id = "questionClip";
             displayName = "问题集";
             description = "这是一个问题集";
-            questions.Add(new QuestionData());
+            // 注意：不要在这里向 questions 填充默认 QuestionData。
+            // 原因同 QuestionData 构造函数的注释：JSON 往返时会追加默认项导致重复。
         }
     }
 

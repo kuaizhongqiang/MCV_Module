@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using MCV_Module.Interfaces;
 using MCV_Module.Managers;
@@ -32,7 +33,7 @@ namespace MCV_Module.Steps
             var panel = ResolvePanel();
             if (panel == null)
             {
-                Debug.LogWarning($"[ConditionQuestion] {step.name} 未找到 StepQuestionPanelController，跳过答题步骤");
+                Log.Warning($"[ConditionQuestion] {step.name} 未找到 StepQuestionPanelController，跳过答题步骤");
                 yield break;
             }
 

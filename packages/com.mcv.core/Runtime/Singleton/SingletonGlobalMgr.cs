@@ -1,4 +1,5 @@
 using MCV_Module.Singleton;
+using MCV_Module.Utils;
 using UnityEngine;
 
 /// <summary>
@@ -44,7 +45,7 @@ namespace MCV_Module.Singleton
             {
                 if (s_AppQuitting)
                 {
-                    Debug.LogWarning($"[SingletonGlobalMgr] 实例 '{typeof(T)}' 已在退出时销毁。返回 null。");
+                    Log.Warning($"[SingletonGlobalMgr] 实例 '{typeof(T)}' 已在退出时销毁。返回 null。");
                     return null;
                 }
 
@@ -99,7 +100,7 @@ namespace MCV_Module.Singleton
             }
             else if (s_Instance != this)
             {
-                Debug.LogWarning($"[SingletonGlobalMgr] {typeof(T)} 的重复实例，已销毁。");
+                Log.Warning($"[SingletonGlobalMgr] {typeof(T)} 的重复实例，已销毁。");
                 Destroy(gameObject);
             }
         }

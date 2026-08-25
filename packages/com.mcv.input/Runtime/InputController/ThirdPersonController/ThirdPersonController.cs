@@ -1,4 +1,5 @@
 using MCV_Module.InputController.Common.InputSystem;
+using MCV_Module.Utils;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -398,7 +399,7 @@ namespace MCV_Module.InputController.ThirdPersonController
             // 障碍物安全检测
             if (obstacleLayers.HasValue && Physics.CheckSphere(targetPosition, checkRadius, obstacleLayers.Value))
             {
-                Debug.LogWarning("目标位置存在障碍物，瞬移取消");
+                Log.Warning("目标位置存在障碍物，瞬移取消");
                 return false;
             }
 

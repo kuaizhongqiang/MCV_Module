@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using MCV_Module.Net;
 using UnityEngine;
 
@@ -47,7 +48,7 @@ namespace MCV_Module.Managers
             string exe = ExePath;
             if (!System.IO.File.Exists(exe))
             {
-                Debug.LogError($"[AiServerProcess] 未找到 AiServer EXE: {exe} (请先运行 unity-ai-server/build.bat 打包)");
+                Log.Error($"[AiServerProcess] 未找到 AiServer EXE: {exe} (请先运行 unity-ai-server/build.bat 打包)");
                 return;
             }
 
@@ -61,11 +62,11 @@ namespace MCV_Module.Managers
                     Arguments = $"--host {_client.Host} --port {_client.Port} --parent-pid {System.Diagnostics.Process.GetCurrentProcess().Id}",
                 };
                 _process = System.Diagnostics.Process.Start(psi);
-                Debug.Log($"[AiServerProcess] 已拉起 AiServer (port {_client.Port})");
+                Log.Info($"[AiServerProcess] 已拉起 AiServer (port {_client.Port})");
             }
             catch (Exception e)
             {
-                Debug.LogError($"[AiServerProcess] 启动 EXE 失败: {e.Message}");
+                Log.Error($"[AiServerProcess] 启动 EXE 失败: {e.Message}");
             }
 #endif
         }
@@ -84,7 +85,7 @@ namespace MCV_Module.Managers
             }
             catch (Exception e)
             {
-                Debug.LogWarning($"[AiServerProcess] 关闭进程失败: {e.Message}");
+                Log.Warning($"[AiServerProcess] 关闭进程失败: {e.Message}");
             }
             finally
             {

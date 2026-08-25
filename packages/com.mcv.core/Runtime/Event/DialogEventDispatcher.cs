@@ -1,4 +1,5 @@
 using MCV_Module.Managers;
+using MCV_Module.Utils;
 using MCV_Module.UI.Panels;
 
 namespace MCV_Module.Event
@@ -63,7 +64,7 @@ namespace MCV_Module.Event
             var panel = canvas.GetPanel<DialogPanel>();
             if (panel == null)
             {
-                UnityEngine.Debug.LogError("[DialogEventDispatcher] 无法创建 DialogPanel，请确认 Resources/UI/DialogPanel 预制体存在");
+                Log.Error("[DialogEventDispatcher] 无法创建 DialogPanel，请确认 Resources/UI/DialogPanel 预制体存在");
                 return;
             }
 

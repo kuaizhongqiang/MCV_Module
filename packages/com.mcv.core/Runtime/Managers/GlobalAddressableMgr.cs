@@ -79,7 +79,7 @@ namespace MCV_Module.Managers
 
             if (string.IsNullOrEmpty(address))
             {
-                Debug.LogError($"[AA] 场景 {sceneName} 未找到 AA 配置");
+                Log.Error($"[AA] 场景 {sceneName} 未找到 AA 配置");
                 yield break;
             }
 
@@ -99,7 +99,7 @@ namespace MCV_Module.Managers
             }
             else
             {
-                Debug.LogError($"[AA] 场景 {sceneName} 的 sceneAsset 未赋值");
+                Log.Error($"[AA] 场景 {sceneName} 的 sceneAsset 未赋值");
             }
 #else
             Log.Verbose($"[AA] Runtime 模式: Addressables.LoadSceneAsync({address})");
@@ -113,7 +113,7 @@ namespace MCV_Module.Managers
             }
             else
             {
-                Debug.LogError($"[AA] AA 场景加载失败: {sceneName}, address={address}, error={handle.OperationException}");
+                Log.Error($"[AA] AA 场景加载失败: {sceneName}, address={address}, error={handle.OperationException}");
             }
 #endif
         }
@@ -177,7 +177,7 @@ namespace MCV_Module.Managers
         {
             if (!m_ConfigMap.TryGetValue(packageId, out var config))
             {
-                Debug.LogError($"[AddrMgr] 未找到包配置: {packageId}");
+                Log.Error($"[AddrMgr] 未找到包配置: {packageId}");
                 onLoaded?.Invoke(null);
                 return;
             }
@@ -290,7 +290,7 @@ namespace MCV_Module.Managers
             }
             else
             {
-                Debug.LogError($"[AddrMgr] AA 加载失败: {address}, {handle.OperationException}");
+                Log.Error($"[AddrMgr] AA 加载失败: {address}, {handle.OperationException}");
                 onLoaded?.Invoke(null);
             }
         }
@@ -299,7 +299,7 @@ namespace MCV_Module.Managers
         {
             if (string.IsNullOrEmpty(config.bundleName))
             {
-                Debug.LogError($"[AddrMgr] AB 配置缺少 bundleName: {config.id}");
+                Log.Error($"[AddrMgr] AB 配置缺少 bundleName: {config.id}");
                 onLoaded?.Invoke(null);
                 yield break;
             }
@@ -321,7 +321,7 @@ namespace MCV_Module.Managers
                 yield return uwr.SendWebRequest();
                 if (uwr.result != UnityWebRequest.Result.Success)
                 {
-                    Debug.LogError($"[AddrMgr] AB 加载失败: {config.bundleName}, {uwr.error}");
+                    Log.Error($"[AddrMgr] AB 加载失败: {config.bundleName}, {uwr.error}");
                     onLoaded?.Invoke(null);
                     yield break;
                 }

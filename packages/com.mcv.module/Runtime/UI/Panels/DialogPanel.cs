@@ -88,6 +88,15 @@ namespace MCV_Module.UI.Panels
         {
             SetUIActive(false);
         }
+
+        /// <summary>
+        /// 关闭并隐藏，收起动画播放完成后回调 onHidden。
+        /// 用于先播完收起动画再发布结果事件，避免面板提前失活导致协程报错。
+        /// </summary>
+        public void Hide(Action onHidden)
+        {
+            SetUIActive(false, onHidden);
+        }
         #endregion
 
         #region 交互处理

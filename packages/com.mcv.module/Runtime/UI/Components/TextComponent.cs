@@ -1,5 +1,6 @@
 
 using MCV_Module.Managers;
+using MCV_Module.Utils;
 using MCV_Module.Models;
 using MCV_Module.Models.System;
 using TMPro;
@@ -182,7 +183,7 @@ namespace MCV_Module.UI.Components
         {
             if (languageClip == null)
             {
-                Debug.LogWarning($"[TextComponent] 传入的 LanguageClip 为空：{name}", this);
+                Log.Warning($"[TextComponent] 传入的 LanguageClip 为空：{name}", this);
                 return;
             }
             this.languageClip = languageClip;
@@ -191,7 +192,7 @@ namespace MCV_Module.UI.Components
             int index = (int)(languageData != null ? languageData.languageType : LanguageType.Chinese);
             if (languageClip.clips == null || index < 0 || index >= languageClip.clips.Length)
             {
-                Debug.LogWarning($"[TextComponent] LanguageClip（{languageClip.id}）缺少当前语言文本，索引 {index} 越界", this);
+                Log.Warning($"[TextComponent] LanguageClip（{languageClip.id}）缺少当前语言文本，索引 {index} 越界", this);
                 return;
             }
             this.text = languageClip.clips[index];

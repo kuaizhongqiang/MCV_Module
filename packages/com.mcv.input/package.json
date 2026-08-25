@@ -1,6 +1,6 @@
 {
   "name": "com.mcv.input",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "MCV Input",
   "description": "MCV 框架输入/相机控制域：InputControllerBase 基类、第一/第三人称控制器、环绕聚焦相机、CameraBg、GlobalInputMgr。依赖 core 的 GlobalCameraMgr/Singleton 基座。",
   "unity": "2022.3",
@@ -11,7 +11,7 @@
     "camera"
   ],
   "dependencies": {
-    "com.mcv.core": "0.1.6",
+    "com.mcv.core": "0.1.10",
     "com.unity.cinemachine": "2.10.7",
     "com.unity.inputsystem": "1.11.2"
   }

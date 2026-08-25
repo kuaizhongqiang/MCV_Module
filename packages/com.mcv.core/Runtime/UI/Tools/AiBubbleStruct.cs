@@ -1,4 +1,5 @@
 using UnityEngine;
+using MCV_Module.Utils;
 using UnityEngine.UI;
 
 namespace MCV_Module.UI.Tools
@@ -27,7 +28,7 @@ namespace MCV_Module.UI.Tools
             GameObject prefab = Resources.Load<GameObject>(PrefabPath);
             if (prefab == null)
             {
-                Debug.LogWarning($"[AiBubble] 缺少气泡预制体: Resources/{PrefabPath}, 气泡 {BubbleName} 无法显示");
+                Log.Warning($"[AiBubble] 缺少气泡预制体: Resources/{PrefabPath}, 气泡 {BubbleName} 无法显示");
                 return null;
             }
             GameObject go = GameObject.Instantiate(prefab, parent);

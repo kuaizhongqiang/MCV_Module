@@ -1,5 +1,6 @@
 
 using MCV_Module.Models;
+using MCV_Module.Utils;
 using MCV_Module.UI.Panels;
 using UnityEngine;
 
@@ -23,7 +24,7 @@ namespace MCV_Module.UI.UICanvas
                 functionPanel.SetFunctionBtnActive("ResourcePanelBtn",false);
                 functionPanel.SetFunctionBtnActive("SummitBtn",false);
                 functionPanel.SetFunctionBtnActive("RecordBtn",false);
-                Debug.Log("StartCanvas.OnRebuild: " + startPanel + " " + functionPanel);
+                Log.Info("StartCanvas.OnRebuild: " + startPanel + " " + functionPanel);
             }
         }
     }

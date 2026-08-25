@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,12 +11,17 @@ namespace MCV_Module.UI
         protected CanvasGroup canvasGroup;
         protected Coroutine ActiveAnimCoroutine;
         protected bool isAnimating = false;
+        /// <summary>收起动画完成后的回调（用于"先播完收起动画再通知业务方"，避免面板提前失活导致协程报错）。</summary>
+        Action m_OnHiddenCallback;
         [Header("初始状态"),Tooltip("是否在实例化时显示")]
         [SerializeField] bool isActiveOnInstance = true;
         [Header("交互状态"), Tooltip("是否可交互")]
         [SerializeField] bool isInteractable = true;
         [Header("动画时间"), Tooltip("显示动画时间")]
         [SerializeField] protected float animTime = 0.3f;
+
+        /// <summary>动画时长（供外部估算等待时间）。</summary>
+        public float AnimDuration => animTime;
 
         protected virtual void Awake()
         {
@@ -37,9 +43,26 @@ namespace MCV_Module.UI
         /// <param name="isActive"></param>
         public virtual void SetUIActive(bool isActive)
         {
-            if (isAnimating)
+            SetUIActive(isActive, null);
+        }
+
+        /// <summary>
+        /// 设置 UI 显示，并可在「收起动画播放完成」后执行回调。
+        /// 用于"先播完收起动画再通知业务方"，避免面板提前失活导致 StartCoroutine 报错。
+        /// </summary>
+        /// <param name="isActive">是否显示。</param>
+        /// <param name="onHidden">isActive=false 且收起动画完成后回调（面板 SetActive(false) 之前）。</param>
+        public virtual void SetUIActive(bool isActive, Action onHidden)
+        {
+            StopRunningAnim();
+
+            if (isActive)
             {
-                StopCoroutine(ActiveAnimCoroutine);
+                m_OnHiddenCallback = null;   // 显示时不期望触发隐藏回调，清掉避免残留
+            }
+            else
+            {
+                m_OnHiddenCallback = onHidden;
             }
 
             if (isActive)
@@ -48,7 +71,7 @@ namespace MCV_Module.UI
                 gameObject.SetActive(true);
             }
 
-            StartCoroutine(Anim(isActive));
+            ActiveAnimCoroutine = StartCoroutine(Anim(isActive));
         }
         /// <summary>
         /// 设置UI显示并立即
@@ -56,10 +79,7 @@ namespace MCV_Module.UI
         /// <param name="isActive"></param>
         public virtual void SetUIActiveImmediately(bool isActive)
         {
-            if (isAnimating)
-            {
-                StopCoroutine(ActiveAnimCoroutine);
-            }
+            StopRunningAnim();
 
             gameObject.SetActive(isActive);
             canvasGroup.alpha = isActive ? 1 : 0;
@@ -68,6 +88,23 @@ namespace MCV_Module.UI
             {
                 canvasGroup.interactable = isActive;
                 canvasGroup.blocksRaycasts = isActive;
+            }
+        }
+
+        /// <summary>
+        /// 停止当前进行中的显示动画，并复位相关状态。
+        /// 判空处理：协程可能被外部 Stop 掉导致 ActiveAnimCoroutine 为 null，避免 StopCoroutine(null) 抛 "routine is null"。
+        /// </summary>
+        void StopRunningAnim()
+        {
+            if (isAnimating)
+            {
+                if (ActiveAnimCoroutine != null)
+                {
+                    StopCoroutine(ActiveAnimCoroutine);
+                }
+                ActiveAnimCoroutine = null;
+                isAnimating = false;
             }
         }
         #endregion
@@ -98,6 +135,10 @@ namespace MCV_Module.UI
 
             if (!isActive)
             {
+                // 先通知"收起动画已完成"，再失活面板（保证回调在面板仍 active 时执行，避免协程报错）
+                var cb = m_OnHiddenCallback;
+                m_OnHiddenCallback = null;
+                cb?.Invoke();
                 gameObject.SetActive(false);
             }
         }

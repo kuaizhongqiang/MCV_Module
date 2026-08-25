@@ -1,4 +1,5 @@
 using System.Collections;
+using MCV_Module.Utils;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -25,7 +26,7 @@ namespace MCV_Module.InputController.FocusRotationController
         {
             base.Awake();
             _cameras = GetComponentsInChildren<Camera>();
-            if (_cameras.Length == 0) Debug.LogError("需要有相机组件");
+            if (_cameras.Length == 0) Log.Error("需要有相机组件");
 
             // 记录初始位姿，供 ResetPos 回到此状态
             startPos = transform.position;

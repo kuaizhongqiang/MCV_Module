@@ -1,4 +1,5 @@
 using System.Collections;
+using MCV_Module.Utils;
 using MCV_Module.Controllers;
 using UnityEngine;
 using UnityEngine.UI;
@@ -27,7 +28,7 @@ namespace MCV_Module.UI.Panels
             base.Awake();
             if (bgImage == null || titleText == null || contentText == null || progressText == null || progressSlider == null)
             {
-                Debug.LogError($"[LoadingPanel] 缺少必要组件", this);
+                Log.Error($"[LoadingPanel] 缺少必要组件", this);
                 return;
             }
             StartBreath();

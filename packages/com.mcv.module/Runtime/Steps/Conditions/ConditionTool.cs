@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using MCV_Module.Interfaces;
 using MCV_Module.Managers;
@@ -37,7 +38,7 @@ namespace MCV_Module.Steps
             var panel = ResolvePanel();
             if (panel == null)
             {
-                Debug.LogWarning($"[ConditionTool] {step.name} 未找到 StepToolPanelController（GlobalControllerMgr 未注册），跳过工具步骤");
+                Log.Warning($"[ConditionTool] {step.name} 未找到 StepToolPanelController（GlobalControllerMgr 未注册），跳过工具步骤");
                 yield break;
             }
             if (step.TargetObj) step.TargetObj.gameObject.SetActive(true);

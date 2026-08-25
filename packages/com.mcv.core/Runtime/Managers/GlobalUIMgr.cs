@@ -1,4 +1,5 @@
 using System.Collections;
+using MCV_Module.Utils;
 using System.Collections.Generic;
 using MCV_Module.Event;
 using MCV_Module.Models;
@@ -17,11 +18,14 @@ namespace MCV_Module.Managers
     public class GlobalUIMgr : SingletonGlobalMgr<GlobalUIMgr>
     {
         #region 参数
+        [SerializeField] Models.PlayMode playMode = Models.PlayMode.Debug;
         Dictionary<string, CanvasBase> canvasDict = new Dictionary<string, CanvasBase>();
         SceneState m_CurrentState = SceneState.Setup;
         /// <summary>当前任务类型（由 TaskTypeChangeEventData 实时更新, 供 AI 上下文描述使用）。</summary>
         TaskType m_CurrentTaskType = TaskType.None;
         CanvasBase m_ActiveCanvas;
+        /// <summary>进行中的状态/任务切换协程（用于连续切换时取消上一次，避免动画叠加）。</summary>
+        Coroutine m_SwitchCoroutine;
 
         [Header("初始状态"), Tooltip("UI 就绪后自动发布的初始 SceneState（状态系统落地前引导）")]
         [SerializeField] SceneState m_InitialState = SceneState.Start;
@@ -35,6 +39,16 @@ namespace MCV_Module.Managers
         #region 生命周期
         protected override IEnumerator DelayInit()
         {
+            // 按运行模式开关屏幕调试浮层（经 Log 统一控制，可安全地在浮层尚未创建时调用）
+            if (playMode == Models.PlayMode.Debug)
+            {
+                Log.EnableGui();
+            }
+            else
+            {
+                Log.DisableGui();
+            }
+
             // 状态事件驱动 Canvas 初始化（强引用，OnDestroy 必须退订）
             EventBus<SceneStateChangeEventData>.Subscribe(OnSceneStateChanged);
             EventBus<TaskTypeChangeEventData>.Subscribe(OnTaskTypeChanged);
@@ -134,42 +148,77 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 私有方法
-        /// <summary>SceneState 变化：清空全部 Canvas → 激活并重建目标 Canvas。</summary>
+        /// <summary>SceneState 变化：带淡入淡出过渡切换到目标 Canvas。</summary>
         void OnSceneStateChanged(SceneStateChangeEventData e)
         {
-            m_CurrentState = e.State;
-
-            var all = new List<CanvasBase>(canvasDict.Values);
-            var target = all.Find(c => c.MatchesState(e.State));
-            if (target == null) return; // 无对应 Canvas 的状态，不处理
-
-            foreach (var canvas in all)
-            {
-                canvas.ClearPanels();
-                if (canvas != target)
-                {
-                    canvas.SetUIActiveImmediately(false);
-                }
-            }
-
-            m_ActiveCanvas = target;
-            target.SetUIActiveImmediately(true);
-            target.Init(e.State, TaskType.None);
+            SwitchToState(e.State, TaskType.None);
         }
 
         /// <summary>登录成功：进入 Menu 状态（LoginSuccessEvent 唯一监听方，常驻订阅，不会随 Canvas 销毁）。</summary>
         void OnLoginSuccess(LoginSuccessEvent e)
         {
             EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(SceneState.Menu));
-            Debug.Log("[GlobalUIMgr] 登录成功，进入菜单界面");
+            Log.Info("[GlobalUIMgr] 登录成功，进入菜单界面");
         }
 
-        /// <summary>TaskType 变化：记录当前任务类型并只重建当前 UI Canvas 的任务面板。</summary>
+        /// <summary>TaskType 变化：记录当前任务类型，并在当前 Canvas 内带过渡重建任务面板。</summary>
         void OnTaskTypeChanged(TaskTypeChangeEventData e)
         {
             m_CurrentTaskType = e.TaskType;
             if (m_ActiveCanvas == null) return;
-            m_ActiveCanvas.Init(m_CurrentState, e.TaskType);
+            SwitchToState(m_CurrentState, e.TaskType);
+        }
+
+        /// <summary>
+        /// 状态/任务切换入口：以「淡出当前 → 重建目标 → 淡入目标」的动画过渡方式切换。
+        /// 同一时间只保留一个切换协程，连续切换会取消上一次。
+        /// </summary>
+        void SwitchToState(SceneState state, TaskType taskType)
+        {
+            var all = new List<CanvasBase>(canvasDict.Values);
+            var target = all.Find(c => c.MatchesState(state));
+            if (target == null) return; // 无对应 Canvas 的状态，不处理
+
+            if (m_SwitchCoroutine != null)
+            {
+                StopCoroutine(m_SwitchCoroutine);
+                m_SwitchCoroutine = null;
+            }
+            m_SwitchCoroutine = StartCoroutine(SwitchToStateCoroutine(target, state, taskType, all));
+        }
+
+        IEnumerator SwitchToStateCoroutine(CanvasBase target, SceneState state, TaskType taskType, List<CanvasBase> all)
+        {
+            var prev = m_ActiveCanvas;
+            m_CurrentState = state;
+
+            // 1) 淡出当前激活的 Canvas（无论是否同一目标，都先淡出以保证过渡效果）
+            if (prev != null && prev.isActiveAndEnabled)
+            {
+                prev.SetUIActive(false);
+                yield return new WaitForSeconds(prev.AnimDuration);
+            }
+
+            // 2) 隐藏所有非目标 Canvas（含刚淡出的 prev），并清空各自面板
+            foreach (var canvas in all)
+            {
+                if (canvas != target)
+                {
+                    canvas.SetUIActiveImmediately(false);
+                }
+                canvas.ClearPanels();
+            }
+
+            // 3) 激活目标 Canvas → 重建面板 → 淡入
+            m_ActiveCanvas = target;
+            if (!target.gameObject.activeSelf)
+            {
+                target.gameObject.SetActive(true);
+            }
+            target.Init(state, taskType);
+            target.SetUIActive(true);
+
+            m_SwitchCoroutine = null;
         }
 
         /// <summary>UI 就绪（首个 Canvas 注册）后，延迟一帧发布初始状态，触发首次重建。</summary>

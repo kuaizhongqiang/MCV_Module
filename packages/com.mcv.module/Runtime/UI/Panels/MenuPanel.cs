@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using System.Collections.Generic;
 using MCV_Module.Models.Project;
@@ -73,7 +74,7 @@ namespace MCV_Module.UI.Panels
             base.Awake();
             if (btnParent == null)
             {
-                Debug.LogError("[MenuPanel] 缺少 btnParent 引用", this);
+                Log.Error("[MenuPanel] 缺少 btnParent 引用", this);
                 return;
             }
             var parentRect = btnParent as RectTransform;
@@ -280,7 +281,7 @@ namespace MCV_Module.UI.Panels
                 GameObject prefab = Resources.Load<GameObject>(menuParentBtnPath);
                 if (prefab == null)
                 {
-                    Debug.LogError($"[MenuPanel] 缺少必要资源：{menuParentBtnPath}");
+                    Log.Error($"[MenuPanel] 缺少必要资源：{menuParentBtnPath}");
                     return;
                 }
                 GameObject go = Instantiate(prefab, btnParent);

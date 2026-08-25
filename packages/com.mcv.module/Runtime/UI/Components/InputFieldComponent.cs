@@ -1,5 +1,6 @@
 
 using MCV_Module.Models;
+using MCV_Module.Utils;
 using TMPro;
 using UnityEngine;
 
@@ -34,7 +35,7 @@ namespace MCV_Module.UI.Components
             }
             if (inputField == null)
             {
-                Debug.LogWarning($"[InputFieldComponent] 未找到 TMP_InputField：{name}", this);
+                Log.Warning($"[InputFieldComponent] 未找到 TMP_InputField：{name}", this);
                 return;
             }
 

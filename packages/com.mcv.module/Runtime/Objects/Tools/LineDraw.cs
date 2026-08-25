@@ -1,4 +1,5 @@
 using UnityEngine;
+using MCV_Module.Utils;
 
 namespace MCV_Module.Objects.Tools
 {
@@ -48,7 +49,7 @@ namespace MCV_Module.Objects.Tools
         {
             if (lineObj == null)
             {
-                Debug.LogError("LineDraw.UpdateLine: lineObj 不能为 null");
+                Log.Error("LineDraw.UpdateLine: lineObj 不能为 null");
                 return null;
             }
             if (!ValidatePoints(points)) return lineObj;
@@ -66,7 +67,7 @@ namespace MCV_Module.Objects.Tools
         {
             if (points == null || points.Length < 2)
             {
-                Debug.LogError("LineDraw: 至少需要 2 个控制点");
+                Log.Error("LineDraw: 至少需要 2 个控制点");
                 return false;
             }
             return true;

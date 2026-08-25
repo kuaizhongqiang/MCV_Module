@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -30,7 +31,7 @@ namespace MCV_Module.Models.Project
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"[TaskDataConverter] JSON 反序列化失败 [{taskType}]: {ex.Message}");
+                Log.Error($"[TaskDataConverter] JSON 反序列化失败 [{taskType}]: {ex.Message}");
                 return null;
             }
         }
@@ -46,7 +47,7 @@ namespace MCV_Module.Models.Project
             }
             catch (Exception ex)
             {
-                UnityEngine.Debug.LogError($"[TaskDataConverter] JSON 序列化失败 [{data.TaskType}]: {ex.Message}");
+                Log.Error($"[TaskDataConverter] JSON 序列化失败 [{data.TaskType}]: {ex.Message}");
                 return null;
             }
         }

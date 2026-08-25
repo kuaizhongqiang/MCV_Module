@@ -1,4 +1,5 @@
 using MCV_Module.Models.Project;
+using MCV_Module.Utils;
 using MCV_Module.Models.System;
 using MCV_Module.Models.User;
 using UnityEngine;
@@ -26,7 +27,7 @@ namespace MCV_Module.Models
             string name = typeof(T).Name;
 #if UNITY_EDITOR
             JsonReaderWriter.Write(name, data, null);
-            Debug.Log($"[DataSO] 已导出 {name} → StreamingAssets/Data/{name}.json");
+            Log.Info($"[DataSO] 已导出 {name} → StreamingAssets/Data/{name}.json");
 #endif
         }
 

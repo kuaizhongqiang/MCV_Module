@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using MCV_Module.Event;
 using MCV_Module.Models;
@@ -27,7 +28,7 @@ namespace MCV_Module.Steps
             var target = step.TargetObj;
             if (drag == null || target == null)
             {
-                Debug.LogWarning($"[ConditionDrag] {step.name} dragObj/targetObj 未赋值，跳过拖拽步骤");
+                Log.Warning($"[ConditionDrag] {step.name} dragObj/targetObj 未赋值，跳过拖拽步骤");
                 yield break;
             }
             drag.gameObject.SetActive(true);

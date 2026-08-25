@@ -1,5 +1,6 @@
 
 using MCV_Module.Models;
+using MCV_Module.Utils;
 using MCV_Module.UI.Panels;
 using UnityEngine;
 
@@ -21,7 +22,7 @@ namespace MCV_Module.UI.UICanvas
                 var functionPanel = GetPanel<FunctionPanel>();                
                 var taskListPanel = GetPanel<TaskListPanel>();                
                 var aiPanel = GetPanel<AiDialogPanel>();
-                Debug.Log("ContentCanvas.OnRebuild: " + titlePanel + " " + functionPanel + " " + taskListPanel + " " + aiPanel);                
+                Log.Info("ContentCanvas.OnRebuild: " + titlePanel + " " + functionPanel + " " + taskListPanel + " " + aiPanel);                
             }
         }
 
@@ -31,29 +32,29 @@ namespace MCV_Module.UI.UICanvas
             {
                 case TaskType.Purpose:
                     var purposePanel = GetPanel<TaskPurposePanel>();
-                    Debug.Log("CreatePanelByTaskType: " + purposePanel);
+                    Log.Info("CreatePanelByTaskType: " + purposePanel);
                     break;
                 case TaskType.Equipment:
                     var equipmentPanel = GetPanel<TaskEquipmentPanel>();
-                    Debug.Log("CreatePanelByTaskType: " + equipmentPanel);
+                    Log.Info("CreatePanelByTaskType: " + equipmentPanel);
                     break;
                 case TaskType.Principle:
                     var principlePanel = GetPanel<TaskPrinciplePanel>();
-                    Debug.Log("CreatePanelByTaskType: " + principlePanel);
+                    Log.Info("CreatePanelByTaskType: " + principlePanel);
                     break;
                 case TaskType.LineConnection:
                     var lineConnectionPanel = GetPanel<TaskLineConnectionPanel>();
                     var tipsPanel = GetPanel<TipsPanel>();
-                    Debug.Log("CreatePanelByTaskType: " + lineConnectionPanel + " " + tipsPanel);
+                    Log.Info("CreatePanelByTaskType: " + lineConnectionPanel + " " + tipsPanel);
                     break;
                 case TaskType.Training:
                     var trainingPanel = GetPanel<TaskTrainingPanel>();
                     GetPanel<TipsPanel>();
-                    Debug.Log("CreatePanelByTaskType: " + trainingPanel);
+                    Log.Info("CreatePanelByTaskType: " + trainingPanel);
                     break;
                 case TaskType.Test:
                     var testPanel = GetPanel<TaskTestPanel>();
-                    Debug.Log("CreatePanelByTaskType: " + testPanel);
+                    Log.Info("CreatePanelByTaskType: " + testPanel);
                     break;
                 default:
                     break;

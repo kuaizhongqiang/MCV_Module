@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using MCV_Module.Utils;
 using MCV_Module.Controller;
 using MCV_Module.Event;
 using MCV_Module.Managers;
@@ -200,7 +201,7 @@ namespace MCV_Module.Controllers
             }
             if (project == null)
             {
-                Debug.LogWarning($"[MenuController] 菜单「{menuClip.displayName}」未绑定项目（clip / projectId 均为空），无法进入任务");
+                Log.Warning($"[MenuController] 菜单「{menuClip.displayName}」未绑定项目（clip / projectId 均为空），无法进入任务");
                 return;
             }
 
@@ -222,7 +223,7 @@ namespace MCV_Module.Controllers
             EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(SceneState.UI));
             EventBus<TaskTypeChangeEventData>.Publish(new TaskTypeChangeEventData(project, firstActive));
 
-            Debug.Log($"[MenuController] 进入项目「{project.displayName}」，默认任务 {firstActive}");
+            Log.Info($"[MenuController] 进入项目「{project.displayName}」，默认任务 {firstActive}");
         }
 
         /// <summary>当前选中菜单在当前层级列表中的索引；取不到返回 0。</summary>

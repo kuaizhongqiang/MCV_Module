@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -79,7 +80,7 @@ namespace MCV_Module.Managers
                 {
                     var texture = DownloadHandlerTexture.GetContent(uwr);
                     var sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), Vector2.zero);
-                    Debug.Log($"[GlobalAssetsMgr] 图片加载成功：{imagePath}");
+                    Log.Info($"[GlobalAssetsMgr] 图片加载成功：{imagePath}");
 
                     // 并发加载同一图片时，CacheImage 会销毁重复的，返回生效的那份
                     Sprite effective = CacheImage(imageName, sprite);
@@ -88,7 +89,7 @@ namespace MCV_Module.Managers
                 else
                 {
                     var error = $"[GlobalAssetsMgr] 加载图片失败: {url}, {uwr.error}";
-                    Debug.LogError(error);
+                    Log.Error(error);
                     onError?.Invoke(error);
                 }
             }
@@ -134,7 +135,7 @@ namespace MCV_Module.Managers
                     {
                         if (sprite.texture != null) Destroy(sprite.texture);
                         Destroy(sprite);
-                        Debug.Log($"[GlobalAssetsMgr] 缓存淘汰：{oldest}");
+                        Log.Info($"[GlobalAssetsMgr] 缓存淘汰：{oldest}");
                     }
                 }
             }

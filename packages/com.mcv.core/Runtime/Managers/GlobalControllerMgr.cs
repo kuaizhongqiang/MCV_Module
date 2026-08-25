@@ -1,4 +1,5 @@
 using System.Collections;
+using MCV_Module.Utils;
 using System.Collections.Generic;
 using MCV_Module.Interfaces;
 using MCV_Module.Singleton;
@@ -35,7 +36,7 @@ namespace MCV_Module.Managers
             var key = controller.ControllerName;
             if (_controllers.TryGetValue(key, out var existing) && existing != null && existing != controller)
             {
-                Debug.LogWarning($"[GlobalControllerMgr] 控制器 {key} 已存在，将被覆盖");
+                Log.Warning($"[GlobalControllerMgr] 控制器 {key} 已存在，将被覆盖");
             }
 
             _controllers[key] = controller;

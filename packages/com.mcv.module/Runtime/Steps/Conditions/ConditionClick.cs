@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using MCV_Module.Event;
 using MCV_Module.Models;
@@ -21,7 +22,7 @@ namespace MCV_Module.Steps
             var target = step.TargetObj;
             if (target == null)
             {
-                Debug.LogWarning($"[ConditionClick] {step.name} targetObj 未赋值，跳过点击步骤");
+                Log.Warning($"[ConditionClick] {step.name} targetObj 未赋值，跳过点击步骤");
                 yield break;
             }
             target.gameObject.SetActive(true);

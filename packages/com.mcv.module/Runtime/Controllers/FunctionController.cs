@@ -1,4 +1,5 @@
 using MCV_Module.Controller;
+using MCV_Module.Utils;
 using MCV_Module.Event;
 using MCV_Module.Managers;
 using MCV_Module.Models;
@@ -234,7 +235,7 @@ namespace MCV_Module.Controllers
             string targetName;
             if (!ResolveBackTarget(current, out targetState, out targetName)) return;
 
-            Debug.Log($"[FunctionController] 从{SceneStateToChinese(current)}返回{targetName}");
+            Log.Info($"[FunctionController] 从{SceneStateToChinese(current)}返回{targetName}");
             EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(targetState));
         }
     }

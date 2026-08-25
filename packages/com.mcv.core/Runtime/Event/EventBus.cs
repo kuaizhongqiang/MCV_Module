@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections.Generic;
 
 namespace MCV_Module.Event
@@ -77,7 +78,7 @@ namespace MCV_Module.Event
                 }
                 catch (Exception ex)
                 {
-                    UnityEngine.Debug.LogError($"[EventBus] 事件处理异常 [{typeof(T).Name}]: {ex.Message}");
+                    Log.Error($"[EventBus] 事件处理异常 [{typeof(T).Name}]: {ex.Message}");
                 }
             }
         }

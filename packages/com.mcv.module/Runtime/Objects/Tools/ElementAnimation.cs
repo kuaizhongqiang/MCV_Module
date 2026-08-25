@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using System.Collections.Generic;
 using MCV_Module.Models;
@@ -48,7 +49,7 @@ namespace MCV_Module.Objects.Tools
             var data = rotationStructs.Find(x => x.animTag == animTag);
             if (data.animTag == null)
             {
-                Debug.LogWarning($"ElementRotationAnimation: 未找到动画标签 {animTag}");
+                Log.Warning($"ElementRotationAnimation: 未找到动画标签 {animTag}");
                 return;
             }
             if (data.duration <= 0)

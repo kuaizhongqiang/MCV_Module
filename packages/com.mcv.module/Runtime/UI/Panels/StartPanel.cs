@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using MCV_Module.Controllers;
 using UnityEngine;
 using UnityEngine.UI;
@@ -28,7 +29,7 @@ namespace MCV_Module.UI.Panels
             }
             else
             {
-                Debug.LogError("[StartPanel] startBtn 未赋值", this);
+                Log.Error("[StartPanel] startBtn 未赋值", this);
             }
         }
 

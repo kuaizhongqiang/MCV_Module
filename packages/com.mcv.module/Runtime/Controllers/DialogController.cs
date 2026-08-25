@@ -37,18 +37,21 @@ namespace MCV_Module.Controller
         }
 
         #region 事件处理
-        /// <summary>确认按钮点击</summary>
+        /// <summary>
+        /// 确认按钮点击：先播完收起动画，再发布结果事件。
+        /// 避免先发布事件导致业务方（如场景状态切换）提前把面板失活，从而引发 StartCoroutine 报错。
+        /// </summary>
         void HandleConfirm()
         {
-            EventBus<DialogResultEvent>.Publish(new DialogResultEvent(GetTitle(), true));
-            View.Hide();
+            var title = GetTitle();
+            View.Hide(() => EventBus<DialogResultEvent>.Publish(new DialogResultEvent(title, true)));
         }
 
-        /// <summary>取消按钮点击</summary>
+        /// <summary>取消按钮点击：同样先收起动画，再发布结果。</summary>
         void HandleCancel()
         {
-            EventBus<DialogResultEvent>.Publish(new DialogResultEvent(GetTitle(), false));
-            View.Hide();
+            var title = GetTitle();
+            View.Hide(() => EventBus<DialogResultEvent>.Publish(new DialogResultEvent(title, false)));
         }
         #endregion
 

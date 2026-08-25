@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using MCV_Module.Utils;
 using MCV_Module.Managers;
 using MCV_Module.Models;
 using UnityEngine;
@@ -93,7 +94,7 @@ namespace MCV_Module.UI
             GameObject prefab = Resources.Load<GameObject>(panelPath);
             if (prefab == null)
             {
-                Debug.LogError($"[CanvasBase] 面板 Prefab 不存在：Resources/{panelPath}（请用 MCV/创建/UI Panel 生成器生成）");
+                Log.Error($"[CanvasBase] 面板 Prefab 不存在：Resources/{panelPath}（请用 MCV/创建/UI Panel 生成器生成）");
                 return null;
             }
             GameObject go = Instantiate(prefab, transform);

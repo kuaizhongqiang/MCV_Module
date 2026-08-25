@@ -1,4 +1,5 @@
 using System;
+using MCV_Module.Utils;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -30,7 +31,7 @@ namespace MCV_Module.UI.Panels
         static readonly HashSet<string> SpacingAfter = new HashSet<string> { "BackBtn", "MuteBtn" };
         static readonly string[] DefaultBtnNames =
         {
-            "BackBtn", "ExitBtn", "SettingBtn", "MuteBtn",
+            "ExitBtn", "BackBtn", "SettingBtn", "MuteBtn",
             "ResourcePanelBtn", "SummitBtn", "RecordBtn"
         };
 
@@ -48,7 +49,7 @@ namespace MCV_Module.UI.Panels
             base.Awake();
             if (btnParent == null || switchBtn == null)
             {
-                Debug.LogError("[FunctionPanel] btnParent / switchBtn 未赋值");
+                Log.Error("[FunctionPanel] btnParent / switchBtn 未赋值");
                 return;
             }
             m_SwitchCanvasGroup = switchBtn.GetComponent<CanvasGroup>();
@@ -58,7 +59,7 @@ namespace MCV_Module.UI.Panels
 
             if ( m_SwitchCanvasGroup == null)
             {
-                Debug.LogError("[FunctionPanel] 缺少 CanvasGroup 组件（panel 或 switchBtn）");
+                Log.Error("[FunctionPanel] 缺少 CanvasGroup 组件（panel 或 switchBtn）");
             }
 
             // 让 switchBtn 不受 panel 自身 CanvasGroup 的 alpha/interactable 影响：
@@ -127,7 +128,7 @@ namespace MCV_Module.UI.Panels
             Button btn = go.GetComponent<Button>();
             if (btn == null)
             {
-                Debug.LogError($"[FunctionPanel] 按钮预制体 {FunctionBtnPath} 上缺少 Button 组件：{btnName}");
+                Log.Error($"[FunctionPanel] 按钮预制体 {FunctionBtnPath} 上缺少 Button 组件：{btnName}");
                 return null;
             }
 
@@ -144,7 +145,7 @@ namespace MCV_Module.UI.Panels
             GameObject prefab = Resources.Load<GameObject>(FunctionBtnPath);
             if (prefab == null)
             {
-                Debug.LogError($"[FunctionPanel] 找不到按钮预制体：{FunctionBtnPath}");
+                Log.Error($"[FunctionPanel] 找不到按钮预制体：{FunctionBtnPath}");
                 return null;
             }
             GameObject go = Instantiate(prefab, btnParent);
@@ -159,7 +160,7 @@ namespace MCV_Module.UI.Panels
             GameObject prefab = Resources.Load<GameObject>(SpacingObjPath);
             if (prefab == null)
             {
-                Debug.LogError($"[FunctionPanel] 找不到分隔预制体：{SpacingObjPath}");
+                Log.Error($"[FunctionPanel] 找不到分隔预制体：{SpacingObjPath}");
                 return null;
             }
             GameObject go = Instantiate(prefab, btnParent);

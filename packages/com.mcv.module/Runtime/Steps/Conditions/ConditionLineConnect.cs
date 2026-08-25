@@ -1,4 +1,5 @@
 using System.Collections;
+using MCV_Module.Utils;
 using System.Collections.Generic;
 using MCV_Module.Managers;
 using MCV_Module.Models;
@@ -28,7 +29,7 @@ namespace MCV_Module.Steps
             var mgr = ElementManagerBase.Instance;
             if (mgr == null)
             {
-                Debug.LogWarning($"[ConditionLineConnect] {step.name} 无 ElementManagerBase，跳过连线步骤");
+                Log.Warning($"[ConditionLineConnect] {step.name} 无 ElementManagerBase，跳过连线步骤");
                 yield break;
             }
             ShowLineElements();

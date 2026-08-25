@@ -1,5 +1,6 @@
 // 由 MCV/创建/UI Panel 生成器生成（2026-08-18）—— 请按需补充业务代码
 using System.Collections;
+using MCV_Module.Utils;
 using System.Collections.Generic;
 using MCV_Module.Controllers;
 using UnityEngine;
@@ -32,7 +33,7 @@ namespace MCV_Module.UI.Panels
             base.Awake();
             if (btnParent == null || showText == null)
             {
-                Debug.LogError("需要手动挂载组件");
+                Log.Error("需要手动挂载组件");
                 return;
             }
 
@@ -86,7 +87,7 @@ namespace MCV_Module.UI.Panels
                 if (btn == null) continue;
                 btn.onClick.AddListener(() =>
                 {
-                    Debug.Log("点击了按钮：" + btn.name);
+                    Log.Info("点击了按钮：" + btn.name);
                 });
                 buttons.Add(btn);
                 if (i < btnNames.Count - 1)
