@@ -122,6 +122,12 @@ namespace MCV_Module.Controllers
                 return;
             }
 
+            if (string.IsNullOrWhiteSpace(userText))
+            {
+                View.SetInfoText("请输入内容后再发送");
+                return;
+            }
+
             if (!IsWarmupDone())
             {
                 View.SetInfoText("系统初始化中，请稍候…");
@@ -138,13 +144,38 @@ namespace MCV_Module.Controllers
         }
 
         /// <summary>
+        /// 组装发给 AI 的最终用户消息 = 便携提示词(当前界面状态) + 用户输入。
+        /// 便携提示词随每次发送动态注入, 让 AI 明确当前用户在哪个界面/任务。
+        /// 兜底: 界面状态为空时退化为仅用户输入, 避免孤立分隔词。
+        /// </summary>
+        string BuildUserText(string userText)
+        {
+            string state = GlobalUIMgr.CurrentStateDescription();
+            string text = userText ?? "";
+            if (string.IsNullOrWhiteSpace(text))
+            {
+                return "";
+            }
+            return string.IsNullOrWhiteSpace(state)
+                ? text
+                : $"{state} 用户输入内容为：{text}";
+        }
+
+        /// <summary>
         /// 执行一次对话。AiServer 未就绪时最多重试 MAX_RETRY 次(每次间隔 1 秒)。
         /// 只传 session_id + user_text 给 GlobalAiMgr, 历史拼接在 EXE。
         /// </summary>
         IEnumerator RunChat(string userText, int retriesLeft)
         {
             var mgr = GlobalAiMgr.Instance;
-            var request = new AiChatRequest(mgr.SessionId, userText, stream: true);
+            if (mgr == null)
+            {
+                Finish(false, "AI 服务未初始化");
+                yield break;
+            }
+
+            string finalString = BuildUserText(userText);
+            var request = new AiChatRequest(mgr.SessionId, finalString, stream: true);
 
             yield return mgr.ChatAsync(request,
                 onDelta: chunk =>

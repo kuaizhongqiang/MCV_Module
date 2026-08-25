@@ -18,5 +18,11 @@ namespace MCV_Module.UI.Panel
         {
             Init(title);
         }
+
+        public override string GetPanelContent()
+        {
+            // TODO: 获取仿真实验面板内容
+            return "";
+        }
     }
 }

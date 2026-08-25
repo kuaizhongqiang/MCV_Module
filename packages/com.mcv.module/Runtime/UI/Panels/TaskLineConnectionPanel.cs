@@ -18,5 +18,11 @@ namespace MCV_Module.UI.Panel
         {
             Init(title);
         }
+
+        public override string GetPanelContent()
+        {
+            // TODO: 获取电路连接面板内容
+            return null;
+        }
     }
 }

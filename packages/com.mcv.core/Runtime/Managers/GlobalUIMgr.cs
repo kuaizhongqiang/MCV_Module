@@ -4,6 +4,8 @@ using MCV_Module.Event;
 using MCV_Module.Models;
 using MCV_Module.Singleton;
 using MCV_Module.UI;
+using MCV_Module.UI.Panel;
+using MCV_Module.UI.Panels;
 using UnityEngine;
 
 namespace MCV_Module.Managers
@@ -18,10 +20,13 @@ namespace MCV_Module.Managers
         #region 参数
         Dictionary<string, CanvasBase> canvasDict = new Dictionary<string, CanvasBase>();
         SceneState m_CurrentState = SceneState.Setup;
+        /// <summary>当前任务类型（由 TaskTypeChangeEventData 实时更新, 供 AI 上下文描述使用）。</summary>
+        TaskType m_CurrentTaskType = TaskType.None;
         CanvasBase m_ActiveCanvas;
 
         [Header("初始状态"), Tooltip("UI 就绪后自动发布的初始 SceneState（状态系统落地前引导）")]
         [SerializeField] SceneState m_InitialState = SceneState.Start;
+        // 已由 m_CurrentTaskType（实时更新的当前任务类型）取代，保留仅用于 Inspector 兼容/初始引导
         [SerializeField] TaskType m_InitialTaskType = TaskType.None;
         bool m_InitialStatePublished = false;
 
@@ -116,9 +121,10 @@ namespace MCV_Module.Managers
             target.Init(e.State, TaskType.None);
         }
 
-        /// <summary>TaskType 变化：只重建当前 UI Canvas 的任务面板。</summary>
+        /// <summary>TaskType 变化：记录当前任务类型并只重建当前 UI Canvas 的任务面板。</summary>
         void OnTaskTypeChanged(TaskTypeChangeEventData e)
         {
+            m_CurrentTaskType = e.TaskType;
             if (m_ActiveCanvas == null) return;
             m_ActiveCanvas.Init(m_CurrentState, e.TaskType);
         }
@@ -139,11 +145,27 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 静态数据
+/*
+        这里主要是UI界面的数据注入到AI的每轮提示词中，让AI明确当前用户在干嘛
+*/
         public static string CurrentStateDescription()
         {
+            if (!Exists || Instance == null) return "";
+
+            var mgr = Instance;
             string result = "";
-            result += "当前处于：" + SceneStateDescription(Instance.m_InitialState) + "\n";
-            result += "当前任务：" + Instance.m_InitialTaskType.ToString() + "\n";
+            result += "当前处于：" + SceneStateDescription(mgr.m_CurrentState) + "\n";
+
+            // 仅在进入功能场景(UI/漫游)时才附加任务上下文
+            if (mgr.m_CurrentState == SceneState.UI || mgr.m_CurrentState == SceneState.Roaming)
+            {
+                result += "当前任务：" + mgr.m_CurrentTaskType.ToString() + "\n";
+                string panelDesc = TaskPanelDescription();
+                if (!string.IsNullOrEmpty(panelDesc))
+                {
+                    result += "当前任务面板：" + panelDesc + "\n";
+                }
+            }
             return result;
         }
 
@@ -165,7 +187,89 @@ namespace MCV_Module.Managers
                     return "漫游界面，主要进行三维交互";
                 default:
                     return "未知";
+            }
+        }
 
+        static string TaskPanelDescription()
+        {
+            var canvas = Instance.m_ActiveCanvas;
+            if (canvas == null) return "任务面板未激活";
+
+            string content = "";
+            switch (Instance.m_CurrentTaskType)
+            {
+                case TaskType.Purpose:
+                    content = SafePanelContent(canvas.GetPanel<TaskPurposePanel>());
+                    break;
+                case TaskType.Equipment:
+                    content = SafePanelContent(canvas.GetPanel<TaskEquipmentPanel>());
+                    break;
+                case TaskType.Principle:
+                    content = SafePanelContent(canvas.GetPanel<TaskPrinciplePanel>());
+                    break;
+                case TaskType.LineConnection:
+                    content = SafePanelContent(canvas.GetPanel<TaskLineConnectionPanel>());
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        string tips = SafeTipsText(canvas);
+                        if (!string.IsNullOrEmpty(tips)) content += "当前操作提示" + tips;
+                    }
+                    break;
+                case TaskType.Training:
+                    content = SafePanelContent(canvas.GetPanel<TaskTrainingPanel>());
+                    if (!string.IsNullOrEmpty(content))
+                    {
+                        string tips = SafeTipsText(canvas);
+                        if (!string.IsNullOrEmpty(tips)) content += "当前操作提示" + tips;
+                    }
+                    break;
+                case TaskType.Test:
+                    content = SafePanelContent(canvas.GetPanel<TaskTestPanel>());
+                    break;
+                default:
+                    content = SafePanelContent(canvas.GetPanel<TaskDefaultPanel>());
+                    break;
+            }
+            return string.IsNullOrEmpty(content) ? "任务面板暂无内容" : content;
+        }
+
+        /// <summary>安全取任务面板内容：面板不存在或返回 null/空/异常时降级为空串，不抛异常。</summary>
+        static string SafePanelContent(TaskPanelBase panel)
+        {
+            if (panel == null) return "";
+            string text = null;
+            try
+            {
+                text = panel.GetPanelContent();
+            }
+            catch (System.Exception)
+            {
+                return "";
+            }
+            return text ?? "";
+        }
+
+        /// <summary>安全取 Tips 面板文本：面板不存在或异常时降级为空串。</summary>
+        static string SafeTipsText(CanvasBase canvas)
+        {
+            if (canvas == null) return "";
+            TipsPanel tips = null;
+            try
+            {
+                tips = canvas.GetPanel<TipsPanel>();
+            }
+            catch (System.Exception)
+            {
+                return "";
+            }
+            if (tips == null) return "";
+            try
+            {
+                return tips.GetText() ?? "";
+            }
+            catch (System.Exception)
+            {
+                return "";
             }
         }
         #endregion

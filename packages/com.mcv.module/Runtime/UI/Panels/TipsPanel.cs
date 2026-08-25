@@ -7,6 +7,10 @@ namespace MCV_Module.UI.Panels
     public class TipsPanel : PanelBase
     {
         [SerializeField] Text tipsText;
+        public string GetText()
+        {
+            return tipsText.text;
+        }
 
         protected override void Awake()
         {

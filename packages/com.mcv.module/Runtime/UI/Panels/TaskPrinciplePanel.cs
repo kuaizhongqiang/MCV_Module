@@ -9,7 +9,9 @@ namespace MCV_Module.UI.Panel
     public class TaskPrinciplePanel : TaskPanelBase
     {
         [SerializeField] Text titleText;
+        [SerializeField] Text contentText;
         [SerializeField] Transform principleParent;
+        PrincipleStruct currentPrinciple;
 
         readonly List<PrincipleStruct> principleList = new List<PrincipleStruct>();
 
@@ -24,6 +26,34 @@ namespace MCV_Module.UI.Panel
         public void SetPrinciple(List<PrincipleStruct> principleStructs)
         {
             Init(principleStructs);
+        }
+
+        public void SelectPrinciple(string title)
+        {
+            var principle = principleList.Find(x => x.title == title);
+            currentPrinciple = principle;
+            titleText.text = currentPrinciple.title;
+            contentText.text = currentPrinciple.contentText;
+            // TODO: 播放视频
+        }
+
+        public override string GetPanelContent()
+        {
+            string result = "";
+            int principleCount = principleList.Count;
+            result += "【实验原理页面】\n";
+            result += $"当前任务包含 {principleCount} 个实验原理视频。\n";
+            result += $"分别是：\n";
+            for (int i = 0; i < principleCount; i++)
+            {
+                var item = principleList[i];
+                result += $"{item.title}\n";
+            }
+            result += $"当前显示的原理是：\n";
+            result += $"{currentPrinciple.title}\n";
+            result += $"{currentPrinciple.contentText}\n";
+
+            return result;
         }
     }
 }

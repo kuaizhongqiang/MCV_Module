@@ -10,20 +10,52 @@ namespace MCV_Module.UI.Panel
     {
         [SerializeField] Text titleText;
         [SerializeField] Transform questionParent;
+        QuestionData currentQuestion;
 
-        readonly List<QuestionClip> questionList = new List<QuestionClip>();
+        readonly QuestionClip questionList = new QuestionClip();
 
-        public void Init(List<QuestionClip> questionClips)
+        public void Init(QuestionClip question)
         {
-            if (questionClips == null) return;
-            questionList.Clear();
-            questionList.AddRange(questionClips);
-            // TODO: 按 questionList 装配测验 UI
+            if (question == null) return;
         }
 
-        public void SetQuestion(List<QuestionClip> questionClips)
+        public void SetQuestion(QuestionClip question)
         {
-            Init(questionClips);
+            Init(question);
+        }
+
+        public void SelectQuestion(QuestionData data)
+        {
+            currentQuestion = data;
+        }
+
+        public override string GetPanelContent()
+        {
+            string result = "";
+            result += "【小测验页面】\n";
+            int questionCount = questionList.questions.Count;
+            result += $"当前任务包含 {questionCount} 个小测验。\n";
+            result += $"当前问题是：\n";
+            result += $"{currentQuestion.questionText}\n";
+            string options = "";
+            for (int i = 0; i < currentQuestion.options.Count; i++)
+            {
+                var item = currentQuestion.options[i];
+                options += $"{item.itemText}\n";
+            }
+            result += $"选项是：\n";
+            result += $"{options}\n";
+            string answer = "";
+            for (int i = 0; i < currentQuestion.options.Count; i++)
+            {
+                var item = currentQuestion.options[i];
+                if (item.isCorrect)
+                {
+                    answer += $"{item.itemText}\n";
+                }
+            }
+            result += $"正确选择项是：{answer}\n";
+            return result;
         }
     }
 }

@@ -7,5 +7,6 @@ namespace MCV_Module.UI
 {
     public abstract class TaskPanelBase : PanelBase
     {
+        public abstract string GetPanelContent();
     }
 }
