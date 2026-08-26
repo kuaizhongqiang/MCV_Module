@@ -22,7 +22,8 @@ namespace MCV_Module.Managers
     ///   - 应用退出时关闭 EXE(优雅 /v1/shutdown + 兜底 Kill)
     ///
     /// 分层:
-    ///   - AiServerClient（MCV.AiClient.dll, 纯协议）: 鉴权/对话/日志/预热
+    ///   - AiServerClient（MCV.AiClient.dll, 纯协议）: 鉴权/对话/日志/预热/模型信息
+    ///     （凭据由本管理器 Inspector 字段配置后运行时注入，DLL 内无硬编码密钥）
     ///   - AiServerProcess（本程序集源码）: EXE 拉起/关闭（#if !UNITY_WEBGL）
     ///
     /// 用法(任意脚本):
@@ -34,6 +35,16 @@ namespace MCV_Module.Managers
         #region 参数
         /// <summary>服务启动就绪等待超时(秒)。Node SEA EXE 首次启动(88MB+杀软扫描)可能较慢, 取 30s。</summary>
         [SerializeField, Header("AiServer 就绪超时(秒)")] float readyTimeoutSeconds = 30f;
+
+        /// <summary>
+        /// 客户端鉴权名称 —— 必须与 AiServer EXE 内嵌白名单(.env CLIENT_WHITELIST)中一组一致。
+        /// DLL 化后凭据不再硬编码，由本 Inspector 字段配置并在运行时注入 AiServerClient。
+        /// </summary>
+        [SerializeField, Header("客户端鉴权(与 .env CLIENT_WHITELIST 一致)")]
+        string _authName = "asdf";
+
+        /// <summary>客户端鉴权令牌 —— 必须与 AiServer EXE 内嵌白名单中一组一致。</summary>
+        [SerializeField] string _authToken = "asdfghjkl";
 
         /// <summary>由 GlobalAiMgr 控制的通讯客户端（纯协议，编入 MCV.AiClient.dll）</summary>
         public AiServerClient Client { get; private set; }
@@ -117,7 +128,8 @@ namespace MCV_Module.Managers
 
         protected override IEnumerator DelayInit()
         {
-            Client = new AiServerClient();
+            // 凭据由 Inspector 配置（_authName/_authToken），运行时注入客户端 —— DLL 内无硬编码密钥
+            Client = new AiServerClient(_authName, _authToken);
             _process = new AiServerProcess(Client);
 
             // 生成会话 id（Unity 侧唯一标识, 传给 EXE 用于会话历史管理）
@@ -202,6 +214,31 @@ namespace MCV_Module.Managers
         public IEnumerator FetchServerLogsAsync(int tail, Action<string> onResult)
         {
             yield return Client.FetchLogsAsync(tail, onResult);
+        }
+
+        /// <summary>
+        /// 拉取 models 目录（providers/模型/能力，对齐 dsh-llm listProviders 概念）。
+        /// 供 UI 展示可选 provider/model；需服务就绪并鉴权。
+        /// </summary>
+        public IEnumerator FetchModelsAsync(Action<AiModelsResult> onResult, Action<string> onError = null)
+        {
+            if (Client == null)
+            {
+                onError?.Invoke("AiServerClient 未初始化");
+                yield break;
+            }
+            yield return Client.FetchModelsAsync(onResult, onError);
+        }
+
+        /// <summary>拉取服务信息（版本/默认 provider/活跃会话/能力目录）。</summary>
+        public IEnumerator FetchInfoAsync(Action<AiInfoResult> onResult, Action<string> onError = null)
+        {
+            if (Client == null)
+            {
+                onError?.Invoke("AiServerClient 未初始化");
+                yield break;
+            }
+            yield return Client.FetchInfoAsync(onResult, onError);
         }
         #endregion
 

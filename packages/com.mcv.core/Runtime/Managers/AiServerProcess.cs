@@ -107,8 +107,8 @@ namespace MCV_Module.Managers
                 var req = (System.Net.HttpWebRequest)System.Net.WebRequest.Create(_client.BaseUrl + "/v1/shutdown");
                 req.Method = "POST";
                 req.Timeout = 1500;
-                req.Headers["X-Auth-Name"] = AiServerClient.AuthName;
-                req.Headers["X-Auth-Token"] = AiServerClient.AuthToken;
+                req.Headers["X-Auth-Name"] = _client.AuthName;
+                req.Headers["X-Auth-Token"] = _client.AuthToken;
                 using (var resp = (System.Net.HttpWebResponse)req.GetResponse()) { }
             }
             catch (Exception)
