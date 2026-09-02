@@ -36,6 +36,15 @@ namespace MCV_Module.Controllers
 
         protected override void OnViewBound()
         {
+            // AI 开关关闭(GlobalAiMgr 静默)时, 面板不显示。
+            var aiMgr = GlobalAiMgr.Instance;
+            if (aiMgr == null || !aiMgr.IfAiStart)
+            {
+                View.SetUIActiveImmediately(false);
+                Log.Info("[AiDialogController] AI 开关关闭, AiDialogPanel 不显示。");
+                return;
+            }
+
             // 先清后加, 避免面板重建后重复订阅
             View.OnSendRequested -= HandleSend;
             View.OnSendRequested += HandleSend;

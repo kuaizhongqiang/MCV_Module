@@ -33,6 +33,9 @@ namespace MCV_Module.Managers
     public class GlobalAiMgr : SingletonGlobalMgr<GlobalAiMgr>
     {
         #region 参数
+        /// <summary>  是否启动 /// </summary>
+        [SerializeField,Header("是否启动")] bool ifAiStart = false;
+
         /// <summary>服务启动就绪等待超时(秒)。Node SEA EXE 首次启动(88MB+杀软扫描)可能较慢, 取 30s。</summary>
         [SerializeField, Header("AiServer 就绪超时(秒)")] float readyTimeoutSeconds = 30f;
 
@@ -51,6 +54,8 @@ namespace MCV_Module.Managers
 
         /// <summary>EXE 宿主进程管理（留源码，含 #if !UNITY_WEBGL）</summary>
         AiServerProcess _process;
+
+        public bool IfAiStart => ifAiStart;
 
         /// <summary>EXE 是否已就绪(health 通过)</summary>
         public bool IsServerReady { get { return Client != null && Client.IsReady; } }
@@ -128,6 +133,15 @@ namespace MCV_Module.Managers
 
         protected override IEnumerator DelayInit()
         {
+            // 开关关闭时整体静默：不创建客户端/进程、不拉起 EXE、不预热，
+            // 只标记已初始化以免阻塞启动链，后续所有公开方法均空转。
+            if (!ifAiStart)
+            {
+                isInit = true;
+                Log.Info("[GlobalAiMgr] AI 开关关闭(ifAiStart=false), GlobalAiMgr 静默模式, 不初始化 AiServer。");
+                yield break;
+            }
+
             // 凭据由 Inspector 配置（_authName/_authToken），运行时注入客户端 —— DLL 内无硬编码密钥
             Client = new AiServerClient(_authName, _authToken);
             _process = new AiServerProcess(Client);
@@ -152,9 +166,12 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 公开方法
-        /// <summary>后台拉起并等待 AiServer 就绪, 就绪后执行启动预热(幂等, 可重复调用)。</summary>
+        /// <summary>后台拉起并等待 AiServer 就绪, 就绪后执行启动预热(幂等, 可重复调用)。开关关闭时静默。</summary>
         public IEnumerator EnsureReadyAndWarmupAsync()
         {
+            if (!ifAiStart || Client == null)
+                yield break;
+
             bool ready = false;
             yield return Client.EnsureReadyAsync(_process.TryLaunch, ok => ready = ok, readyTimeoutSeconds);
 
@@ -190,6 +207,10 @@ namespace MCV_Module.Managers
         public IEnumerator ChatAsync(AiChatRequest request, Action<AiChatChunk> onDelta,
             Action<AiChatResult> onDone, Action<string> onError = null)
         {
+            // 开关关闭时静默: 不执行任何对话逻辑
+            if (!ifAiStart || Client == null)
+                yield break;
+
             if (string.IsNullOrEmpty(request.sessionId))
                 request.sessionId = SessionId;
 
@@ -213,6 +234,8 @@ namespace MCV_Module.Managers
         /// <summary>拉取 AiServer 最近日志(排障用)。</summary>
         public IEnumerator FetchServerLogsAsync(int tail, Action<string> onResult)
         {
+            if (!ifAiStart || Client == null)
+                yield break;
             yield return Client.FetchLogsAsync(tail, onResult);
         }
 

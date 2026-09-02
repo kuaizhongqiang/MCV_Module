@@ -50,6 +50,16 @@ namespace MCV_Module.Models
         Justified,
         Auto,
     }
+
+    [Serializable]
+    public enum SettingLabelType
+    {
+        Title,
+        Input,
+        Bool,
+        Dropdown,
+        Slider,
+    }
     #endregion
 
     #region Audio

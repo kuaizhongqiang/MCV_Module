@@ -1,6 +1,6 @@
 {
     "name":  "com.mcv.core",
-    "version":  "0.1.11",
+    "version":  "0.1.12",
     "displayName":  "MCV Core",
     "description":  "MCV 框架核心（基础设施）：Singleton/Event/Interfaces/Models/Utils、UI 基类（UIBase/CanvasBase/PanelBase/ComponentBase）、交互基类（ObjectBase/InteractiveBase）与纯管理器（Global*Mgr）。零业务代码，可独立复用。",
     "unity":  "2022.3",
