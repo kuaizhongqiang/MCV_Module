@@ -1,6 +1,7 @@
 using MCV_Module.Managers;
 using MCV_Module.Utils;
 using MCV_Module.UI.Panels;
+using UnityEngine;
 
 namespace MCV_Module.Event
 {
@@ -12,10 +13,11 @@ namespace MCV_Module.Event
     ///   2. 找到当前激活（正在展示）的 Canvas
     ///   3. 在该 Canvas 中 GetPanel&lt;DialogPanel&gt;（不存在则懒加载创建）并调用 Show(request)
     ///
-    /// 用法（框架启动时初始化一次）：
-    ///   DialogEventDispatcher.Initialize();
-    ///   // 场景切换 / 单例销毁时清理：
-    ///   DialogEventDispatcher.Shutdown();
+    /// 包归属说明：本类依赖 DialogPanel 等 module 类型，因此位于 module 包
+    /// （文件路径 UI/Tools，命名空间保持 MCV_Module.Event）。
+    /// 启动时经 [RuntimeInitializeOnLoadMethod] 自注册订阅，不再依赖 core 侧调用
+    /// （core 的 GlobalUIMgr 零 module 依赖）。请求早于 UI 就绪时由下方守卫静默丢弃，
+    /// 行为与旧版"UI 就绪后才订阅"一致。
     ///
     /// 与 DialogController 的职责划分：
     ///   - 本类只负责「收到请求 → 定位面板 → 显示」；
@@ -24,6 +26,12 @@ namespace MCV_Module.Event
     public static class DialogEventDispatcher
     {
         static bool s_Initialized;
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        static void AutoInitialize()
+        {
+            Initialize();
+        }
 
         /// <summary>订阅 DialogRequestEvent，开始分发对话框显示请求。重复调用幂等。</summary>
         public static void Initialize()

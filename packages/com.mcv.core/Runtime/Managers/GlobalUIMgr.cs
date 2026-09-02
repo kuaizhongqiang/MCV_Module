@@ -5,7 +5,6 @@ using MCV_Module.Event;
 using MCV_Module.Models;
 using MCV_Module.Singleton;
 using MCV_Module.UI;
-using MCV_Module.UI.Panels;
 using UnityEngine;
 
 namespace MCV_Module.Managers
@@ -55,15 +54,14 @@ namespace MCV_Module.Managers
             // 登录成功 → 进入 Menu（登录→菜单导航断点的监听方，常驻订阅）
             EventBus<LoginSuccessEvent>.Subscribe(OnLoginSuccess);
             yield return null;
-            // GlobalUIMgr 就绪后，启动对话框专门处理逻辑（依赖激活 Canvas 与 GetPanel 链路）
-            DialogEventDispatcher.Initialize();
+            // 对话框分发（DialogEventDispatcher）在 module 侧自注册（RuntimeInitializeOnLoadMethod），
+            // core 不再引用任何 module 类型。
             isInit = true;
         }
 
         protected override void OnDestroy()
         {
             base.OnDestroy();
-            DialogEventDispatcher.Shutdown();
             EventBus<SceneStateChangeEventData>.Unsubscribe(OnSceneStateChanged);
             EventBus<TaskTypeChangeEventData>.Unsubscribe(OnTaskTypeChanged);
             EventBus<LoginSuccessEvent>.Unsubscribe(OnLoginSuccess);
@@ -71,6 +69,12 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 静态方法
+        /// <summary>
+        /// 任务面板内容提供器（由 module 侧注入，见 TaskPanelPrompt 的 RuntimeInitializeOnLoadMethod 注册）：
+        /// core 不引用具体 Panel 类型；未注入时为 null，AI 提示词中不附加"当前任务面板"描述（静默降级）。
+        /// </summary>
+        public static System.Func<string> TaskPanelDescProvider;
+
         public static void RegisterCanvas(CanvasBase canvas)
         {
             string name = canvas.GetType().ToString();
@@ -252,10 +256,14 @@ namespace MCV_Module.Managers
             if (mgr.m_CurrentState == SceneState.UI || mgr.m_CurrentState == SceneState.Roaming)
             {
                 result += "当前任务：" + mgr.m_CurrentTaskType.ToString() + "\n";
-                string panelDesc = TaskPanelDescription();
-                if (!string.IsNullOrEmpty(panelDesc))
+                // 任务面板具体内容由 module 侧提供器注入，core 侧不依赖具体面板类型
+                if (TaskPanelDescProvider != null)
                 {
-                    result += "当前任务面板：" + panelDesc + "\n";
+                    string panelDesc = TaskPanelDescProvider();
+                    if (!string.IsNullOrEmpty(panelDesc))
+                    {
+                        result += "当前任务面板：" + panelDesc + "\n";
+                    }
                 }
             }
             return result;
@@ -279,89 +287,6 @@ namespace MCV_Module.Managers
                     return "漫游界面，主要进行三维交互";
                 default:
                     return "未知";
-            }
-        }
-
-        static string TaskPanelDescription()
-        {
-            var canvas = Instance.m_ActiveCanvas;
-            if (canvas == null) return "任务面板未激活";
-
-            string content = "";
-            switch (Instance.m_CurrentTaskType)
-            {
-                case TaskType.Purpose:
-                    content = SafePanelContent(canvas.GetPanel<TaskPurposePanel>());
-                    break;
-                case TaskType.Equipment:
-                    content = SafePanelContent(canvas.GetPanel<TaskEquipmentPanel>());
-                    break;
-                case TaskType.Principle:
-                    content = SafePanelContent(canvas.GetPanel<TaskPrinciplePanel>());
-                    break;
-                case TaskType.LineConnection:
-                    content = SafePanelContent(canvas.GetPanel<TaskLineConnectionPanel>());
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        string tips = SafeTipsText(canvas);
-                        if (!string.IsNullOrEmpty(tips)) content += "当前操作提示" + tips;
-                    }
-                    break;
-                case TaskType.Training:
-                    content = SafePanelContent(canvas.GetPanel<TaskTrainingPanel>());
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        string tips = SafeTipsText(canvas);
-                        if (!string.IsNullOrEmpty(tips)) content += "当前操作提示" + tips;
-                    }
-                    break;
-                case TaskType.Test:
-                    content = SafePanelContent(canvas.GetPanel<TaskTestPanel>());
-                    break;
-                default:
-                    content = SafePanelContent(canvas.GetPanel<TaskDefaultPanel>());
-                    break;
-            }
-            return string.IsNullOrEmpty(content) ? "任务面板暂无内容" : content;
-        }
-
-        /// <summary>安全取任务面板内容：面板不存在或返回 null/空/异常时降级为空串，不抛异常。</summary>
-        static string SafePanelContent(TaskPanelBase panel)
-        {
-            if (panel == null) return "";
-            string text = null;
-            try
-            {
-                text = panel.GetPanelContent();
-            }
-            catch (System.Exception)
-            {
-                return "";
-            }
-            return text ?? "";
-        }
-
-        /// <summary>安全取 Tips 面板文本：面板不存在或异常时降级为空串。</summary>
-        static string SafeTipsText(CanvasBase canvas)
-        {
-            if (canvas == null) return "";
-            TipsPanel tips = null;
-            try
-            {
-                tips = canvas.GetPanel<TipsPanel>();
-            }
-            catch (System.Exception)
-            {
-                return "";
-            }
-            if (tips == null) return "";
-            try
-            {
-                return tips.GetText() ?? "";
-            }
-            catch (System.Exception)
-            {
-                return "";
             }
         }
         #endregion
