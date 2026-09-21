@@ -19,6 +19,13 @@ namespace MCV_Module.UI
         public SceneState CanvasState => m_SceneState;
         public bool MatchesState(SceneState state) => m_SceneState == state;
 
+        /// <summary>
+        /// 是否常驻画布：常驻画布**不参与状态切换**（不被淡出/隐藏，也不参与 ClearPanels + Rebuild），
+        /// 也不会被选成切换目标。用于加载遮挡层这类「跨状态覆盖物」——它必须活过状态切换，
+        /// 否则切换时遮罩被连根拔掉/跟着父画布淡出，加载一快就看到闪一下。
+        /// </summary>
+        public virtual bool IsPersistent => false;
+
         protected override void Awake()
         {
             base.Awake();
@@ -86,6 +93,21 @@ namespace MCV_Module.UI
                 return panels[panelName] as T;
             }
             return CreatePanel(panelName) as T;
+        }
+
+        /// <summary>
+        /// 取已注册的面板，不存在时返回 null（**不创建**）。
+        /// 收起 / 收尾路径要用这个：用 <see cref="GetPanel{T}"/> 会在面板不存在时先建一个再立刻关掉，
+        /// 新建实例的 Awake（isActiveOnInstance）会先亮一帧 —— 又是一次闪。
+        /// </summary>
+        public T FindPanel<T>() where T : PanelBase
+        {
+            string panelName = typeof(T).Name;
+            if (panels.TryGetValue(panelName, out PanelBase panel))
+            {
+                return panel as T;
+            }
+            return null;
         }
 
         PanelBase CreatePanel(string panelName)

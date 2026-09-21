@@ -22,6 +22,8 @@ namespace MCV_Module.Managers
         Camera cam;
         Mouse mouse;
         float lastClickTime = -1f;
+        /// <summary>鼠标是否静止（由 GlobalInputMgr 的 MouseMoveStateEventData 同步）</summary>
+        bool m_MouseIdle;
         #endregion
 
         #region 生命周期
@@ -31,21 +33,28 @@ namespace MCV_Module.Managers
         {
             base.Awake();
             mouse = Mouse.current;
+            EventBus<MouseMoveStateEventData>.Subscribe(OnMouseMoveStateChanged);
+        }
+
+        protected override void OnDestroy()
+        {
+            EventBus<MouseMoveStateEventData>.Unsubscribe(OnMouseMoveStateChanged);
+            base.OnDestroy();
         }
 
         void Update()
         {
             if (!isInit) return;
 
-            // 输入门控：鼠标未移动且无按键事件时，悬停/点击状态不可能变化，跳过射线检测。
+            // 输入门控：鼠标静止且无按键事件时，悬停/点击状态不可能变化，跳过射线检测。
+            // 鼠标是否静止由 GlobalInputMgr 统一判定（0.1s 窗口 + 位移阈值）后经事件同步过来，
+            // 这里不再自己读 delta，避免两处各判一套。
             // （代价：物体在静止光标下移动时，移入/移出事件延迟到下一次输入才触发 —— 教学场景可接受）
-            Vector2 delta = mouse.delta.ReadValue();
-            bool hasInput = delta.sqrMagnitude > 0f
-                            || mouse.leftButton.wasPressedThisFrame
-                            || mouse.leftButton.wasReleasedThisFrame
-                            || mouse.rightButton.wasPressedThisFrame
-                            || mouse.rightButton.wasReleasedThisFrame;
-            if (!hasInput) return;
+            if (m_MouseIdle
+                && !mouse.leftButton.wasPressedThisFrame
+                && !mouse.leftButton.wasReleasedThisFrame
+                && !mouse.rightButton.wasPressedThisFrame
+                && !mouse.rightButton.wasReleasedThisFrame) return;
 
             if (ifUiBlockRayCast()) return;
             CoreDetect();
@@ -60,6 +69,16 @@ namespace MCV_Module.Managers
             }
             isInit = true;
         }
+
+        /// <summary>
+        /// 鼠标移动状态同步（GlobalInputMgr 发布）：静止时跳过每帧射线检测；
+        /// 恢复移动的下一帧 Update 会自然做一次检测，这里不用额外补检测。
+        /// </summary>
+        void OnMouseMoveStateChanged(MouseMoveStateEventData e)
+        {
+            if (e == null) return;
+            m_MouseIdle = e.IsIdle;
+        }
         #endregion
 
         #region 静态方法
@@ -73,6 +92,24 @@ namespace MCV_Module.Managers
         {
             if (!Instance.objDict.ContainsKey(interactive)) return;
             Instance.objDict.Remove(interactive);
+        }
+
+        /// <summary>
+        /// 按类型收集当前已登记的交互物（结果写入调用方列表，不产生 GC；销毁/取消登记的会自动消失）。
+        /// 供"在全部交互物里找出某类对象"的场景使用 —— 不要用 FindObjectsOfType / 遍历场景。
+        /// </summary>
+        public static void CollectRegistered<T>(List<T> results) where T : InteractiveBase
+        {
+            if (results == null) return;
+            results.Clear();
+
+            var mgr = SafeInstance;   // 安全取实例：不触发创建，退出期返回 null
+            if (mgr == null) return;
+
+            foreach (var kv in mgr.objDict)
+            {
+                if (kv.Key is T typed) results.Add(typed);
+            }
         }
         #endregion
 

@@ -87,6 +87,23 @@ namespace MCV_Module.Event
         public SceneLoadedEvent(string sceneName) { SceneName = sceneName; }
     }
 
+    // ────────────────────── 内容包（一 ProjectClip 一包） ──────────────────────
+
+    /// <summary>
+    /// 内容包就绪事件：某个 ProjectClip 的 AB 包已**全部**加载完成（遮罩随即关闭）。
+    ///
+    /// 为什么需要它：面板的 <c>OnViewBound</c> 必然早于包加载完成（同一帧里 UI 建面板、资源才开始异步加载），
+    /// 所以同步取件只能拿到空。消费方订阅本事件补一次取用 —— 收到即代表
+    /// <c>GlobalAssetsMgr.GetSpriteByPackageId</c> / <c>GetPrefabByPackageId</c> 能取到东西了。
+    /// </summary>
+    public class ClipReadyEvent
+    {
+        /// <summary>就绪的 ProjectClip.id（形如 clip_contactor）。</summary>
+        public string ClipId { get; }
+
+        public ClipReadyEvent(string clipId) { ClipId = clipId; }
+    }
+
     // ── 登录事件 ──────────────────────────────────────────────
 
     /// <summary>
@@ -186,6 +203,26 @@ namespace MCV_Module.Event
         }
 
         private GlobalInteractionEventData() { }
+    }
+
+    // ── 输入事件 ─────────────────────────────────────────────
+
+    /// <summary>
+    /// 鼠标移动状态变化事件（GlobalInputMgr 在状态翻转时发布，不逐帧发）。
+    /// 订阅方：GlobalInteractiveMgr（静止时跳过射线检测）等。
+    /// </summary>
+    public class MouseMoveStateEventData
+    {
+        /// <summary>新状态</summary>
+        public MouseMoveState State;
+
+        /// <summary>是否静止（等价 State == MouseMoveState.Idle，便于订阅方直接判断）</summary>
+        public bool IsIdle => State == MouseMoveState.Idle;
+
+        public MouseMoveStateEventData(MouseMoveState state)
+        {
+            State = state;
+        }
     }
 
     // ── 步骤/进程事件（与元件/步骤载荷相关的事件已随 module 包拆分，见 CoreEventModule.cs）──

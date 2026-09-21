@@ -139,8 +139,9 @@ namespace MCV_Module.Managers
         {
             foreach (var canvas in Instance.canvasDict.Values)
             {
-                // 跳过未激活的 Canvas，避免在隐藏 Canvas 下创建面板
-                if (!canvas.isActiveAndEnabled) continue;
+                // 跳过未激活的 Canvas，避免在隐藏 Canvas 下创建面板；
+                // 也跳过常驻画布（LoadingCanvas）——它的面板由 LoadingController 驱动，不参与按类型的全局查找
+                if (!canvas.isActiveAndEnabled || canvas.IsPersistent) continue;
                 T panel = canvas.GetPanel<T>();
                 if (panel != null)
                 {
@@ -149,6 +150,22 @@ namespace MCV_Module.Managers
             }
             return null;
         }
+
+        /// <summary>
+        /// 画布重建版本号：每次「状态 / 任务切换」把目标画布的面板重建完成时 +1。
+        /// 消费方（如 StepManager 启动步骤链、内容包装配）需要「等画布重建完再建自己的面板」时，
+        /// 记下当前值再等它变化 —— 固定秒数不可靠（淡出动画时长随状态变化）。
+        ///
+        /// 只在 GlobalUIMgr（Manager 层）暴露，避免 Manager 反向依赖 UI 层的 CanvasBase。
+        /// </summary>
+        public static int CanvasRebuildVersion { get; private set; }
+
+        /// <summary>
+        /// 当前是否正处于「状态切换」过程中（淡出上一画布 → 重建目标画布 → 淡入）。
+        /// 切换期间画布会被 ClearPanels()，此时建出来的面板会被清掉，所以消费方要等到切换结束
+        /// （见 <see cref="CanvasRebuildVersion"/>）。不在切换 = 画布是稳定的，可以直接建面板。
+        /// </summary>
+        public static bool IsSwitching => Exists && Instance.m_SwitchCoroutine != null;
         #endregion
 
         #region 私有方法
@@ -179,7 +196,15 @@ namespace MCV_Module.Managers
         /// </summary>
         void SwitchToState(SceneState state, TaskType taskType)
         {
-            var all = new List<CanvasBase>(canvasDict.Values);
+            // 常驻画布（LoadingCanvas）不进这张表：既不会被选成切换目标，
+            // 也不会被「淡出 + ClearPanels」——它上面的加载遮挡层必须活过整个状态切换。
+            var all = new List<CanvasBase>();
+            foreach (var canvas in canvasDict.Values)
+            {
+                if (canvas == null || canvas.IsPersistent) continue;
+                all.Add(canvas);
+            }
+
             var target = all.Find(c => c.MatchesState(state));
             if (target == null) return; // 无对应 Canvas 的状态，不处理
 
@@ -220,6 +245,7 @@ namespace MCV_Module.Managers
                 target.gameObject.SetActive(true);
             }
             target.Init(state, taskType);
+            CanvasRebuildVersion++;     // 面板已重建完：等到这个版本变化的消费方现在可以安全地建自己的面板了
             target.SetUIActive(true);
 
             m_SwitchCoroutine = null;

@@ -21,14 +21,12 @@ namespace MCV_Module.Objects.Interactives.Elements
         public LineDrawData LineDrawData { get => lineDrawData; set => lineDrawData = value; }
         public List<ElementPointObj> PointList { get => pointList; }
 
-        MeshRenderer meshRenderer;
         MeshFilter meshFilter;
         MeshCollider meshCollider;
 
         #region 生命周期
         protected override void Awake()
         {
-            meshRenderer = GetComponent<MeshRenderer>();
             meshFilter = GetComponent<MeshFilter>();
             meshCollider = GetComponent<MeshCollider>();
             data.id = gameObject.name;
@@ -39,6 +37,8 @@ namespace MCV_Module.Objects.Interactives.Elements
 
         protected override void OnDestroy()
         {
+            // 释放本线独占的网格（只销毁 LineDraw 创建的那张，预制体自带 / 共享网格不受影响）
+            LineDraw.ReleaseLine(gameObject);
             base.OnDestroy();
             if (ElementManagerBase.Instance != null) ElementManagerBase.Instance.UnregisterLine(this);
         }
@@ -122,17 +122,11 @@ namespace MCV_Module.Objects.Interactives.Elements
 
         public void DestroyLine()
         {
-            if (meshFilter == null) meshFilter = GetComponent<MeshFilter>();
-            if (meshRenderer == null) meshRenderer = GetComponent<MeshRenderer>();
             if (meshCollider == null) meshCollider = GetComponent<MeshCollider>();
-            if (meshFilter != null && meshFilter.sharedMesh != null)
-            {
-                meshFilter.sharedMesh.Clear();
-            }
-            if (meshCollider != null)
-            {
-                meshCollider.sharedMesh = null;
-            }
+            // 先摘掉碰撞网格，再释放本线独占的网格
+            // （不要直接 sharedMesh.Clear()：那会清掉预制体自带 / 其它对象共享的网格）
+            if (meshCollider != null) meshCollider.sharedMesh = null;
+            LineDraw.ReleaseLine(gameObject);
         }
 
         /// <summary>

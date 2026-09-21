@@ -410,7 +410,11 @@ namespace MCV_Module.Models.Project
     [Serializable]
     public abstract class TaskData<T> : TaskDataBase where T : TaskData<T>
     {        
-        protected bool taskActive = true;
+        /// <summary>
+        /// 该任务是否启用。可写入 JSON 配置：false 时 TaskListPanel 不装配该项（数据仍保留）。
+        /// 注意：必须为 public 才会被 Newtonsoft 序列化（protected 字段不进 JSON）。
+        /// </summary>
+        public bool taskActive = true;
         public override TaskType TaskType => TaskType.None;
         public override bool TaskActive => taskActive;
     }

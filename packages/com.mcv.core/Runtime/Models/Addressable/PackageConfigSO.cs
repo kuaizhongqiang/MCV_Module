@@ -10,6 +10,12 @@ namespace MCV_Module.Models.Addressable
     ///   2. 运行时读取此数据，驱动资源加载
     ///
     /// 使用方式：在 Assets 右键 → Create → MCV → Package → 选择合适的类型
+    ///
+    /// ⚠ 拆文件说明（2026-09-21）：Unity 只给「文件名 = 类名」的类生成 MonoScript。
+    /// 原实现把基类与 3 个具体子类都写在 `PackageConfigSO.cs` 里，导致
+    /// `CreateInstance&lt;ABPackageConfigSO&gt;() + CreateAsset` 出来的资产 `m_Script: {fileID: 0}`（脚本丢失、加载为 null，
+    /// 表现为「配置生成了但数据库收不到」）。因此拆成 4 个同名文件，每个文件只放一个类：
+    /// 本文件（PackageConfigSO）+ AAPackageConfigSO.cs + ABPackageConfigSO.cs + DefaultPackageConfigSO.cs。
     /// </summary>
     public abstract class PackageConfigSO : ScriptableObject
     {
@@ -47,105 +53,5 @@ namespace MCV_Module.Models.Addressable
         public string SourceAssetPath =>
             UnityEditor.AssetDatabase.GetAssetPath(sourceAsset);
 #endif
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  AA（Addressable Assets）配置
-    // ─────────────────────────────────────────────────────────────
-
-    [CreateAssetMenu(
-        fileName = "AA_",
-        menuName = "MCV/Package/Addressable (AA)",
-        order = 10)]
-    public class AAPackageConfigSO : PackageConfigSO
-    {
-        [Header("Addressable 设置")]
-        [Tooltip("Addressables 系统中的资源地址（运行时加载的唯一标识）\n\n" +
-                 "例如：bg/main_menu_bg\n" +
-                 "建议按类别分层命名，方便分组和管理")]
-        public string address;
-
-        [Tooltip("资源的标签，用于批量加载或分组筛选\n" +
-                 "例如：bg、main_menu、character 等\n" +
-                 "运行时可以通过标签一次性加载一组资源")]
-        public string[] labels;
-
-        [Tooltip("Addressables 组名（Editor 用，运行时不需要）\n" +
-                 "构建 AA Group 时，资源会被分配到同名的 Group 中")]
-        public string groupName;
-
-        public override PackageType PackageType => PackageType.AA;
-        public override string GetLoadKey() => address;
-
-        /// <summary>
-        /// Editor 工具方法：自动将 address 填充为目标资源的文件名（不含扩展名）
-        /// 例如 sourceAsset 为 main_menu_bg.jpg → address = "main_menu_bg"
-        /// </summary>
-        public void AutoAssignAddress()
-        {
-            if (string.IsNullOrEmpty(address) && sourceAsset != null)
-                address = sourceAsset.name;
-        }
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  AB（AssetBundle）配置
-    // ─────────────────────────────────────────────────────────────
-
-    [CreateAssetMenu(
-        fileName = "AB_",
-        menuName = "MCV/Package/AssetBundle (AB)",
-        order = 20)]
-    public class ABPackageConfigSO : PackageConfigSO
-    {
-        [Header("AssetBundle 设置")]
-        [Tooltip("AssetBundle 文件名（不含扩展名）\n\n" +
-                 "打包时资源被分配到此 Bundle 中\n" +
-                 "运行时从 StreamingAssets/{bundleName} 加载该 Bundle")]
-        public string bundleName;
-
-        [Tooltip("AB 包变体标识（可选）\n" +
-                 "例如：hd / sd，用于区分同一资源的不同精度版本")]
-        public string variant;
-
-        [Tooltip("资产的完整项目路径（如 Assets/Art/BG/main_menu_bg.jpg）\n\n" +
-                 "Editor 下可通过 AutoAssignPath() 自动填充\n" +
-                 "运行时由此路径在 Bundle 内查找资源")]
-        public string assetPath;
-
-        public override PackageType PackageType => PackageType.AB;
-
-        /// <summary>
-        /// 加载键格式：bundleName:assetPath
-        /// 运行时 GlobalAddressableMgr 按此格式解析：
-        ///   冒号前 → AB 包名（定位 StreamingAssets 中的文件）
-        ///   冒号后 → 资源在包内的项目路径（加载具体资源）
-        /// </summary>
-        public override string GetLoadKey() => $"{bundleName}:{assetPath}";
-
-#if UNITY_EDITOR
-        /// <summary>
-        /// Editor 工具方法：自动将 assetPath 填充为 sourceAsset 的项目相对路径
-        /// </summary>
-        public void AutoAssignPath()
-        {
-            if (string.IsNullOrEmpty(assetPath) && sourceAsset != null)
-                assetPath = UnityEditor.AssetDatabase.GetAssetPath(sourceAsset);
-        }
-#endif
-    }
-
-    // ─────────────────────────────────────────────────────────────
-    //  Default（本地直引用）配置
-    // ─────────────────────────────────────────────────────────────
-
-    [CreateAssetMenu(
-        fileName = "Default_",
-        menuName = "MCV/Package/Default (Local)",
-        order = 30)]
-    public class DefaultPackageConfigSO : PackageConfigSO
-    {
-        public override PackageType PackageType => PackageType.Default;
-        public override string GetLoadKey() => id;
     }
 }

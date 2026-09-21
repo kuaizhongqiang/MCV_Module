@@ -80,7 +80,26 @@ namespace MCV_Module.Managers
         public void SwitchScene(string sceneName)
         {
             if (IsLoading || string.IsNullOrEmpty(sceneName)) return;
+
+            // 已经是当前切换场景：不重复 additive 加载（否则会加载出同场景的第二份实例）
+            if (m_LoadedAAScene == sceneName)
+            {
+                Log.Verbose($"[SceneMgr] {sceneName} 已是当前切换场景，跳过重复加载");
+                return;
+            }
             StartCoroutine(SwitchSceneAsync(sceneName));
+        }
+
+        /// <summary>
+        /// 卸载当前 AA 切换场景（回到常驻的基础场景外壳）。
+        /// 供「从切换场景返回菜单」这类离开链路调用；没有切换场景时是空操作。
+        /// 注意：不能改用 <see cref="UnloadScene"/> —— 它按 CurrentScene 判重，
+        /// 而 SwitchScene 已把 CurrentScene 设为该场景，会被判为「不能卸自己」。
+        /// </summary>
+        public void UnloadSwitchedScene()
+        {
+            if (IsLoading || string.IsNullOrEmpty(m_LoadedAAScene)) return;
+            StartCoroutine(UnloadSwitchedSceneAsync());
         }
         #endregion
 
@@ -114,17 +133,55 @@ namespace MCV_Module.Managers
         private IEnumerator LoadScenesAdditiveAsync(string[] sceneNames)
         {
             IsLoading = true;
-            foreach (var sceneName in sceneNames)
+            // try/finally：任一步异常也必须复位 IsLoading，否则后续加载全被挡掉、启动链死等
+            try
             {
-                if (string.IsNullOrEmpty(sceneName)) continue;
+                foreach (var sceneName in sceneNames)
+                {
+                    if (string.IsNullOrEmpty(sceneName)) continue;
 
+                    var loadingEvent = new SceneLoadingEvent(sceneName);
+                    EventBus<SceneLoadingEvent>.Publish(loadingEvent);
+
+                    bool isAA = UseAddressable &&
+                                GlobalAddressableMgr.Instance != null &&
+                                GlobalAddressableMgr.Instance.IsSceneAA(sceneName);
+                    Log.Verbose($"[SceneMgr] 批量加载场景: {sceneName}, IsSceneAA={isAA}, UseAddressable={UseAddressable}");
+
+                    if (isAA)
+                    {
+                        yield return GlobalAddressableMgr.Instance.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+                    }
+                    else
+                    {
+                        yield return LoadSceneDirectAsync(sceneName, LoadSceneMode.Additive);
+                    }
+
+                    loadingEvent.Progress = 1f;
+                    EventBus<SceneLoadingEvent>.Publish(loadingEvent);
+                    EventBus<SceneLoadedEvent>.Publish(new SceneLoadedEvent(sceneName));
+
+                    CurrentScene = sceneName;
+                }
+            }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
+
+        private IEnumerator LoadSceneAdditiveAsync(string sceneName)
+        {
+            IsLoading = true;
+            try
+            {
                 var loadingEvent = new SceneLoadingEvent(sceneName);
                 EventBus<SceneLoadingEvent>.Publish(loadingEvent);
 
                 bool isAA = UseAddressable &&
                             GlobalAddressableMgr.Instance != null &&
                             GlobalAddressableMgr.Instance.IsSceneAA(sceneName);
-                Log.Verbose($"[SceneMgr] 批量加载场景: {sceneName}, IsSceneAA={isAA}, UseAddressable={UseAddressable}");
+                Log.Verbose($"[SceneMgr] 加载场景: {sceneName}, IsSceneAA={isAA}, UseAddressable={UseAddressable}");
 
                 if (isAA)
                 {
@@ -137,90 +194,94 @@ namespace MCV_Module.Managers
 
                 loadingEvent.Progress = 1f;
                 EventBus<SceneLoadingEvent>.Publish(loadingEvent);
-                EventBus<SceneLoadedEvent>.Publish(new SceneLoadedEvent(sceneName));
 
                 CurrentScene = sceneName;
+                EventBus<SceneLoadedEvent>.Publish(new SceneLoadedEvent(sceneName));
             }
-            IsLoading = false;
-        }
-
-        private IEnumerator LoadSceneAdditiveAsync(string sceneName)
-        {
-            IsLoading = true;
-            var loadingEvent = new SceneLoadingEvent(sceneName);
-            EventBus<SceneLoadingEvent>.Publish(loadingEvent);
-
-            bool isAA = UseAddressable &&
-                        GlobalAddressableMgr.Instance != null &&
-                        GlobalAddressableMgr.Instance.IsSceneAA(sceneName);
-            Log.Verbose($"[SceneMgr] 加载场景: {sceneName}, IsSceneAA={isAA}, UseAddressable={UseAddressable}");
-
-            if (isAA)
+            finally
             {
-                yield return GlobalAddressableMgr.Instance.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
+                IsLoading = false;
             }
-            else
-            {
-                yield return LoadSceneDirectAsync(sceneName, LoadSceneMode.Additive);
-            }
-
-            loadingEvent.Progress = 1f;
-            EventBus<SceneLoadingEvent>.Publish(loadingEvent);
-
-            CurrentScene = sceneName;
-            IsLoading = false;
-            EventBus<SceneLoadedEvent>.Publish(new SceneLoadedEvent(sceneName));
         }
 
         private IEnumerator LoadSceneSingleAsync(string sceneName)
         {
             IsLoading = true;
-            var loadingEvent = new SceneLoadingEvent(sceneName);
-            EventBus<SceneLoadingEvent>.Publish(loadingEvent);
-
-            // 判断是否走 AA
-            if (UseAddressable &&
-                GlobalAddressableMgr.Instance != null &&
-                GlobalAddressableMgr.Instance.IsSceneAA(sceneName))
+            try
             {
-                yield return GlobalAddressableMgr.Instance.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+                var loadingEvent = new SceneLoadingEvent(sceneName);
+                EventBus<SceneLoadingEvent>.Publish(loadingEvent);
+
+                // 判断是否走 AA
+                if (UseAddressable &&
+                    GlobalAddressableMgr.Instance != null &&
+                    GlobalAddressableMgr.Instance.IsSceneAA(sceneName))
+                {
+                    yield return GlobalAddressableMgr.Instance.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+                }
+                else
+                {
+                    yield return LoadSceneDirectAsync(sceneName, LoadSceneMode.Single);
+                }
+
+                loadingEvent.Progress = 1f;
+                EventBus<SceneLoadingEvent>.Publish(loadingEvent);
+
+                CurrentScene = sceneName;
+                EventBus<SceneLoadedEvent>.Publish(new SceneLoadedEvent(sceneName));
             }
-            else
+            finally
             {
-                yield return LoadSceneDirectAsync(sceneName, LoadSceneMode.Single);
+                IsLoading = false;
             }
-
-            loadingEvent.Progress = 1f;
-            EventBus<SceneLoadingEvent>.Publish(loadingEvent);
-
-            CurrentScene = sceneName;
-            IsLoading = false;
-            EventBus<SceneLoadedEvent>.Publish(new SceneLoadedEvent(sceneName));
         }
 
         private IEnumerator SwitchSceneAsync(string sceneName)
         {
             IsLoading = true;
-            var loadingEvent = new SceneLoadingEvent(sceneName);
-            EventBus<SceneLoadingEvent>.Publish(loadingEvent);
-
-            // 1. 先加载新 AA 场景（additive）
-            yield return LoadSceneCore(sceneName, LoadSceneMode.Additive);
-
-            // 2. 再卸载上一个 AA 场景（释放其包）
-            if (!string.IsNullOrEmpty(m_LoadedAAScene) && m_LoadedAAScene != sceneName)
+            try
             {
-                yield return UnloadAAScene(m_LoadedAAScene);
+                var loadingEvent = new SceneLoadingEvent(sceneName);
+                EventBus<SceneLoadingEvent>.Publish(loadingEvent);
+
+                // 1. 先加载新 AA 场景（additive）
+                yield return LoadSceneCore(sceneName, LoadSceneMode.Additive);
+
+                // 2. 再卸载上一个 AA 场景（释放其包）
+                if (!string.IsNullOrEmpty(m_LoadedAAScene) && m_LoadedAAScene != sceneName)
+                {
+                    yield return UnloadAAScene(m_LoadedAAScene);
+                }
+
+                // 3. 更新追踪
+                m_LoadedAAScene = sceneName;
+                CurrentScene = sceneName;
+
+                loadingEvent.Progress = 1f;
+                EventBus<SceneLoadingEvent>.Publish(loadingEvent);
+                EventBus<SceneLoadedEvent>.Publish(new SceneLoadedEvent(sceneName));
             }
+            finally
+            {
+                IsLoading = false;
+            }
+        }
 
-            // 3. 更新追踪
-            m_LoadedAAScene = sceneName;
-            CurrentScene = sceneName;
-
-            loadingEvent.Progress = 1f;
-            EventBus<SceneLoadingEvent>.Publish(loadingEvent);
-            EventBus<SceneLoadedEvent>.Publish(new SceneLoadedEvent(sceneName));
-            IsLoading = false;
+        /// <summary>卸载当前 AA 切换场景：先清槽位再卸载，避免卸载过程中被当成"还在切换场景里"。</summary>
+        private IEnumerator UnloadSwitchedSceneAsync()
+        {
+            IsLoading = true;
+            string sceneName = m_LoadedAAScene;
+            m_LoadedAAScene = "";
+            try
+            {
+                Log.Verbose($"[SceneMgr] 卸载切换场景: {sceneName}");
+                yield return UnloadAAScene(sceneName);
+            }
+            finally
+            {
+                IsLoading = false;
+            }
         }
 
         /// <summary>核心加载：按 AA 配置路由到 GlobalAddressableMgr 或直接 SceneManager。</summary>
@@ -235,7 +296,7 @@ namespace MCV_Module.Managers
             }
             else
             {
-                yield return SceneManager.LoadSceneAsync(sceneName, mode);
+                yield return LoadSceneDirectAsync(sceneName, mode);
             }
         }
 
@@ -251,21 +312,36 @@ namespace MCV_Module.Managers
             }
             else
             {
-                yield return SceneManager.UnloadSceneAsync(sceneName);
+                yield return UnloadSceneAsync(sceneName);
             }
         }
         #endregion
 
         #region 工具方法
-        /// <summary>直接通过 SceneManager 加载（Build Settings 中的场景）</summary>
+        /// <summary>
+        /// 直接通过 SceneManager 加载（Build Settings 中的场景）。
+        /// 场景既不在 Build Settings、又没配 AA 时 LoadSceneAsync 会返回 null，
+        /// 这里显式报错，避免"静默失败 + 调用方误以为加载完成"。
+        /// </summary>
         private IEnumerator LoadSceneDirectAsync(string sceneName, LoadSceneMode mode)
         {
-            yield return SceneManager.LoadSceneAsync(sceneName, mode);
+            var operation = SceneManager.LoadSceneAsync(sceneName, mode);
+            if (operation == null)
+            {
+                Log.Error($"[SceneMgr] 场景加载失败：{sceneName} 既不在 Build Settings 也未配置 Addressables");
+                yield break;
+            }
+            yield return operation;
         }
 
         private IEnumerator UnloadSceneAsync(string sceneName)
         {
             var operation = SceneManager.UnloadSceneAsync(sceneName);
+            if (operation == null)
+            {
+                Log.Warning($"[SceneMgr] 场景卸载失败（场景未加载？）：{sceneName}");
+                yield break;
+            }
             yield return operation;
         }
         #endregion

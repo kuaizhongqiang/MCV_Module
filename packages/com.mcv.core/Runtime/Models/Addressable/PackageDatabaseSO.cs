@@ -68,23 +68,40 @@ namespace MCV_Module.Models.Addressable
 
 #if UNITY_EDITOR
         /// <summary>
-        /// Editor 工具方法：自动扫描并收集项目中所有 PackageConfigSO
+        /// Editor 工具方法：自动扫描并收集项目中所有 PackageConfigSO，适用于初始化或同步清单。
         ///
-        /// 使用 AssetDatabase.FindAssets 搜索全部 PackageConfigSO 类型的 .asset 文件，
-        /// 排除了自身后添加到列表中。适用于初始化或同步清单。
+        /// ⚠ 只搜 <c>t:PackageConfigSO</c> 是**收不到**的：AssetDatabase 的类型过滤器不匹配抽象基类的派生资源
+        /// （实测配置资产确实存在于磁盘，DB 里却是 <c>packages: []</c>），
+        /// 所以这里按「基类 + 各具体子类」各搜一遍，再按资产路径去重、按 id 排序。
         /// </summary>
         public void AutoCollect()
         {
-            var guids = UnityEditor.AssetDatabase.FindAssets("t:PackageConfigSO");
+            var found = new Dictionary<string, PackageConfigSO>();
+
+            AddAssets("t:PackageConfigSO", found);
+            AddAssets("t:AAPackageConfigSO", found);
+            AddAssets("t:ABPackageConfigSO", found);
+            AddAssets("t:DefaultPackageConfigSO", found);
+
             packages.Clear();
-            foreach (var guid in guids)
-            {
-                var path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
-                var so = UnityEditor.AssetDatabase.LoadAssetAtPath<PackageConfigSO>(path);
-                if (so != null && so != this)
-                    packages.Add(so);
-            }
+            var list = new List<PackageConfigSO>(found.Values);
+            list.Sort((a, b) => string.CompareOrdinal(a.id ?? "", b.id ?? ""));
+            packages.AddRange(list);
+
             UnityEditor.EditorUtility.SetDirty(this);
+        }
+
+        /// <summary>按过滤器收集资产（同一路径只收一次，防止多轮过滤重复）。</summary>
+        static void AddAssets(string filter, Dictionary<string, PackageConfigSO> found)
+        {
+            foreach (var guid in UnityEditor.AssetDatabase.FindAssets(filter))
+            {
+                string path = UnityEditor.AssetDatabase.GUIDToAssetPath(guid);
+                if (string.IsNullOrEmpty(path) || found.ContainsKey(path)) continue;
+
+                var config = UnityEditor.AssetDatabase.LoadAssetAtPath<PackageConfigSO>(path);
+                if (config != null) found[path] = config;
+            }
         }
 #endif
     }

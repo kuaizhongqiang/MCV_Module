@@ -10,7 +10,16 @@ namespace MCV_Module.Objects.Interactives
     {
         [SerializeField] protected bool isInteractable = true;
         [SerializeField] protected Color highlightColor = new Color(0, 1, 0, 0.5f);
-        public bool IsInteractable => isInteractable;
+
+        /// <summary>
+        /// 是否可交互。可写：运行期需要临时"关掉/恢复"某个交互物时直接赋值，
+        /// 不必再另设一套开关字段（GlobalInteractiveMgr 的射线命中判定每帧读它）。
+        /// </summary>
+        public bool IsInteractable
+        {
+            get => isInteractable;
+            set => isInteractable = value;
+        }
         public event Action MoEnter;
         public event Action MoExit;
         public event Action MoClick;

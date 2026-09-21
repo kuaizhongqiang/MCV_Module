@@ -1,6 +1,7 @@
 using UnityEngine;
 using MCV_Module.Event;
 using MCV_Module.Singleton;
+using MCV_Module.Utils;
 using System.Collections;
 using Cinemachine;
 
@@ -11,7 +12,19 @@ namespace MCV_Module.Managers
         #region 参数
         Camera _cam;
         CinemachineBrain brain;
+
+        /// <summary>
+        /// 相机实例化中的重入标记：Instantiate 到返回之间，预制体上的 Awake 会回调 GetCamera()，
+        /// 此时 _cam 尚未赋值，若不拦截就会「实例化 → Awake → 再实例化」无限递归（栈溢出）。
+        /// </summary>
+        static bool s_IsCreating;
         #endregion
+
+        // 注：相机背景遮挡面（CameraBg）的显隐**不在这里管**。
+        // 包归属上 Managers/Global* 属 com.mcv.core、InputController/ 属 com.mcv.input，
+        // 而 input 依赖 core；若本类直接引用 CameraBg 会形成 core → input 的循环依赖，
+        // 平铺（/bare）时看不出来，包化形态下直接编译失败。
+        // 故改为让 CameraBg 自己订阅 SceneStateChangeEventData（input → core，方向正确）。
 
         #region 生命周期
         protected override IEnumerator DelayInit()
@@ -65,6 +78,10 @@ namespace MCV_Module.Managers
                 return Instance._cam;
             }
 
+            // 重入保护：正在实例化相机时（预制体 Awake 阶段回调进来）直接返回 null，
+            // 让调用方（如 CameraBg.DelayInit）等下一帧再取，打断递归链。
+            if (s_IsCreating) return null;
+
             Camera[] cams = Camera.allCameras;
             for (int i = 0; i < cams.Length; i++)
             {
@@ -79,11 +96,20 @@ namespace MCV_Module.Managers
             GameObject prefab = Resources.Load<GameObject>("MainCamera");
             if (prefab == null) return null;
 
-            GameObject go = Instantiate(prefab, Instance.transform);
-            go.name = "MainCamera";
-            Instance._cam = go.GetComponent<Camera>();
-            Instance.brain = go.GetComponent<CinemachineBrain>();
-            return Instance._cam;
+            s_IsCreating = true;
+            try
+            {
+                GameObject go = Instantiate(prefab, Instance.transform);
+                go.name = "MainCamera";
+                Instance._cam = go.GetComponent<Camera>();
+                Instance.brain = go.GetComponent<CinemachineBrain>();
+                return Instance._cam;
+            }
+            finally
+            {
+                // 无论实例化过程中是否抛异常/提前返回，都要清标记
+                s_IsCreating = false;
+            }
         }
         #endregion
 

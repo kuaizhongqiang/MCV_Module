@@ -123,6 +123,9 @@ namespace MCV_Module.Objects.Interactives.Elements
         public void DestroyLine()
         {
             if (tmpLine == null) return;
+            // 先释放 LineDraw 为该临时线独占创建的网格（否则网格要等下一次建线时的
+            // PruneDestroyed 兜底回收；拖线预览是高频路径，这里确定性回收）
+            LineDraw.ReleaseLine(tmpLine);
             if (Application.isPlaying) Destroy(tmpLine);
             else DestroyImmediate(tmpLine);
             tmpLine = null;

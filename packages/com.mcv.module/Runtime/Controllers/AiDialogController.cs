@@ -1,6 +1,5 @@
 using System.Collections;
 using MCV_Module.Utils;
-using MCV_Module.Controller;
 using MCV_Module.Managers;
 using MCV_Module.Net;
 using MCV_Module.UI.Panels;

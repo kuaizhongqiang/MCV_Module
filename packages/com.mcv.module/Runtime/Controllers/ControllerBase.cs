@@ -5,7 +5,7 @@ using MCV_Module.Managers;
 using MCV_Module.UI;
 using UnityEngine;
 
-namespace MCV_Module.Controller
+namespace MCV_Module.Controllers
 {
     /// <summary>
     /// Controller 基类，负责调度逻辑与数据转换。

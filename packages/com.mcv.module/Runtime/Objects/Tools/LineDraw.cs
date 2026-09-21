@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using MCV_Module.Utils;
 
@@ -18,12 +19,26 @@ namespace MCV_Module.Objects.Tools
         static float[] s_ScratchArcLengths;
         static int s_ScratchDepth;
 
-        static T[] GetScratch<T>(ref T[] scratch, int size)
+        // ── 网格所有权（一个对象一张网格）──
+        // MeshFilter 的网格引用会被 Instantiate 复制（副本与模板指向同一张 Mesh），预制体自带的
+        // 网格也可能被多个对象共用；一旦复用这种共享网格，多条线就会互相覆盖顶点，最终只剩最后
+        // 重建的那条可见。故这里按对象记账，只复用「本对象自己独占」的网格，其余一律换成新的。
+        static readonly Dictionary<GameObject, Mesh> s_OwnedMeshes = new Dictionary<GameObject, Mesh>();
+        static readonly List<KeyValuePair<GameObject, Mesh>> s_DeadEntries = new List<KeyValuePair<GameObject, Mesh>>();
+
+        /// <summary>
+        /// 取工作区缓冲：可复用且尺寸精确匹配时复用，否则重新分配。
+        /// 尺寸必须精确匹配 —— 网格是整段数组赋值（<c>mesh.vertices = array</c>），
+        /// 长度偏大会带进多余顶点与残留三角形索引。
+        /// </summary>
+        /// <param name="canReuse">本次是否允许复用共享缓冲（嵌套重建时为 false）</param>
+        static T[] GetScratch<T>(bool canReuse, ref T[] scratch, int size)
         {
-            if (s_ScratchDepth > 0 || scratch == null || scratch.Length < size)
-                return new T[size];
+            if (!canReuse || scratch == null || scratch.Length != size)
+                scratch = new T[size];
             return scratch;
         }
+
         /// <summary>
         /// 创建并返回一根管状网格对象。
         /// </summary>
@@ -156,10 +171,13 @@ namespace MCV_Module.Objects.Tools
 
         static void ApplyTubeMesh(GameObject go, Vector3[] path, LineDrawData data)
         {
+            // 只有最外层重建才能复用共享缓冲：重建过程中又触发重建（嵌套）时，内层复用会把
+            // 外层还没赋值进网格的数据冲掉。注意深度必须在 Core 之前判定，否则最外层也会被判成嵌套。
+            bool canReuseScratch = s_ScratchDepth == 0;
             s_ScratchDepth++;
             try
             {
-                ApplyTubeMeshCore(go, path, data);
+                ApplyTubeMeshCore(go, path, data, canReuseScratch);
             }
             finally
             {
@@ -167,7 +185,7 @@ namespace MCV_Module.Objects.Tools
             }
         }
 
-        static void ApplyTubeMeshCore(GameObject go, Vector3[] path, LineDrawData data)
+        static void ApplyTubeMeshCore(GameObject go, Vector3[] path, LineDrawData data, bool canReuseScratch)
         {
             int pathLen = path.Length;
             int radial = Mathf.Max(3, data.RadialSegments);
@@ -177,13 +195,13 @@ namespace MCV_Module.Objects.Tools
             int triCount = (pathLen - 1) * radial * 6;
 
             // 复用工作区缓冲（嵌套调用时 GetScratch 自动回退为新分配）
-            Vector3[] vertices = GetScratch(ref s_ScratchVertices, vertexCount);
-            Vector3[] normals = GetScratch(ref s_ScratchNormals, vertexCount);
-            Vector2[] uv = GetScratch(ref s_ScratchUv, vertexCount);
-            int[] triangles = GetScratch(ref s_ScratchTriangles, triCount);
+            Vector3[] vertices = GetScratch(canReuseScratch, ref s_ScratchVertices, vertexCount);
+            Vector3[] normals = GetScratch(canReuseScratch, ref s_ScratchNormals, vertexCount);
+            Vector2[] uv = GetScratch(canReuseScratch, ref s_ScratchUv, vertexCount);
+            int[] triangles = GetScratch(canReuseScratch, ref s_ScratchTriangles, triCount);
 
             // 累积弧长（用于 UV.v 沿路径映射；复用工作区缓冲并填充）
-            float[] arcLengths = GetScratch(ref s_ScratchArcLengths, pathLen);
+            float[] arcLengths = GetScratch(canReuseScratch, ref s_ScratchArcLengths, pathLen);
             arcLengths[0] = 0f;
             for (int i = 1; i < pathLen; i++)
                 arcLengths[i] = arcLengths[i - 1] + Vector3.Distance(path[i], path[i - 1]);
@@ -238,20 +256,11 @@ namespace MCV_Module.Objects.Tools
                 }
             }
 
-            // 应用 Mesh（复用或新建）
+            // 应用 Mesh（本对象独占的那张才可复用，详见 s_OwnedMeshes 注释）
             var mf = go.GetComponent<MeshFilter>();
             var mr = go.GetComponent<MeshRenderer>();
 
-            Mesh mesh = mf.sharedMesh;
-            if (mesh == null)
-            {
-                mesh = new Mesh();
-                mf.sharedMesh = mesh;
-            }
-            else
-            {
-                mesh.Clear();
-            }
+            Mesh mesh = AcquireMesh(go, mf);
 
             mesh.vertices = vertices;
             mesh.normals = normals;
@@ -259,7 +268,76 @@ namespace MCV_Module.Objects.Tools
             mesh.triangles = triangles;
             mesh.RecalculateBounds();
 
-            mr.material = data.material;
+            // 必须写 sharedMaterial：写 material 会在运行期实例化一份材质并写进对象，
+            // 导致同材质的连线各自持有一份副本（且可能把实例材质残留进场景）。
+            mr.sharedMaterial = data.material;
+        }
+
+        // ──────────────────────────────────────────────
+        //  网格所有权
+        // ──────────────────────────────────────────────
+
+        /// <summary>
+        /// 取得本对象用于绘线的独占网格：是它自己的就清空复用，否则（空网格、预制体自带网格、
+        /// 由 Instantiate 继承来的模板网格）换一张新的，避免多条线写进同一张网格互相覆盖。
+        /// </summary>
+        static Mesh AcquireMesh(GameObject go, MeshFilter mf)
+        {
+            Mesh mesh = mf.sharedMesh;
+            if (mesh != null && s_OwnedMeshes.TryGetValue(go, out var owned) && owned == mesh)
+            {
+                mesh.Clear();
+                return mesh;
+            }
+
+            mesh = new Mesh { name = go.name + "_LineMesh" };
+            s_OwnedMeshes[go] = mesh;
+            mf.sharedMesh = mesh;
+            PruneDestroyed();
+            return mesh;
+        }
+
+        /// <summary>
+        /// 释放本工具为该对象独占创建的网格（清除线、对象销毁时调用）。
+        /// 预制体自带或他处共享的网格不会被销毁。
+        /// </summary>
+        public static void ReleaseLine(GameObject lineObj)
+        {
+            if (lineObj == null) return;
+            if (!s_OwnedMeshes.TryGetValue(lineObj, out var owned)) return;
+            s_OwnedMeshes.Remove(lineObj);
+            if (owned == null) return;
+
+            var mf = lineObj.GetComponent<MeshFilter>();
+            if (mf != null && mf.sharedMesh == owned) mf.sharedMesh = null;
+            DestroyMesh(owned);
+        }
+
+        /// <summary>清理已销毁对象残留的记账，防止表格随时间增长（对象销毁时未显式释放的兜底）。</summary>
+        static void PruneDestroyed()
+        {
+            if (s_OwnedMeshes.Count == 0) return;
+
+            foreach (var kv in s_OwnedMeshes)
+            {
+                if (kv.Key == null) s_DeadEntries.Add(kv);
+            }
+            if (s_DeadEntries.Count == 0) return;
+
+            for (int i = 0; i < s_DeadEntries.Count; i++)
+            {
+                s_OwnedMeshes.Remove(s_DeadEntries[i].Key);
+                DestroyMesh(s_DeadEntries[i].Value);
+            }
+            s_DeadEntries.Clear();
+        }
+
+        /// <summary>销毁运行时创建的网格资源（编辑期用 DestroyImmediate，运行期用 Destroy）。</summary>
+        static void DestroyMesh(Mesh mesh)
+        {
+            if (mesh == null) return;
+            if (Application.isPlaying) UnityEngine.Object.Destroy(mesh);
+            else UnityEngine.Object.DestroyImmediate(mesh);
         }
 
         // ──────────────────────────────────────────────

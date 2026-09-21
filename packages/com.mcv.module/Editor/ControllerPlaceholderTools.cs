@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using MCV_Module.Controller;
+using MCV_Module.Controllers;
 using MCV_Module.Interfaces;
 using UnityEditor;
 using UnityEditor.SceneManagement;

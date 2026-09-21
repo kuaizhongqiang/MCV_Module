@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using MCV_Module.Utils;
-using MCV_Module.Controller;
 using MCV_Module.Event;
 using MCV_Module.Managers;
 using MCV_Module.Models;

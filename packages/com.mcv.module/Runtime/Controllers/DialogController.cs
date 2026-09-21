@@ -1,7 +1,7 @@
 using MCV_Module.Event;
 using MCV_Module.UI.Panels;
 
-namespace MCV_Module.Controller
+namespace MCV_Module.Controllers
 {
     /// <summary>
     /// 对话框控制器 —— 协调 DialogPanel 与业务系统。

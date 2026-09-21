@@ -47,13 +47,14 @@ namespace MCV_Module.Models.System
     [Serializable]
     public class RenderQuality : DataBase
     {
-        public int renderQuality = 0;
+        /// <summary>渲染质量档位（低/中/高）。原为 int，改枚举后 Inspector 可读、且取值集合封闭。</summary>
+        public RenderQualityLevel renderQuality = RenderQualityLevel.Low;
         public bool qualitySetted = false;
         public RenderQuality()
         {
             id = "RenderQuality";
             displayName = "渲染质量";
-            renderQuality = 0;
+            renderQuality = RenderQualityLevel.Low;
             qualitySetted = false;
         }
     }

@@ -1,5 +1,6 @@
 using System.Text;
-using MCV_Module.Managers;
+using MCV_Module.Event;
+using MCV_Module.Models;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -36,12 +37,35 @@ namespace MCV_Module.Utils
 
         // ── 缓存 ──────────────────────────────────
         float m_Fps = 0f;
+        // 当前导航状态 / 任务类型：订阅事件缓存（浮层常驻，不向管理器拉取当前态）
+        SceneState m_SceneState = SceneState.Setup;
+        TaskType m_TaskType = TaskType.None;
         #endregion
 
         #region 生命周期
         void Awake()
         {
             DontDestroyOnLoad(gameObject);
+            EventBus<SceneStateChangeEventData>.Subscribe(OnSceneStateChanged);
+            EventBus<TaskTypeChangeEventData>.Subscribe(OnTaskTypeChanged);
+        }
+
+        void OnDestroy()
+        {
+            EventBus<SceneStateChangeEventData>.Unsubscribe(OnSceneStateChanged);
+            EventBus<TaskTypeChangeEventData>.Unsubscribe(OnTaskTypeChanged);
+        }
+
+        /// <summary>导航状态变化：只缓存，供上下文面板显示。</summary>
+        void OnSceneStateChanged(SceneStateChangeEventData e)
+        {
+            if (e != null) m_SceneState = e.State;
+        }
+
+        /// <summary>任务类型变化：只缓存，供上下文面板显示。</summary>
+        void OnTaskTypeChanged(TaskTypeChangeEventData e)
+        {
+            if (e != null) m_TaskType = e.TaskType;
         }
 
         void Update()
@@ -141,18 +165,16 @@ namespace MCV_Module.Utils
             return m_LabelStyle;
         }
 
-        /// <summary>安全读取当前导航状态（UI 管理器未就绪时返回 "未知"）。</summary>
+        /// <summary>当前导航状态名（订阅 SceneStateChangeEventData 缓存；未收到事件时为初始值）。</summary>
         string GetCurrentStateName()
         {
-            if (!GlobalUIMgr.Exists || GlobalUIMgr.Instance == null) return "未知";
-            return GlobalUIMgr.GetCurrentState().ToString();
+            return m_SceneState.ToString();
         }
 
-        /// <summary>安全读取当前任务类型（UI 管理器未就绪时返回 "未知"）。</summary>
+        /// <summary>当前任务类型名（订阅 TaskTypeChangeEventData 缓存）。</summary>
         string GetCurrentTaskName()
         {
-            if (!GlobalUIMgr.Exists || GlobalUIMgr.Instance == null) return "未知";
-            return GlobalUIMgr.GetCurrentTaskType().ToString();
+            return m_TaskType.ToString();
         }
         #endregion
 
