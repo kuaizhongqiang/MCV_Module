@@ -5,8 +5,8 @@ using UnityEngine.Video;
 
 namespace MCV_Module.UI.Tools
 {
-    // WHY: module 包不能直接依赖 AVProVideo，AVPro 只能由宿主实现本接口后注册，把插件类型带进来就破坏了第三方零依赖。
-    /// <summary>视频播放器抽象：宿主注入 AVPro 实现，未注册时回退 Unity 原生 VideoPlayer。</summary>
+    // WHY: module 包不引入任何第三方播放器插件；播放器一律由本接口抽象，未注入实现时用 Unity 原生 VideoPlayer。
+    /// <summary>视频播放器抽象：宿主可注入自建实现，未注入时用 Unity 原生 VideoPlayer。</summary>
     public interface IVideoPlayer
     {
         /// <summary>预加载视频。加载完成后触发 onComplete（失败也会触发）。</summary>
@@ -43,25 +43,15 @@ namespace MCV_Module.UI.Tools
         bool IsPlaying();
     }
 
-    /// <summary>宿主 AVPro 实现创建器：返回 null 表示该 host 不支持 AVPro，工厂据此回退。</summary>
-    public delegate IVideoPlayer AvProVideoPlayerCreator(GameObject host);
-
-    // WHY: s_AvProCreator 是全局静态注册（后注册覆盖先注册、不会叠加），只有未注册或返回 null 时才走 Unity 回退。
-    /// <summary>视频播放器工厂：宿主注册的 AVPro 实现优先，未注册时回退 Unity 原生 VideoPlayer。</summary>
+    // WHY: 宿主若要换播放器实现，自行实现 IVideoPlayer 并在宿主侧创建；框架侧不保留任何插件专用注册口。
+    /// <summary>视频播放器工厂：为承载对象创建统一播放器（当前唯一实现 = Unity 原生 VideoPlayer）。</summary>
     public static class VideoPlayerFactory
     {
-        static AvProVideoPlayerCreator s_AvProCreator;
-
-        /// <summary>宿主初始化时注册 AVPro 实现创建器（幂等，后注册覆盖先注册）。</summary>
-        public static void RegisterAvPro(AvProVideoPlayerCreator creator) => s_AvProCreator = creator;
-
-        // WHY: 回退分支必须 AddComponent<VideoPlayer>（host 上没有该组件是常态），漏掉就会返回一个不可用的播放器。
-        /// <summary>为承载对象创建播放器：宿主 AVPro 优先，未注册或缺 MediaPlayer 时回退 Unity VideoPlayer。</summary>
+        // WHY: 必须 AddComponent<VideoPlayer>（host 上没有该组件是常态），漏掉就会返回一个不可用的播放器。
+        /// <summary>为承载对象创建播放器（Unity 原生 VideoPlayer）。</summary>
         public static IVideoPlayer Create(GameObject host)
         {
             if (host == null) return null;
-            var avPro = s_AvProCreator?.Invoke(host);
-            if (avPro != null) return avPro;
             var player = host.GetComponent<VideoPlayer>();
             if (player == null) player = host.AddComponent<VideoPlayer>();
             return new UnityVideoPlayer(player);

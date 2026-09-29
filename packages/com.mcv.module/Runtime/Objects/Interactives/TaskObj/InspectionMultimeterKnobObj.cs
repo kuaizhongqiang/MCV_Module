@@ -159,7 +159,7 @@ namespace MCV_Module.Objects.Interactives.TaskObj
             m_Visual = Visual;
             m_VisualRenderer = m_Visual != null ? m_Visual.GetComponentInChildren<Renderer>() : null;
 
-            HighlightPluginInit(gameObject);
+            HighlightInit(gameObject);
 
             if (gears.Count == 0)
             {

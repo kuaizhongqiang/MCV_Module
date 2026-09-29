@@ -78,7 +78,7 @@ namespace MCV_Module.Objects.Interactives.TaskObj
             base.Awake();
 
             m_Visual = Visual;
-            HighlightPluginInit(m_Visual != null ? m_Visual.gameObject : gameObject);
+            HighlightInit(m_Visual != null ? m_Visual.gameObject : gameObject);
 
             if (m_Visual == null)
             {

@@ -109,7 +109,7 @@ namespace MCV_Module.Objects.Interactives.TaskObj
             if (areaCollider == null)
                 Log.Warning($"{name}: areaCollider 未赋值，表笔不会有任何接触判定");
 
-            HighlightPluginInit(gameObject);
+            HighlightInit(gameObject);
         }
 
         void Update()

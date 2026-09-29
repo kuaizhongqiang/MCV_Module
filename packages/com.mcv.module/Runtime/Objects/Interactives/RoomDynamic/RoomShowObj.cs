@@ -61,7 +61,7 @@ namespace MCV_Module.Objects.Interactives.RoomDynamic
 
             m_BaseLocalPos = transform.localPosition;
 
-            HighlightPluginInit(gameObject);
+            HighlightInit(gameObject);
         }
 
         void OnEnable()

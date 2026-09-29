@@ -114,10 +114,10 @@ namespace MCV_Module.Objects.Interactives
         #endregion
 
         #region 工具方法
-        /// <summary>高亮服务目标（HighlightPluginInit 指定，默认自身）。</summary>
+        /// <summary>高亮服务目标（HighlightInit 指定，默认自身）。</summary>
         GameObject highlightTarget;
 
-        protected void HighlightPluginInit(GameObject obj = null)
+        protected void HighlightInit(GameObject obj = null)
         {
             highlightTarget = obj != null ? obj : gameObject;
             IHighlightService.Instance?.Init(highlightTarget, highlightColor);
@@ -127,7 +127,7 @@ namespace MCV_Module.Objects.Interactives
         {
             if (highlightTarget == null) highlightTarget = gameObject;
             var service = IHighlightService.Instance;
-            // WHY: 未注入宿主高亮服务（HighlightPlusAdapter）时静默降级为无高亮，不可改成报错或直连 HighlightPlus
+            // WHY: 未注入宿主高亮服务时静默降级为无高亮，不可改成报错、也不得在框架内直连第三方高亮插件
             if (service == null) return;
             if (isHighlight) service.ApplyHighlight(highlightTarget, highlightColor);
             else service.ClearHighlight(highlightTarget);

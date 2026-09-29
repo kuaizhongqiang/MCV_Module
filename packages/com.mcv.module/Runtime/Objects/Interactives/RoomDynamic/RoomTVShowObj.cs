@@ -53,7 +53,7 @@ namespace MCV_Module.Objects.Interactives.RoomDynamic
             base.Awake();   // 交互注册与事件绑定不能省
             CacheTarget();
 
-            HighlightPluginInit(gameObject);
+            HighlightInit(gameObject);
         }
 
         void OnEnable()

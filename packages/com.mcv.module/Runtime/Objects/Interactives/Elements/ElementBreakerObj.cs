@@ -28,7 +28,7 @@ namespace MCV_Module.Objects.Interactives.Elements
             rotationAnimation.Play(tag);
             isOpen = !isOpen;
 
-            HighlightPluginInit(rotationAnimation.rotateObj.gameObject);
+            HighlightInit(rotationAnimation.rotateObj.gameObject);
         }
 
         protected override void MoEnterEvent()

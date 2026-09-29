@@ -41,7 +41,7 @@ namespace MCV_Module.Objects.Interactives.RoomDynamic
             if (projectNameText != null) m_ProjectNameTextComp = projectNameText.GetComponent<TextComponent>();
 
             CacheHighlightObjs();
-            HighlightPluginInit(gameObject);
+            HighlightInit(gameObject);
 
             ApplyProject();
 

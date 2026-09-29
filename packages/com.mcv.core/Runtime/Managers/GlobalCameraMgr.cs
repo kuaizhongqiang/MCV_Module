@@ -89,7 +89,7 @@ namespace MCV_Module.Managers
             {
                 // 防御：跳过已销毁/待销毁的相机，避免重复 Destroy
                 if (cams[i] == null) continue;
-                // WHY: 只清理本管理器实例化过的相机（挂在 Instance 下），不误杀 AVPro / UI 相机
+                // WHY: 只清理本管理器实例化过的相机（挂在 Instance 下），不误杀外部 / UI 相机
                 if (cams[i].transform.parent == Instance.transform)
                     Destroy(cams[i].gameObject);
             }

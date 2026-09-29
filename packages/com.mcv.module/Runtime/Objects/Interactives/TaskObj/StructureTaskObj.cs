@@ -25,7 +25,7 @@ namespace MCV_Module.Objects.Interactives.TaskObj
         protected override void Awake()
         {
             base.Awake();
-            HighlightPluginInit(gameObject);
+            HighlightInit(gameObject);
         }
         #endregion
 

@@ -26,7 +26,7 @@ namespace MCV_Module.Objects.Interactives.TaskObj
         {
             base.Awake();  
             HandleHighlightSetting();
-            HighlightPluginInit(gameObject);
+            HighlightInit(gameObject);
             // WHY: 点名只在 Awake 取一次——之后改 gameObject.name 不会同步，名字要在进检测任务前定好
             pointName = $"{ChnNameMap.Get(element)}_{gameObject.name}";
         }
@@ -66,8 +66,8 @@ namespace MCV_Module.Objects.Interactives.TaskObj
             Highlight(on);
         }
 
-        // WHY: 检测点常藏机柜/零件内部——高亮必须 AlwaysOnTop 穿透遮挡，且须在 HighlightPluginInit 前登记偏好才同批生效
-        /// <summary>设置检测点高亮穿透遮挡（AlwaysOnTop）；走 IHighlightService 契约，未注入则静默降级</summary>
+        // WHY: 检测点常藏机柜/零件内部——高亮必须穿透遮挡，且须在 HighlightInit 前登记偏好才同批生效
+        /// <summary>设置检测点高亮穿透遮挡；走 IHighlightService 契约，未注入则静默降级</summary>
         void HandleHighlightSetting()
         {
             IHighlightService.Instance?.SetHighlightOnTop(gameObject, true);

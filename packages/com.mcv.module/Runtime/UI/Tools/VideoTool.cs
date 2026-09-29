@@ -5,8 +5,8 @@ using UnityEngine.Video;
 
 namespace MCV_Module.UI.Tools
 {
-    // WHY: 这里只封装 Unity 原生 VideoPlayer，AVPro 一律走 IVideoPlayer/VideoPlayerFactory，把插件类型带进来就又钉死了第三方依赖。
-    /// <summary>Unity VideoPlayer 的静态封装（AVPro 由 IVideoPlayer/VideoPlayerFactory 承担）。</summary>
+    // WHY: 这里只封装 Unity 原生 VideoPlayer；任何第三方播放器都不得进包，播放器统一走 IVideoPlayer/VideoPlayerFactory。
+    /// <summary>Unity VideoPlayer 的静态封装（其它实现由 IVideoPlayer/VideoPlayerFactory 承担）。</summary>
     public static class VideoTool
     {
         public static void InitVideoPlayer(VideoPlayer player)
@@ -107,7 +107,7 @@ namespace MCV_Module.UI.Tools
             return player.isPlaying;
         }
 
-        /// <summary>通过工厂创建统一播放器（宿主 AVPro 优先，未注册回退 Unity VideoPlayer）。</summary>
+        /// <summary>通过工厂创建统一播放器（Unity 原生 VideoPlayer）。</summary>
         public static IVideoPlayer CreatePlayer(GameObject host)
         {
             return VideoPlayerFactory.Create(host);

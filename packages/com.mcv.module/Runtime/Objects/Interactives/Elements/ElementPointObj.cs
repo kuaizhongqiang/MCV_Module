@@ -20,7 +20,7 @@ namespace MCV_Module.Objects.Interactives.Elements
         protected override void Awake()
         {
             base.Awake();
-            HighlightPluginInit();
+            HighlightInit();
         }
 
         protected override IEnumerator DelayInit()

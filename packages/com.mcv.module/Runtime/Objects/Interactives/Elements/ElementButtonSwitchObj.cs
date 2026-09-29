@@ -30,7 +30,7 @@ namespace MCV_Module.Objects.Interactives.Elements
             // WHY: 强制初始为抬起态，避免按位置推断出「已按下」导致流程要先点一次
             elementMoveAnimation.Open = true;
 
-            HighlightPluginInit(elementMoveAnimation.moveObj.gameObject);
+            HighlightInit(elementMoveAnimation.moveObj.gameObject);
         }
 
         
