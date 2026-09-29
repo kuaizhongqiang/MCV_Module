@@ -1,0 +1,21 @@
+{
+    "name": "MCV.Editor.Tools",
+    "rootNamespace": "",
+    "references": [
+        "MCV.Core", "MCV.Module",
+        "MCV.Editor.Common",
+        "Unity.TextMeshPro",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

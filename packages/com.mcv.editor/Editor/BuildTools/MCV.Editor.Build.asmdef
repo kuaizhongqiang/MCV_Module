@@ -1,9 +1,12 @@
 {
-    "name": "MCV.Module.Editor",
+    "name": "MCV.Editor.Build",
     "rootNamespace": "",
     "references": [
-        "MCV.Module",
-        "MCV.Core"
+        "MCV.Core", "MCV.Module",
+        "MCV.Editor.Common",
+        "Unity.Addressables.Editor",
+        "Unity.Addressables",
+        "Unity.Newtonsoft.Json"
     ],
     "includePlatforms": [
         "Editor"

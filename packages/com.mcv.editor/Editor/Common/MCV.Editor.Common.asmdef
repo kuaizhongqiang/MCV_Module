@@ -1,9 +1,8 @@
 {
-    "name": "MCV.Core.Editor",
-    "rootNamespace": "",
+    "name": "MCV.Editor.Common",
+    "rootNamespace": "MCV_Module.EditorTools.Common",
     "references": [
-        "MCV.Core",
-        "Unity.Addressables.Editor"
+        "MCV.Core", "MCV.Module"
     ],
     "includePlatforms": [
         "Editor"
