@@ -37,10 +37,7 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 生命周期
-        /// <summary>
-        /// 在 Awake 中绑定静态 instance。
-        /// 父物体 Awake 先于子物体执行，因此元素子物体自注册（RegisterElement/RegisterLine）时 instance 已可用。
-        /// </summary>
+        /// <summary>在 Awake 中绑定静态 instance（父物体 Awake 先于子物体，子物体自注册时 instance 已可用）。</summary>
         protected virtual void Awake()
         {
             instance = this;
@@ -58,8 +55,7 @@ namespace MCV_Module.Managers
             EventBus<GlobalInteractionEventData>.Unsubscribe(OnGlobalInteraction);
         }
 
-        /// <summary>连线状态机每帧驱动：Drawing 状态下更新临时线端点（吸附 / 虚拟平面）。
-        /// 端点位移超过阈值才重建网格，避免鼠标静止时每帧全量重建。</summary>
+        /// <summary>Drawing 状态下每帧更新临时线端点（吸附 / 虚拟平面），位移超阈值才重建网格。</summary>
         void Update()
         {
             if (instance != this || !isInit) return;
@@ -82,24 +78,14 @@ namespace MCV_Module.Managers
         #region 静态方法
         public static ElementManagerBase Instance { get => instance; set => instance = value; }
 
-        /// <summary>
-        /// 获取元器件
-        /// </summary>
-        /// <typeparam name="EL"> 元器件基类</typeparam>
-        /// <param name="id"> 元器件id</param>
-        /// <returns></returns>
+        /// <summary>按 id 取元器件（未注册返回 null）。</summary>
         public static EL GetElement<EL>(string id) where EL : ElementObjBase
         {
             if (instance == null || !instance.elements.ContainsKey(id)) return null;
             return instance.elements[id] as EL;
         }
 
-        /// <summary>
-        /// 获取连线
-        /// </summary>
-        /// <typeparam name="LI"> 连线基类</typeparam>
-        /// <param name="id"> 连线id</param>
-        /// <returns></returns>
+        /// <summary>按 id 取已连接的连线（未注册返回 null）。</summary>
         public static LI GetLine<LI>(string id) where LI : ElementLineObj
         {
             if (instance == null || !instance.lines.ContainsKey(id)) return null;
@@ -108,11 +94,8 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 公开方法
-        /// <summary>
-        /// 注册元器件。操作本 Manager 实例的字典（而非静态 instance），
-        /// 避免调用方通过 GetComponentInParent 找到的 Manager 与静态 instance 不同步导致空引用。
-        /// </summary>
-        /// <param name="element"> 元器件物体 </param>
+        // WHY: 调用方常用 GetComponentInParent 找到 Manager，那个实例可能不是静态 instance，所以字典要按实例操作
+        /// <summary>注册元器件（操作本实例的字典，避免与静态 instance 不同步导致空引用）。</summary>
         public void RegisterElement(ElementObjBase element)
         {
             if (element == null || element.Data == null) return;
@@ -120,10 +103,7 @@ namespace MCV_Module.Managers
             elements.Add(element.Data.id, element);
         }
 
-        /// <summary>
-        /// 注销元器件
-        /// </summary>
-        /// <param name="element"></param>
+        /// <summary>注销元器件。</summary>
         public void UnregisterElement(ElementObjBase element)
         {
             if (element == null || element.Data == null) return;
@@ -131,10 +111,7 @@ namespace MCV_Module.Managers
             elements.Remove(element.Data.id);
         }
 
-        /// <summary>
-        /// 注册连线
-        /// </summary>
-        /// <param name="line"> 线段物体 </param>
+        /// <summary>注册连线。</summary>
         public void RegisterLine(ElementLineObj line)
         {
             if (line == null || line.Data == null) return;
@@ -142,10 +119,7 @@ namespace MCV_Module.Managers
             lines.Add(line.Data.id, line);
         }
 
-        /// <summary>
-        /// 注销连线
-        /// </summary>
-        /// <param name="line"></param>
+        /// <summary>注销连线。</summary>
         public void UnregisterLine(ElementLineObj line)
         {
             if (line == null || line.Data == null) return;
@@ -174,10 +148,7 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 私有方法
-        /// <summary>
-        /// 连线状态机：订阅全局交互事件，处理 Click 类型。
-        /// Idle → 点击任意 point 开始连线；Drawing → 点击合法目标提交 / 点击起点、其他 collider、空白取消。
-        /// </summary>
+        /// <summary>连线状态机：Idle 点 point 开始连线，Drawing 点合法目标提交、其余情况取消。</summary>
         void OnGlobalInteraction(GlobalInteractionEventData data)
         {
             if (instance != this || !isInit) return;
@@ -215,9 +186,7 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 工具方法
-        /// <summary>
-        /// 临时线绘制参数：优先用管理器配置的 lineDrawData；未配置（width<=0 或分段<1）时回退到起点点的绘制参数。
-        /// </summary>
+        /// <summary>临时线参数：优先管理器配置，未配置（width<=0 或分段<1）时回退起点的绘制参数。</summary>
         LineDrawData GetTmpLineData()
         {
             if (lineDrawData.width <= 0 || lineDrawData.sectionSegments < 1)

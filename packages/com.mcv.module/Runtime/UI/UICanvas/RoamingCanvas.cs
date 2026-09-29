@@ -1,4 +1,5 @@
 
+using MCV_Module.Managers;
 using MCV_Module.Models;
 using MCV_Module.Utils;
 using MCV_Module.UI.Panels;
@@ -6,6 +7,7 @@ using UnityEngine;
 
 namespace MCV_Module.UI.UICanvas
 {
+    /// <summary>漫游页画布：装配漫游功能面板，AI 开启时再挂 AI 对话面板。</summary>
     public class RoamingCanvas : CanvasBase
     {
         protected override void Awake()
@@ -13,22 +15,22 @@ namespace MCV_Module.UI.UICanvas
             base.Awake();
         }
 
-        protected override void OnRebuild(SceneState state, TaskType taskType)
+        protected override void OnRebuild()
         {
-            if (state == SceneState.Roaming)
+            // 目标 Canvas 已由 SceneStateChangeEventData 选定，这里不再判断状态
+            if (GlobalAiMgr.Instance.IsAiEnabled)
             {
-                var titlePanel = GetPanel<TitlePanel>();
-                var functionPanel = GetPanel<FunctionPanel>();
-                var taskListPanel = GetPanel<TaskListPanel>();                                
                 var aiPanel = GetPanel<AiDialogPanel>();
-                Log.Info("ContentCanvas.OnRebuild: " + titlePanel + " " + functionPanel + " " + taskListPanel + " " + aiPanel);
-                CreatePanelByTaskType(taskType);
-            }
+                Log.Info("MenuCanvas.OnRebuild: " + aiPanel);
+            };
+            var roamingFunctionPanel = GetPanel<RoamingFunctionPanel>();
+            Log.Info("RoamingCanvas.OnRebuild: " + roamingFunctionPanel);
         }
 
-        void CreatePanelByTaskType(TaskType taskType)
+        /// <summary>按当前任务类型装配任务面板（当前无调用方：漫游页只建功能面板，任务面板归 ContentCanvas）。</summary>
+        void CreatePanelByTaskType()
         {
-            switch (taskType)
+            switch (GlobalDataMgr.GetCurrentTaskType())
             {
                 case TaskType.Purpose:
                     var purposePanel = GetPanel<TaskPurposePanel>();

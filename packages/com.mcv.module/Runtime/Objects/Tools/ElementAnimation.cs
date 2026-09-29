@@ -8,9 +8,7 @@ using UnityEngine;
 
 namespace MCV_Module.Objects.Tools
 {
-    /// <summary>
-    /// 旋转动画（一次性：从当前位置转到目标角度）
-    /// </summary>
+    /// <summary>旋转动画（一次性：从当前位置转到目标角度）</summary>
     [Serializable]
     public class ElementRotationAnimation
     {
@@ -38,11 +36,7 @@ namespace MCV_Module.Objects.Tools
         public ElementRotationAnimation()
         {
         }
-        /// <summary>
-        /// 播放动画
-        /// </summary>
-        /// <param name="animTag"> 动画标签 </param>
-        /// <param name="onComplete"> 播放完成的回调 </param>
+        /// <summary>播放动画</summary>
         public void Play(string animTag, Action onComplete = null)
         {
             if (rotateObj == null || element == null) return;
@@ -137,9 +131,7 @@ namespace MCV_Module.Objects.Tools
         public float duration;
     }
 
-    /// <summary>
-    /// 运行动画（持续旋转，用于电机等）
-    /// </summary>
+    /// <summary>运行动画（持续旋转，用于电机等）</summary>
     [Serializable]
     public class ElementRunAnimation
     {
@@ -172,9 +164,7 @@ namespace MCV_Module.Objects.Tools
         /// <summary> 当前转速（度/秒） </summary>
         public float Speed { get => runSpeed; }
 
-        /// <summary>
-        /// 记录初始状态（首次使用时采集，避免 Unity 反序列化顺序问题）
-        /// </summary>
+        /// <summary>记录初始状态（首次使用时采集，避免 Unity 反序列化顺序问题）</summary>
         void CaptureInitial()
         {
             if (captured) return;
@@ -183,15 +173,12 @@ namespace MCV_Module.Objects.Tools
             captured = true;
         }
 
-        /// <summary>
-        /// 开始运行（以当前转速）
-        /// </summary>
+        /// <summary>开始运行（以当前转速）</summary>
         public void Play()
         {
             if (runObj == null || element == null) return;
             CaptureInitial();
-            // 取消可能仍在进行的减速协程并恢复默认转速，
-            // 避免 Stop 把转速降到 0 后 Play 无法再启动（转速保持 0）。
+            // WHY: 取消减速协程并恢复默认转速，否则 Stop 把转速降到 0 后 Play 无法再启动。
             if (speedCoroutine != null)
             {
                 element.StopCoroutine(speedCoroutine);
@@ -204,27 +191,20 @@ namespace MCV_Module.Objects.Tools
             }
         }
 
-        /// <summary>
-        /// 开始运行，并渐变到指定转速
-        /// </summary>
-        /// <param name="speed"> 目标转速（度/秒） </param>
+        /// <summary>开始运行，并渐变到指定转速</summary>
         public void Play(float speed)
         {
             Play();
             SetSpeed(speed);
         }
 
-        /// <summary>
-        /// 减速停止（转速渐变到 0）
-        /// </summary>
+        /// <summary>减速停止（转速渐变到 0）</summary>
         public void Stop()
         {
             SetSpeed(0f);
         }
 
-        /// <summary>
-        /// 立即停止运行动画（转速保持，仅供复位使用）
-        /// </summary>
+        /// <summary>立即停止运行动画（转速保持，仅供复位使用）</summary>
         void StopRunning()
         {
             if (runCoroutine != null)
@@ -234,9 +214,7 @@ namespace MCV_Module.Objects.Tools
             }
         }
 
-        /// <summary>
-        /// 停止并复位到初始角度与初始转速
-        /// </summary>
+        /// <summary>停止并复位到初始角度与初始转速</summary>
         public void Reset()
         {
             StopRunning();
@@ -250,9 +228,7 @@ namespace MCV_Module.Objects.Tools
             runSpeed = defaultSpeed;
         }
 
-        /// <summary>
-        /// 渐变转速
-        /// </summary>
+        /// <summary>渐变转速</summary>
         void SetSpeed(float speed)
         {
             if (speedCoroutine != null)
@@ -303,9 +279,7 @@ namespace MCV_Module.Objects.Tools
         }
     }
 
-    /// <summary>
-    /// 移动动画（在打开/关闭两个位置之间移动，用于滑块开关等）
-    /// </summary>
+    /// <summary>移动动画（在打开/关闭两个位置之间移动，用于滑块开关等）</summary>
     [Serializable]
     public class ElementMoveAnimation
     {
@@ -349,10 +323,7 @@ namespace MCV_Module.Objects.Tools
             this.duration = duration;
         }
 
-        /// <summary>
-        /// 记录初始状态（首次使用时采集，避免 Unity 反序列化顺序问题；
-        /// 初始开合状态根据当前位置与两端距离推断，保证与实际场景一致）
-        /// </summary>
+        /// <summary>记录初始状态（首次使用时采集，避免 Unity 反序列化顺序问题；初始开合状态按当前位置与两端距离推断）</summary>
         void CaptureInitial()
         {
             if (captured) return;
@@ -366,9 +337,7 @@ namespace MCV_Module.Objects.Tools
             captured = true;
         }
 
-        /// <summary>
-        /// 停止并复位到初始位置与初始开合状态
-        /// </summary>
+        /// <summary>停止并复位到初始位置与初始开合状态</summary>
         public void Reset()
         {
             if (moveCoroutine != null && element != null)

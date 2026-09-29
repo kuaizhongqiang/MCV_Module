@@ -4,28 +4,13 @@ using System.Collections.Generic;
 
 namespace MCV_Module.Event
 {
-    /// <summary>
-    /// 类型安全的事件总线 —— 泛型 Action<T> 解耦机制。
-    ///
-    /// 用法：
-    ///   // 发布事件
-    ///   EventBus<AudioVolumeEventData>.Publish(new AudioVolumeEventData(AudioSouceType.BGM, 0.5f));
-    ///
-    ///   // 订阅事件
-    ///   EventBus<AudioVolumeEventData>.Subscribe(OnVolumeChange);
-    ///   EventBus<AudioVolumeEventData>.Unsubscribe(OnVolumeChange);
-    ///
-    /// 特点：
-    ///   - 泛型 T 承载事件参数，编译时类型安全
-    ///   - 使用强引用 List&lt;Action&lt;T&gt;&gt;，订阅者须在 OnDestroy 中 Unsubscribe
-    ///   - Clear() 可在场景切换时重置所有订阅
-    /// </summary>
+    // WHY: 强引用 List，订阅者必须在 OnDestroy 里 Unsubscribe，否则悬挂并在对象销毁后被回调；Subscribe 用 Contains 去重，Publish 对每个订阅者 try/catch、按订阅顺序派发。
+    /// <summary>类型安全的泛型事件总线：EventBus&lt;T&gt;.Publish / Subscribe / Unsubscribe，编译期类型安全。</summary>
     public static class EventBus<T> where T : class
     {
         private static readonly List<Action<T>> s_Subscribers = new List<Action<T>>();
         private static readonly object s_Lock = new object();
-        // 订阅快照缓存：订阅列表未变化时复用数组，避免每次 Publish 分配 ToArray。
-        // s_Revision 在 Subscribe/Unsubscribe/Clear 时递增，Publish 据此判断是否重建快照。
+        // WHY: 订阅列表未变化时复用快照数组，避免每次 Publish 分配 ToArray；s_Revision 由 Subscribe/Unsubscribe/Clear 递增。
         private static Action<T>[] s_Snapshot = new Action<T>[0];
         private static int s_Revision;
         private static int s_SnapshotRevision = -1;

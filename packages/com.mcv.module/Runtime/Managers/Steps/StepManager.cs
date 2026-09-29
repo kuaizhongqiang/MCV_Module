@@ -9,14 +9,7 @@ using UnityEngine;
 
 namespace MCV_Module.Managers.Steps
 {
-    /// <summary>
-    /// 步骤导演 —— 统一驱动所有进程/步骤的执行。
-    /// 仿照参考项目 StepDirector：协程驱动，生命周期 Prepare→Waiting→Complete，
-    /// 发布状态事件，处理步骤间延迟、下一步、跳转步骤/进程、跳过。
-    ///
-    /// 场景结构：StepManager 下挂若干 ProcessingHandler（进程），
-    /// 每个 ProcessingHandler 下挂若干 StepHandler（步骤）。
-    /// </summary>
+    /// <summary>步骤导演：协程驱动全部进程/步骤（Prepare→Waiting→Complete），发布状态事件，处理延迟、下一步、跳转与跳过。</summary>
     public class StepManager : SingletonBase
     {
         #region 参数
@@ -28,16 +21,10 @@ namespace MCV_Module.Managers.Steps
         /// <summary>进程间延迟（秒）</summary>
         [SerializeField] float processingDelayTime = 0.3f;
 
-        /// <summary>
-        /// 启动步骤链前，最多等多少秒让**内容页画布完成重建**（0 = 立即启动）。
-        ///
-        /// 为什么必须等：任务切换事件里实例化的东西是**立刻**建好的，而画布重建要等上一画布淡出动画
-        /// 结束才发生（实测约 0.3 秒）。若步骤链当场开跑，Start 弹的说明面板会被随后 <c>ClearPanels()</c>
-        /// 连根销毁 —— 面板看不见，控制器还在等它的「确认」事件，流程就此卡死。
-        /// 等待信号是 <see cref="GlobalUIMgr.CanvasRebuildVersion"/>（画布重建完成才 +1），不是固定秒数。
-        /// </summary>
+        // WHY: 检测预制体在任务切换事件里立刻实例化，而画布重建要等上一画布淡出（约 0.3s）；当场开跑会让 Start 弹的 StepUIPanel 被 ClearPanels() 销毁，面板不显示、流程卡死。等待信号是 GlobalUIMgr.CanvasRebuildVersion，不是固定秒数
+        /// <summary>启动步骤链前最多等多久让内容页画布完成重建（秒）；0 = 立即启动。</summary>
         [SerializeField, Tooltip("启动步骤链前最多等多久让画布完成重建（秒）：0 = 立即启动（旧行为）。" +
-                                 "内容装配早于画布重建约 0.3 秒，不等会导致说明面板被清掉、流程卡死")]
+                                 "检测预制体实例化早于画布重建约 0.3 秒，不等会导致说明面板被清掉、流程卡死")]
         float canvasRebuildWaitTimeout = 1.5f;
 
         List<ProcessingHandler> processingHandlers = new List<ProcessingHandler>();
@@ -107,13 +94,7 @@ namespace MCV_Module.Managers.Steps
             yield break;
         }
 
-        /// <summary>
-        /// 等「画布重建完成」再启动。三种收口，避免死等：
-        ///   ① 让出第一帧 —— 同一事件里的其它处理方（<see cref="GlobalUIMgr"/>）才有机会把状态切换起来；
-        ///   ② 画布正在切换 → 等它重建完（<see cref="GlobalUIMgr.CanvasRebuildVersion"/> +1）；
-        ///   ③ 没在切换（如内容包晚到、由 ClipReadyEvent 补装配）→ 画布本来就是稳定的，直接启动。
-        /// 另有 <see cref="canvasRebuildWaitTimeout"/> 超时兜底，日志写明走的是哪条路。
-        /// </summary>
+        /// <summary>等画布重建完成再启动；让出一帧 / 未在切换 / 超时三种收口，避免死等。</summary>
         IEnumerator WaitCanvasRebuild()
         {
             if (canvasRebuildWaitTimeout <= 0f) yield break;
@@ -124,7 +105,7 @@ namespace MCV_Module.Managers.Steps
             yield return null;                  // ① 让出第一帧
             elapsed += Time.unscaledDeltaTime;
 
-            // ② 只在「正在切换」时等重建；没在切换说明画布稳定，直接走
+            // ② 只在"正在切换"时等重建；没在切换说明画布稳定，直接走
             while (GlobalUIMgr.IsSwitching
                 && GlobalUIMgr.CanvasRebuildVersion == version
                 && elapsed < canvasRebuildWaitTimeout)
@@ -159,9 +140,8 @@ namespace MCV_Module.Managers.Steps
             executionCoroutine = StartCoroutine(ExecuteAll());
         }
 
-        /// <summary>
-        /// 跳转到指定进程的指定步骤：全员归位 + 快进前缀 + 目标正常执行（保证动画状态一致，对齐 Tuanjie）。
-        /// </summary>
+        // WHY: 跳转必须「全员归位 + 快进前缀 + 目标正常执行」，否则动画状态与当前步骤不一致（对齐 Tuanjie）。
+        /// <summary>跳转到指定进程的指定步骤。</summary>
         public void JumpToStep(int processingIndex, int stepIndex)
         {
             if (processingHandlers.Count == 0) return;
@@ -281,9 +261,7 @@ namespace MCV_Module.Managers.Steps
             yield return condition.Complete();
             EventBus<StepCompletedEvent>.Publish(new StepCompletedEvent(step, processingIndex, stepIndex));
 
-            // ④ Finish 步骤：三阶段（含「弹说明面板等确认」）跑完后整条链结束。
-            //    原实现是识别到 Finish 就不走三阶段、直接发完成事件 —— 那样 Finish 上配的说明面板永远弹不出来。
-            //    改成正常走完再收尾：没配交互内容时 Waiting 立即返回，行为与旧版一致。
+            // WHY: Finish 步骤要先正常走完三阶段再收尾 —— 旧实现识别到 Finish 就跳过三阶段，配在 Finish 上的说明面板永远弹不出来
             if (IsFinishStep(step))
             {
                 EndChain();
@@ -297,11 +275,7 @@ namespace MCV_Module.Managers.Steps
         /// <summary>是否为终结步骤（Finish）：执行完本步即整条链结束。</summary>
         static bool IsFinishStep(StepHandler step) => step != null && step.Type == ConditionType.Finish;
 
-        /// <summary>
-        /// 收尾：标记已结束并发布「全部完成」。
-        /// <c>ExecuteAll</c> / <c>JumpTo</c> 的循环里都有 <c>if (isFinished) yield break;</c>，
-        /// 所以在这里发过之后它们不会再补发一次。
-        /// </summary>
+        /// <summary>收尾：标记已结束并发布「全部完成」（两个循环里都有 isFinished 判断，不会补发）。</summary>
         void EndChain()
         {
             isFinished = true;
@@ -309,10 +283,7 @@ namespace MCV_Module.Managers.Steps
             EventBus<AllStepsCompletedEvent>.Publish(new AllStepsCompletedEvent());
         }
 
-        /// <summary>
-        /// 跳转到目标：全员归位 + 快进前缀 + 目标正常执行，随后**继续正常推进**（对齐 Tuanjie 的 NextStep 语义）。
-        /// 目标之前的步骤快进（动画跳末帧），目标及之后的步骤正常执行。
-        /// </summary>
+        /// <summary>跳转到目标：全员归位 + 前缀快进（动画跳末帧）+ 目标起正常执行并继续推进。</summary>
         IEnumerator JumpTo(int targetProcess, int targetStep)
         {
             isFinished = false;

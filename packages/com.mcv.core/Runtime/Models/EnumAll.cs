@@ -10,7 +10,7 @@ namespace MCV_Module.Models
         Release,
     }
 
-    #region Render
+    #region Rendering
     [Serializable]
     public enum RenderQualityLevel
     {
@@ -43,13 +43,14 @@ namespace MCV_Module.Models
         [InspectorName("视频")]
         Video, 
     }
+    /// <summary>文本形态（设置类数据 <c>SystemData.textType</c> 的取值）：Legacy = 0 是默认值，与工程现状一致。</summary>
     [Serializable]
     public enum TextType
     {
-        [InspectorName("传统")]
-        Legacy,
-        [InspectorName("Tmp")]
-        TextMeshPro,
+        [InspectorName("旧版 Text")]
+        Legacy = 0,
+        [InspectorName("TextMeshPro")]
+        TMP = 1,
     }
     [Serializable]
     public enum VideoType
@@ -75,14 +76,18 @@ namespace MCV_Module.Models
         Auto,
     }
 
+    /// <summary>对话框身份（DialogRequestEvent / DialogResultEvent 的认领键）：只用于区分来源，不做显示，故不带 InspectorName；None = 无需认领的纯提示框。</summary>
     [Serializable]
-    public enum SettingLabelType
+    public enum DialogId
     {
-        Title,
-        Input,
-        Bool,
-        Dropdown,
-        Slider,
+        None,          // 未指定（纯提示框，发布方不认领结果）
+        Exit,          // FunctionController「退出」
+        Back,          // FunctionController「返回」
+        BackToMenu,    // ContentFunctionController「返回菜单」
+        QuitApp,       // MenuController「退出应用」
+        EnterProject,  // MenuController「进入项目」
+        SubmitScore,   // ResultSummitController「提交成绩」
+        BackFromExam,  // TaskExamController「离开考核返回菜单」（菜单「小测验」入口走的也是考核面板）
     }
     #endregion
 
@@ -125,24 +130,6 @@ namespace MCV_Module.Models
         Roaming,
     }
 
-    /// <summary>
-    /// 项目级状态（内容页导航用）：与 SceneState 并列，偏"项目内视图"语义。
-    /// 枚举值只能往后追加（已序列化进数据/prefab）。
-    /// </summary>
-    [Serializable]
-    public enum ProjectState
-    {
-        [InspectorName("开始")]
-        Start,
-        [InspectorName("目录")]
-        Menu,
-        [InspectorName("漫游")]
-        Roaming,
-        [InspectorName("UI")]
-        UI,
-        [InspectorName("考核")]
-        Exam,
-    }
     #endregion
 
     #region User
@@ -158,8 +145,75 @@ namespace MCV_Module.Models
         [InspectorName("管理员")]
         Admin
     }
+
+    /// <summary>实训完成情况（成绩档案 <c>ScoreData.completion</c>）。</summary>
+    [Serializable]
+    public enum CompletionStatus
+    {
+        [InspectorName("未完成")]
+        Unfinished = 0,
+        [InspectorName("已完成")]
+        Completed = 1,
+    }
     #endregion
+    
     #region Element
+    [Serializable]
+    public enum InspectionProbeType
+    {
+        [InspectorName("红表笔")]
+        Red,
+        [InspectorName("黑表笔")]
+        Black,
+    }
+
+    /// <summary>数字万用表档位（旋钮指向的功能）：电阻类读 resistance、电压类读 voltage、电流类读 current，Off = 关机。</summary>
+    [Serializable]
+    public enum MultimeterGearType
+    {
+        [InspectorName("关机")]
+        Off,
+        [InspectorName("电阻")]
+        Resistance,
+        [InspectorName("直流电压")]
+        VoltageDC,
+        [InspectorName("交流电压")]
+        VoltageAC,
+        [InspectorName("直流电流")]
+        CurrentDC,
+        [InspectorName("交流电流")]
+        CurrentAC,
+        [InspectorName("二极管")]
+        Diode,
+        [InspectorName("通断")]
+        Continuity,
+    }
+
+    /// <summary>检测点「端子对」类型：只决定自动配对时填的默认读数，不决定配对本身。</summary>
+    [Serializable]
+    public enum TerminalPairKind
+    {
+        [InspectorName("动合（常开）触点")]
+        NoContact,
+
+        [InspectorName("动断（常闭）/ 正常导通")]
+        NcContact,
+
+        [InspectorName("其它（阻值按实物填）")]
+        Other,
+    }
+
+    /// <summary>测量时被测电器的状态：静止时动合断开（∞）、动断闭合（0Ω），已动作时相反，由元件动作部件决定。</summary>
+    [Serializable]
+    public enum ElementActuationState
+    {
+        [InspectorName("静止（未通电）")]
+        Normal,
+
+        [InspectorName("已动作（通电 / 按住试验按键）")]
+        Actuated,
+    }
+
     [Serializable]
     public enum ElementType
     {
@@ -280,6 +334,36 @@ namespace MCV_Module.Models
     }
     #endregion
 
+    #region Interactive
+    /// <summary>检测笔（<c>InspectionProbeObj</c>）的拖拽平面法线取法</summary>
+    [Serializable]
+    public enum MovePlaneNormal
+    {
+        [InspectorName("自动（取与相机视线最接近的世界轴）")]
+        Auto,
+        [InspectorName("屏幕平行面（法线 = 相机视线）")]
+        CameraFacing,
+        [InspectorName("X轴平面")]
+        X,
+        [InspectorName("Y轴平面")]
+        Y,
+        [InspectorName("Z轴平面")]
+        Z,
+    }
+
+    /// <summary>元器件上「可点击部件」（<c>InspectionSwitchObj</c>：接触器试验按钮、断路器手柄…）的手势语义。</summary>
+    [Serializable]
+    public enum SwitchGesture
+    {
+        [InspectorName("按住（松手弹回）")]
+        Press,
+        [InspectorName("点击切换（自锁）")]
+        Toggle,
+        [InspectorName("拖拽跟手")]
+        Drag,
+    }
+    #endregion
+
     #region Task
     [Serializable]
     public enum TaskType
@@ -298,15 +382,14 @@ namespace MCV_Module.Models
         Training,
         [InspectorName("小测验")]
         Test,
-        // ── 本次追加（值 7/8/9，与 LOW 数值天然对齐：LOW 侧同名三项为 Info / Structure / Inspection）──
-        // Exam（LOW 值 10）本次不加（§10.2 F-7）。新值暂无 Task*Data 与面板，所有分发点走 default，
-        // 属「先对齐枚举、后续批次补实现」，不影响既有 6 种任务。
         [InspectorName("简介")]
         Info,
         [InspectorName("结构")]
         Structure,
         [InspectorName("检测")]
-        Measure,
+        Inspection,
+        [InspectorName("考核")]
+        Exam,
 
     }
     [Serializable]
@@ -318,8 +401,7 @@ namespace MCV_Module.Models
         TrueFalse,
         FillInBlank,
     }
-
-    /// <summary>题库用途：同一套题库结构服务"考核"与"步骤内答题"两类消费方。</summary>
+    /// <summary>题目用途（题库 <c>QuestionData.json</c>）：<see cref="Exam"/> = 考核抽题池（默认），<see cref="Step"/> = 步骤答题，不进考核池。</summary>
     [Serializable]
     public enum QuestionUsage
     {
@@ -328,34 +410,45 @@ namespace MCV_Module.Models
         [InspectorName("步骤")]
         Step,
     }
-
+    [Serializable]
+    public enum ProjectState
+    {
+        [InspectorName("开始")]
+        Start,
+        [InspectorName("目录")]
+        Menu,
+        [InspectorName("漫游")]
+        Roaming,
+        [InspectorName("UI")]
+        UI,
+        [InspectorName("考核")]
+        Exam,
+    }
     [Serializable]
     public enum ConditionType
     {        
         [InspectorName("默认无操作")]
-        Default,     // 默认无操作
+        Default,
         [InspectorName("点击交互")]
-        Click,       // 点击交互
+        Click,
         [InspectorName("拖拽交互")]
-        Drag,        // 拖拽交互
+        Drag,
         [InspectorName("工具交互")]
-        Tool,        // 工具使用
+        Tool,
         [InspectorName("UI 交互")]
-        UI,          // UI 交互
+        UI,
         [InspectorName("答题")]
-        Question,    // 答题
+        Question,
         [InspectorName("连线配对")]
-        LineConnect, // 连线配对
+        LineConnect,
         [InspectorName("完成")]
-        Finish,      // 完成/结束
-        // ── 本次追加（只追加不插值：值 8/9/10，与 LOW 完全一致）──
-        // ⚠ ConditionType 已序列化进 prefab，往后追加安全、插值会静默错位（§12 U-1）。
+        Finish,
         [InspectorName("开始")]
-        Start,       // 开始（进程/流程起始标记；当前行为同 Default，后续接开始面板——P3b）
+        Start,
         [InspectorName("测量一对点")]
-        MeasurePair, // 测量一对点（两个测点分别被交互物吸附；判定逻辑 P4c，本批只对齐枚举）
-        [InspectorName("调整档位")]
-        GearAdjust,  // 调整档位（把可旋转仪器调到指定档位；判定逻辑 P4c，本批只对齐枚举）
+        MeasurePair,
+        [InspectorName("调整表旋钮")]
+        GearAdjust,
     }
     [Serializable]
     public enum StepStutus
@@ -367,17 +460,7 @@ namespace MCV_Module.Models
         [InspectorName("完成")]
         Complete,
     }
-
-    [Serializable]
-    public enum CompletionStatus
-    {
-        [InspectorName("未完成")]
-        Unfinished = 0,
-        [InspectorName("已完成")]
-        Completed = 1,
-    }
-
-    /// <summary>步骤内容的类型（决定同一份步骤文字被"弹层"还是"提示条"消费）。</summary>
+    /// <summary>步骤文字内容的类型——多态条目的判别字段，与 <c>Models/Project/StepContentBase</c> 子类一一对应。</summary>
     [Serializable]
     public enum StepContentType
     {

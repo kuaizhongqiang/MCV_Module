@@ -1,37 +1,14 @@
 using MCV_Module.Managers;
 using MCV_Module.Utils;
 using MCV_Module.UI.Panels;
-using UnityEngine;
 
 namespace MCV_Module.Event
 {
-    /// <summary>
-    /// 对话框事件专门处理逻辑 —— 针对 DialogRequestEvent 的集中式分发器。
-    ///
-    /// 职责：任何系统发布 DialogRequestEvent 时，统一走固定的定位链路把对话框显示出来：
-    ///   1. 找到 GlobalUIMgr
-    ///   2. 找到当前激活（正在展示）的 Canvas
-    ///   3. 在该 Canvas 中 GetPanel&lt;DialogPanel&gt;（不存在则懒加载创建）并调用 Show(request)
-    ///
-    /// 包归属说明：本类依赖 DialogPanel 等 module 类型，因此位于 module 包
-    /// （文件路径 UI/Tools，命名空间保持 MCV_Module.Event）。
-    /// 启动时经 [RuntimeInitializeOnLoadMethod] 自注册订阅，不再依赖 core 侧调用
-    /// （core 的 GlobalUIMgr 零 module 依赖）。请求早于 UI 就绪时由下方守卫静默丢弃，
-    /// 行为与旧版"UI 就绪后才订阅"一致。
-    ///
-    /// 与 DialogController 的职责划分：
-    ///   - 本类只负责「收到请求 → 定位面板 → 显示」；
-    ///   - DialogController 仍负责监听 DialogPanel 的 OnConfirm/OnCancel 并发布 DialogResultEvent。
-    /// </summary>
+    // WHY: 任何系统发布 DialogRequestEvent 都从这里统一收口；框架启动 Initialize 一次、场景切换/退出时必须 Shutdown，否则静态处理器会悬挂。
+    /// <summary>DialogRequestEvent 集中式分发器：GlobalUIMgr → 激活 Canvas → GetPanel&lt;DialogPanel&gt; → Show。</summary>
     public static class DialogEventDispatcher
     {
         static bool s_Initialized;
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-        static void AutoInitialize()
-        {
-            Initialize();
-        }
 
         /// <summary>订阅 DialogRequestEvent，开始分发对话框显示请求。重复调用幂等。</summary>
         public static void Initialize()
@@ -52,11 +29,7 @@ namespace MCV_Module.Event
         /// <summary>是否已完成初始化（供外部判断）。</summary>
         public static bool IsInitialized => s_Initialized;
 
-        /// <summary>
-        /// DialogRequestEvent 处理入口 —— 核心定位链路：
-        /// GlobalUIMgr → 当前激活 Canvas → GetPanel&lt;DialogPanel&gt; → Show。
-        /// 任何一环缺失（GlobalUIMgr 未就绪 / 无激活 Canvas / 面板创建失败）都安全降级，不抛异常。
-        /// </summary>
+        /// <summary>处理入口：GlobalUIMgr → 激活 Canvas → GetPanel&lt;DialogPanel&gt; → Show；任一环缺失都安全降级、不抛异常。</summary>
         static void OnDialogRequested(DialogRequestEvent request)
         {
             if (request == null) return;
@@ -72,7 +45,7 @@ namespace MCV_Module.Event
             var panel = canvas.GetPanel<DialogPanel>();
             if (panel == null)
             {
-                Log.Error("[DialogEventDispatcher] 无法创建 DialogPanel，请确认 Resources/UI/DialogPanel 预制体存在");
+                Log.Error("[DialogEventDispatcher] 无法创建 DialogPanel —— 请确认 UI 包里有 ui_DialogPanel（跑 MCV Build/UI prefab AB，且 Setup 的 UI 包预加载成功）");
                 return;
             }
 

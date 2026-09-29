@@ -1,11 +1,14 @@
-// 由 MCV/创建/UI Panel 生成器生成（2026-08-18）—— 请按需补充业务代码
+// 由 MCV Editor/创建/UI Panel 生成器生成（2026-08-18）—— 请按需补充业务代码
 using System.Collections;
 using MCV_Module.Utils;
 using System.Collections.Generic;
 using MCV_Module.Controllers;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using MCV_Module.UI.Components;
+using MCV_Module.UI.Tools;
 using UnityEngine.UI;
+
 
 namespace MCV_Module.UI.Panels
 {
@@ -15,13 +18,17 @@ namespace MCV_Module.UI.Panels
     {
         [SerializeField] Transform btnParent;
         [SerializeField] Text showText;
+
+        /// <summary>说明文本节点上的组件（TMP 形态下节点上的 Legacy Text 被卸载，字段随后成"假 null"）。</summary>
+        TextComponent m_ShowTextComp;
         List<Button> buttons = new List<Button>();
         List<GameObject> spacings = new List<GameObject>();
-        const string ButtonPath = "UI/StepProcessingBtn";
-        const string SpacingPath = "UI/StepProcessingSpacing";    
+        // WHY: 按钮与分隔预制体已移出 Resources 进 UI 包，这里存裸 prefab 名（UIPrefabUtil 按 ui_{name} 拼包配置 id）。
+        const string ButtonPrefabName = "StepProcessingBtn";
+        const string SpacingPrefabName = "StepProcessingSpacing";    
         HorizontalLayoutGroup m_LayoutGroup;    
         bool isActiveNow = true;
-        bool m_TargetActive = true;   // 当前动画/静止所朝向的目标状态，用于防重复触发
+        bool m_TargetActive = true;   // WHY: 当前动画/静止所朝向的目标状态，用于防重复触发
         int spacingHide = -8;
         int spacingShow = 13;
         int parentShow = 5;
@@ -31,7 +38,12 @@ namespace MCV_Module.UI.Panels
         protected override void Awake()
         {
             base.Awake();
-            if (btnParent == null || showText == null)
+
+            // WHY: 尽早解析一次（此时节点上的 Legacy Text 还在，GetComponent 稳定可用）；换形态后再解析会抛。
+            if (showText != null) m_ShowTextComp = showText.GetComponent<TextComponent>();
+
+            // WHY: 组件存在即视为已配置 —— 换形态后 Legacy 被卸载、showText 变成 null 是正常状态，只有字段与缓存组件都为 null 才算缺配置。
+            if (btnParent == null || (showText == null && m_ShowTextComp == null))
             {
                 Log.Error("需要手动挂载组件");
                 return;
@@ -45,16 +57,6 @@ namespace MCV_Module.UI.Panels
             spacings.Clear();
 
         }
-
-        // 测试方法
-        // void Update()
-        // {
-        //     if (Keyboard.current.escapeKey.wasPressedThisFrame)
-        //     {
-        //         SetUIActive(!isActiveNow);
-        //         isActiveNow = !isActiveNow;
-        //     }
-        // }
 
         public void Init(List<string> btnNames)
         {
@@ -102,19 +104,24 @@ namespace MCV_Module.UI.Panels
         #region 工具方法
         Button CreateButton(string name)
         {
-            GameObject prefab = Resources.Load<GameObject>(ButtonPath);
+            GameObject prefab = UIPrefabUtil.Get(ButtonPrefabName);
             if (prefab == null) return null;
             GameObject go = Instantiate(prefab, btnParent);
             Button btn = go.GetComponent<Button>();
             btn.name = name;
             Text text = btn.GetComponentInChildren<Text>();
-            if (text != null) text.text = name;
+            // WHY: 按钮文本来自运行时实例化的预制体、没有可缓存的字段，只能在创建时同一处把组件取出来用 —— TMP 形态下
+            // TextComponent 会卸载该节点上的 Legacy Text，text 随后成"假 null"，静态入口 SetTextOn 会静默 no-op（按钮无字）。
+            // 组件优先经 text 所在节点取；text 已"假 null"时退回在子级里找组件（对它调 GetComponent 会抛）。
+            TextComponent textComp = text != null ? text.GetComponent<TextComponent>() : btn.GetComponentInChildren<TextComponent>();
+            if (textComp != null) textComp.SetText(name);
+            else if (text != null) TextComponent.SetTextOn(text, name);
             return btn;
         }
 
         GameObject CreateSpacing()
         {
-            GameObject prefab = Resources.Load<GameObject>(SpacingPath);
+            GameObject prefab = UIPrefabUtil.Get(SpacingPrefabName);
             if (prefab == null) return null;
             GameObject go = Instantiate(prefab, btnParent);
             return go;
@@ -158,7 +165,7 @@ namespace MCV_Module.UI.Panels
         #region 覆盖Active方法
         public override void SetUIActive(bool isActive)
         {
-            // 已是目标状态（静止或正在动画前往），不重复触发，避免 switch alpha 出现 0-1-0 抖动
+            // WHY: 已是目标状态（静止或正在动画前往），不重复触发，避免 switch alpha 出现 0-1-0 抖动
             if (isActive == m_TargetActive) return;
 
             m_TargetActive = isActive;

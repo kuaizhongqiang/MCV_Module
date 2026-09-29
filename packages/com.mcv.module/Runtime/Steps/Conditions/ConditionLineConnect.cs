@@ -8,12 +8,7 @@ using UnityEngine;
 
 namespace MCV_Module.Steps
 {
-    /// <summary>
-    /// 连线条件 —— 复用常驻连线系统（ElementManagerBase 状态机）。
-    /// step.Lines 存"目标连线模板"（ElementLineObj，inactive，PointList 预填两端点）。
-    /// 轮询 ElementManagerBase 已连接的线，所有模板端点对都有匹配即完成（顺序无关）。
-    /// 跳转离开时 CancelDrawing 取消临时线，不销毁已提交的常驻线（跳回后仍算完成，保证状态延续）。
-    /// </summary>
+    /// <summary>连线条件：step.Lines 的每个模板线都有匹配的已连接线即完成，顺序无关。</summary>
     public class ConditionLineConnect : ConditionBase
     {
         public override ConditionType Type => ConditionType.LineConnect;
@@ -36,7 +31,8 @@ namespace MCV_Module.Steps
             step.ShowAnimationsAtFirstFrame();
             while (!IsForceCompleted && !AllLinesConnected(mgr))
                 yield return null;
-            HideLineElements(); // 完成后隐藏模板；已连接的常驻线保留
+            // WHY: 只隐藏模板；已提交的常驻线保留，跳回后仍算已完成
+            HideLineElements();
         }
 
         protected override void OnCompleteHide() => HideLineElements();

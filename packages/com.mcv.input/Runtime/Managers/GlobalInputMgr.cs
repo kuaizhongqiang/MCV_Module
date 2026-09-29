@@ -1,3 +1,5 @@
+
+
 using System.Collections;
 using System.Collections.Generic;
 using MCV_Module.Event;
@@ -9,14 +11,7 @@ using UnityEngine.InputSystem;
 
 namespace MCV_Module.Managers
 {
-    /// <summary>
-    /// 全局输入管理器：输入控制器注册表 + **鼠标移动状态判定**。
-    ///
-    /// 静止判定：在 idleJudgeTime（默认 0.1s）窗口内累计位移小于 idleMoveThreshold（默认 0.5px）
-    /// 即判定为静止；累计位移超过阈值则判定为移动中。状态翻转时通过 EventBus 发布
-    /// <see cref="MouseMoveStateEventData"/>（不逐帧发）。
-    /// 订阅方：GlobalInteractiveMgr（静止时跳过射线检测）等。
-    /// </summary>
+    /// <summary>全局输入管理器：输入控制器注册表 + 鼠标静止/移动判定（仅状态翻转时发事件）。</summary>
     public class GlobalInputMgr : SingletonGlobalMgr<GlobalInputMgr>
     {
         #region 参数
@@ -30,8 +25,6 @@ namespace MCV_Module.Managers
         float moveDistance;     // 本次判定窗口内累计位移
         bool isIdle;            // 当前状态：false = 移动中
         #endregion
-
-        protected GlobalInputMgr() { }
 
         protected override IEnumerator DelayInit()
         {
@@ -94,9 +87,7 @@ namespace MCV_Module.Managers
             }
         }
 
-        /// <summary>
-        /// 按类型获取已注册的 Controller（T 的类型名作为查找 key）
-        /// </summary>
+        /// <summary>按类型获取已注册的 Controller（T 的类型名作为查找 key）。</summary>
         public static T GetController<T>() where T : InputControllerBase
         {
             string key = typeof(T).Name;

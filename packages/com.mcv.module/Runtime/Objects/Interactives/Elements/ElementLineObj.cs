@@ -10,6 +10,7 @@ using UnityEngine;
 namespace MCV_Module.Objects.Interactives.Elements
 {
     [RequireComponent(typeof(MeshRenderer)), RequireComponent(typeof(MeshFilter)), RequireComponent(typeof(MeshCollider))]
+    /// <summary>已连接导线：两端子之间的管状网格，负责建/清网格与碰撞，并做端点对匹配。</summary>
     public class ElementLineObj : ElementObjBase, IEleLine
     {
         public override ElementType Type {get => ElementType.Line;}
@@ -37,7 +38,6 @@ namespace MCV_Module.Objects.Interactives.Elements
 
         protected override void OnDestroy()
         {
-            // 释放本线独占的网格（只销毁 LineDraw 创建的那张，预制体自带 / 共享网格不受影响）
             LineDraw.ReleaseLine(gameObject);
             base.OnDestroy();
             if (ElementManagerBase.Instance != null) ElementManagerBase.Instance.UnregisterLine(this);
@@ -90,7 +90,7 @@ namespace MCV_Module.Objects.Interactives.Elements
                     DestroyLine();
                     return;
                 }
-                // 网格顶点是本地空间，把点的世界坐标换算到线的本地空间
+                // WHY: 网格顶点是本地的，必须把点的世界坐标换算进线的本地空间，否则线位置错乱
                 points[i] = transform.InverseTransformPoint(pointList[i].transform.position);
             }
 
@@ -107,9 +107,7 @@ namespace MCV_Module.Objects.Interactives.Elements
 
         }
 
-        /// <summary>
-        /// 网格重建后同步 MeshCollider，保证碰撞与显示一致（创建/更新/清除都在同一时机处理）。
-        /// </summary>
+        /// <summary>网格重建后同步 MeshCollider，保证碰撞与显示一致。</summary>
         void SyncCollider()
         {
             if (meshCollider == null) meshCollider = GetComponent<MeshCollider>();
@@ -123,16 +121,12 @@ namespace MCV_Module.Objects.Interactives.Elements
         public void DestroyLine()
         {
             if (meshCollider == null) meshCollider = GetComponent<MeshCollider>();
-            // 先摘掉碰撞网格，再释放本线独占的网格
-            // （不要直接 sharedMesh.Clear()：那会清掉预制体自带 / 其它对象共享的网格）
+            // WHY: 先摘碰撞网格再释放；只销毁 LineDraw 创建的那张，预制体自带/共享网格不受影响
             if (meshCollider != null) meshCollider.sharedMesh = null;
             LineDraw.ReleaseLine(gameObject);
         }
 
-        /// <summary>
-        /// 模板匹配：本线端点（首尾）与给定两端点是否构成同一条线（顺序无关）。
-        /// 供 ConditionLineConnect 判定"某模板连线是否已连上"。
-        /// </summary>
+        /// <summary>模板匹配：本线首尾端点与给定两端点是否构成同一条线（顺序无关），供 ConditionLineConnect 判定连线是否完成。</summary>
         public bool Matches(ElementPointObj a, ElementPointObj b)
         {
             if (pointList == null || pointList.Count < 2) return false;
@@ -151,9 +145,9 @@ namespace MCV_Module.Objects.Interactives.Elements
             Highlight(false);
         }
 
+        // WHY: 连线交互由控制器/任务模式（LineConnection）驱动，此处刻意留空。
         protected override void MoClickEvent()
         {
-            // 连线交互由控制器/任务模式驱动（LineConnection），此处预留
         }
 
         protected override void MoClickDoubleEvent()

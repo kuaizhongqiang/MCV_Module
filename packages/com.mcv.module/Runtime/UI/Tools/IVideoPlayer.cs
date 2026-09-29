@@ -5,20 +5,20 @@ using UnityEngine.Video;
 
 namespace MCV_Module.UI.Tools
 {
-    /// <summary>
-    /// 视频播放器抽象（module 包不直接依赖 AVProVideo）。
-    /// 宿主可注入 AVPro 实现（AVProVideoPlayerAdapter）；未注册时回退 Unity 原生 VideoPlayer 实现。
-    /// 覆盖原 VideoTool 的播放/暂停/停止/预加载/时间/音量/事件调用面。
-    /// </summary>
+    // WHY: module 包不能直接依赖 AVProVideo，AVPro 只能由宿主实现本接口后注册，把插件类型带进来就破坏了第三方零依赖。
+    /// <summary>视频播放器抽象：宿主注入 AVPro 实现，未注册时回退 Unity 原生 VideoPlayer。</summary>
     public interface IVideoPlayer
     {
         /// <summary>预加载视频。加载完成后触发 onComplete（失败也会触发）。</summary>
         void Preload(string path, Action onComplete = null);
 
+        /// <summary>开始播放。</summary>
         void Play();
 
+        /// <summary>停止播放。</summary>
         void Stop();
 
+        /// <summary>暂停播放（可用 Resume 续播）。</summary>
         void Pause();
 
         /// <summary>从暂停恢复播放（未在播放时直接 Play）。</summary>
@@ -43,14 +43,11 @@ namespace MCV_Module.UI.Tools
         bool IsPlaying();
     }
 
-    /// <summary>
-    /// 宿主 AVPro 实现创建器：给定承载播放组件的 GameObject，返回 AVPro 实现；不支持（无 MediaPlayer）时返回 null。
-    /// </summary>
+    /// <summary>宿主 AVPro 实现创建器：返回 null 表示该 host 不支持 AVPro，工厂据此回退。</summary>
     public delegate IVideoPlayer AvProVideoPlayerCreator(GameObject host);
 
-    /// <summary>
-    /// 视频播放器工厂：优先使用宿主注册的 AVPro 实现，未注册时回退 Unity 原生 VideoPlayer。
-    /// </summary>
+    // WHY: s_AvProCreator 是全局静态注册（后注册覆盖先注册、不会叠加），只有未注册或返回 null 时才走 Unity 回退。
+    /// <summary>视频播放器工厂：宿主注册的 AVPro 实现优先，未注册时回退 Unity 原生 VideoPlayer。</summary>
     public static class VideoPlayerFactory
     {
         static AvProVideoPlayerCreator s_AvProCreator;
@@ -58,10 +55,8 @@ namespace MCV_Module.UI.Tools
         /// <summary>宿主初始化时注册 AVPro 实现创建器（幂等，后注册覆盖先注册）。</summary>
         public static void RegisterAvPro(AvProVideoPlayerCreator creator) => s_AvProCreator = creator;
 
-        /// <summary>
-        /// 为承载对象创建视频播放器实现。
-        /// 优先宿主 AVPro 实现；未注册或宿主缺少 MediaPlayer 时回退 Unity 原生 VideoPlayer（缺失则自动添加组件）。
-        /// </summary>
+        // WHY: 回退分支必须 AddComponent<VideoPlayer>（host 上没有该组件是常态），漏掉就会返回一个不可用的播放器。
+        /// <summary>为承载对象创建播放器：宿主 AVPro 优先，未注册或缺 MediaPlayer 时回退 Unity VideoPlayer。</summary>
         public static IVideoPlayer Create(GameObject host)
         {
             if (host == null) return null;

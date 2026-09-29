@@ -2,12 +2,8 @@ using System;
 
 namespace MCV_Module.UI
 {
-    /// <summary>
-    /// 面板 ↔ Controller 强绑定特性：编译期指定对应 Controller 类型，
-    /// 替代纯字符串命名约定（XxxPanel → XxxController）。
-    /// 未标注时 PanelBase 回退字符串约定（兼容历史面板）。
-    /// 由 MCV/创建/UI Panel 生成器自动写入。
-    /// </summary>
+    // WHY: 未标注的（历史）面板由 PanelBase 回退到 XxxPanel → XxxController 约定；本特性由 MCV Editor/创建/UI Panel 生成器自动写入
+    /// <summary>面板 ↔ Controller 强绑定特性：编译期指定 Controller 类型，替代字符串命名约定。</summary>
     [AttributeUsage(AttributeTargets.Class, Inherited = false)]
     public sealed class RequireControllerAttribute : Attribute
     {

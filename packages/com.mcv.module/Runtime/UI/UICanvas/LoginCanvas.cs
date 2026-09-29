@@ -6,6 +6,7 @@ using UnityEngine;
 
 namespace MCV_Module.UI.UICanvas
 {
+    /// <summary>登录页画布：只装配登录面板，其余登录流程归 LoginPanel / LoginController。</summary>
     public class LoginCanvas : CanvasBase
     {
         protected override void Awake()
@@ -13,20 +14,11 @@ namespace MCV_Module.UI.UICanvas
             base.Awake();
         }
 
-        protected override void OnRebuild(SceneState state, TaskType taskType)
+        protected override void OnRebuild()
         {
-            if (state == SceneState.Login)
-            {                
-                var loginPanel = GetPanel<LoginPanel>();
-                var titlePanel = GetPanel<TitlePanel>();
-                var functionPanel = GetPanel<FunctionPanel>();
-                functionPanel.SetFunctionBtnActive("BackBtn",false);
-                functionPanel.SetFunctionBtnActive("MuteBtn",false);
-                functionPanel.SetFunctionBtnActive("ResourcePanelBtn",false);
-                functionPanel.SetFunctionBtnActive("SummitBtn",false);
-                functionPanel.SetFunctionBtnActive("RecordBtn",false);
-                Log.Info("LoginCanvas.OnRebuild: " + loginPanel + " " + titlePanel);
-            }
+            // 目标 Canvas 已由 SceneStateChangeEventData 选定，这里不再判断状态
+            var loginPanel = GetPanel<LoginPanel>();
+            Log.Info("LoginCanvas.OnRebuild: " + loginPanel);
         }
     }
 }

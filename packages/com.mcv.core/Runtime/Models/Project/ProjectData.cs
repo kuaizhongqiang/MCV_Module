@@ -12,10 +12,7 @@ namespace MCV_Module.Models.Project
         public List<MenuClip> clips = new List<MenuClip>();
 
         #region 工厂方法
-        /// <summary>
-        /// 获取根菜单
-        /// </summary>
-        /// <returns></returns>
+        /// <summary>获取根菜单。</summary>
         public List<MenuClip> GetRootClips()
         {
             var list = new List<MenuClip>();
@@ -28,11 +25,7 @@ namespace MCV_Module.Models.Project
             }
             return list;
         }
-        /// <summary>
-        /// 获取子菜单 
-        /// </summary>
-        /// <param name="parentClip"> 父菜单数据 </param>
-        /// <returns></returns>
+        /// <summary>获取子菜单（按父菜单数据）。</summary>
         public List<MenuClip> GetChildClips(MenuClip parentClip)
         {
             var list = new List<MenuClip>();
@@ -45,11 +38,7 @@ namespace MCV_Module.Models.Project
             }
             return list;
         }
-        /// <summary>
-        /// 获取子菜单
-        /// </summary>
-        /// <param name="parentId"> 父菜单ID </param>
-        /// <returns></returns>
+        /// <summary>获取子菜单（按父菜单 ID）。</summary>
         public List<MenuClip> GetChildClips(string parentId)
         {
             var list = new List<MenuClip>();
@@ -63,11 +52,7 @@ namespace MCV_Module.Models.Project
             return list;
 
         }
-        /// <summary>
-        /// 获取父菜单
-        /// </summary>
-        /// <param name="childClip"> 子菜单数据 </param>
-        /// <returns></returns>
+        /// <summary>获取父菜单（按子菜单数据）；找不到返回 null。</summary>
         public MenuClip GetParentClip(MenuClip childClip)
         {
             foreach (var clip in clips)
@@ -80,11 +65,7 @@ namespace MCV_Module.Models.Project
             return null;
 
         }
-        /// <summary>
-        /// 获取父菜单
-        /// </summary>
-        /// <param name="childId"> 子菜单ID </param>
-        /// <returns>父菜单；找不到（根菜单或无此ID）返回 null </returns>
+        /// <summary>获取父菜单（按子菜单 ID）；找不到（根菜单或无此 ID）返回 null。</summary>
         public MenuClip GetParentClip(string childId)
         {
             var child = GetClip(childId);
@@ -94,11 +75,7 @@ namespace MCV_Module.Models.Project
             }
             return GetParentClip(child);
         }
-        /// <summary>
-        /// 获取菜单
-        /// </summary>
-        /// <param name="clipId"> 菜单ID </param>
-        /// <returns></returns>
+        /// <summary>获取菜单（按 ID）；找不到返回 null。</summary>
         public MenuClip GetClip(string clipId)
         {
             foreach (var clip in clips)
@@ -111,12 +88,7 @@ namespace MCV_Module.Models.Project
             return null;
         }
         
-        /// <summary>
-        /// 获取菜单在其所属层级（同 parentId）中的索引，而不是整体数组的索引。
-        /// 找不到时返回 -1。
-        /// </summary>
-        /// <param name="clipId"> 菜单ID </param>
-        /// <returns></returns>
+        /// <summary>获取菜单在其所属层级（同 parentId）中的索引，而不是整体数组的索引；找不到返回 -1。</summary>
         public int GetClipIndex(string clipId)
         {
             var target = GetClip(clipId);
@@ -127,12 +99,7 @@ namespace MCV_Module.Models.Project
             return GetClipIndex(target);
         }
 
-        /// <summary>
-        /// 获取菜单在其所属层级（同 parentId）中的索引，而不是整体数组的索引。
-        /// 找不到时返回 -1。
-        /// </summary>
-        /// <param name="clip"> 菜单数据 </param>
-        /// <returns></returns>
+        /// <summary>获取菜单在其所属层级（同 parentId）中的索引，而不是整体数组的索引；找不到返回 -1。</summary>
         public int GetClipIndex(MenuClip clip)
         {
             if (clip == null)
@@ -154,11 +121,7 @@ namespace MCV_Module.Models.Project
             return -1;
         }
 
-        /// <summary>
-        /// 判断菜单是否含有子菜单。
-        /// </summary>
-        /// <param name="clip"> 菜单数据 </param>
-        /// <returns>有子菜单返回 true；无子菜单或参数为 null 返回 false </returns>
+        /// <summary>判断菜单是否含有子菜单；有子菜单返回 true，无子菜单或参数为 null 返回 false。</summary>
         public bool HasChildren(MenuClip clip)
         {
             if (clip == null)
@@ -176,15 +139,7 @@ namespace MCV_Module.Models.Project
         }
         #endregion
     
-        /// <summary>
-        /// 返回菜单数据的 JSON 描述, 体现 id / parentId 的层级结构。
-        ///
-        /// id / parentId 意义:
-        ///   - id:       每个菜单项的唯一标识。
-        ///   - parentId: 指向父菜单的 id; parentId 为 null 表示根菜单, 否则表示该菜单是
-        ///                parentId 对应菜单的子菜单。
-        /// 这里把扁平的 clips 列表还原为树形结构输出, 便于展示菜单层级关系。
-        /// </summary>
+        /// <summary>返回菜单数据的 JSON 描述（把扁平的 clips 还原为 id/parentId 树形结构）。</summary>
         public string MenuDataDescription()
         {
             var tree = new List<MenuNodeDto>();
@@ -219,6 +174,7 @@ namespace MCV_Module.Models.Project
         {
             [JsonProperty("id")] public string id;
             [JsonProperty("displayName")] public string displayName;
+        [JsonProperty("displayNameEn")] public string displayNameEn;   // 英文列（空 = 回退中文）
             [JsonProperty("parentId")] public string parentId;
             [JsonProperty("children")] public List<MenuNodeDto> children = new List<MenuNodeDto>();
         }
@@ -226,9 +182,12 @@ namespace MCV_Module.Models.Project
     [Serializable]
     public class MenuClip : DataBase
     {
-        public string parentId;          // 便于创建结构性数据
-        public string projectId;         // 绑定的项目 id（从 ProjectData.clips 查询，数据源单一）；为空时回退 clip 直接引用
-        public ProjectClip clip;         // 绑定项目数据（旧字段，可空）
+        /// <summary>便于创建结构性数据。</summary>
+        public string parentId;
+        /// <summary>绑定的项目 id（从 ProjectData.clips 查询，数据源单一）；为空时回退 clip 直接引用。</summary>
+        public string projectId;
+        /// <summary>绑定项目数据（旧字段，可空）。</summary>
+        public ProjectClip clip;
 
         public MenuClip() { }
         public MenuClip(string id, string displayName)
@@ -244,6 +203,7 @@ namespace MCV_Module.Models.Project
         public List<ProjectClip> clips = new List<ProjectClip>();
         [NonSerialized] public ProjectClip currentClip = null;
         [NonSerialized] public TaskType currentTaskType = TaskType.None;
+        [NonSerialized] public ProjectState projectState = ProjectState.Start;
 
         public string ProjectDescription()
         {
@@ -265,18 +225,28 @@ namespace MCV_Module.Models.Project
         [SerializeField, JsonProperty("taskLineConnectionData")] TaskLineConnectionData taskLineConnectionData;
         [SerializeField, JsonProperty("taskTrainingData")] TaskTrainingData taskTrainingData;
         [SerializeField, JsonProperty("taskTestData")] TaskTestData taskTestData;
+        [SerializeField, JsonProperty("taskExamData")] TaskExamData taskExamData;
+        [SerializeField, JsonProperty("taskInfoData")] TaskInfoData taskInfoData;
+        [SerializeField, JsonProperty("taskStructureData")] TaskStructureData taskStructureData;
+        [SerializeField, JsonProperty("taskInspectionData")] TaskInspectionData taskInspectionData;
         [JsonIgnore]
         public List<TaskDataBase> Tasks
         {
             get
             {
+                // WHY: 顺序 = 步骤在 TaskListPanel 中的装配顺序：四步在前，旧实验线在后。
                 var list = new List<TaskDataBase>();
+                if (taskInfoData != null) list.Add(taskInfoData);
+                if (taskStructureData != null) list.Add(taskStructureData);
+                if (taskPrincipleData != null) list.Add(taskPrincipleData);
+                if (taskInspectionData != null) list.Add(taskInspectionData);
+                // WHY: 旧实验线暂时保留，不下线。
                 if (taskPurposeData != null) list.Add(taskPurposeData);
                 if (taskEquipmentData != null) list.Add(taskEquipmentData);
-                if (taskPrincipleData != null) list.Add(taskPrincipleData);
                 if (taskLineConnectionData != null) list.Add(taskLineConnectionData);
                 if (taskTrainingData != null) list.Add(taskTrainingData);
                 if (taskTestData != null) list.Add(taskTestData);
+                if (taskExamData != null) list.Add(taskExamData);
                 return list;
             }
             set
@@ -287,6 +257,10 @@ namespace MCV_Module.Models.Project
                 taskLineConnectionData = value.Find(x => x.TaskType == TaskType.LineConnection) as TaskLineConnectionData;
                 taskTrainingData = value.Find(x => x.TaskType == TaskType.Training) as TaskTrainingData;
                 taskTestData = value.Find(x => x.TaskType == TaskType.Test) as TaskTestData;
+                taskExamData = value.Find(x => x.TaskType == TaskType.Exam) as TaskExamData;
+                taskInfoData = value.Find(x => x.TaskType == TaskType.Info) as TaskInfoData;
+                taskStructureData = value.Find(x => x.TaskType == TaskType.Structure) as TaskStructureData;
+                taskInspectionData = value.Find(x => x.TaskType == TaskType.Inspection) as TaskInspectionData;
             }
         }
 
@@ -300,6 +274,10 @@ namespace MCV_Module.Models.Project
                 TaskType.LineConnection => taskLineConnectionData,
                 TaskType.Training => taskTrainingData,
                 TaskType.Test => taskTestData,
+                TaskType.Exam => taskExamData,
+                TaskType.Info => taskInfoData,
+                TaskType.Structure => taskStructureData,
+                TaskType.Inspection => taskInspectionData,
                 _ => null,
             };
             return rawData as TData;
@@ -314,6 +292,10 @@ namespace MCV_Module.Models.Project
                 TaskType.LineConnection => taskLineConnectionData,
                 TaskType.Training => taskTrainingData,
                 TaskType.Test => taskTestData,
+                TaskType.Exam => taskExamData,
+                TaskType.Info => taskInfoData,
+                TaskType.Structure => taskStructureData,
+                TaskType.Inspection => taskInspectionData,
                 _ => null
             };
         }
@@ -329,6 +311,10 @@ namespace MCV_Module.Models.Project
             taskLineConnectionData = new TaskLineConnectionData($"{id}_lineConnection");
             taskTrainingData = new TaskTrainingData($"{id}_training");
             taskTestData = new TaskTestData($"{id}_test");
+            taskExamData = new TaskExamData($"{id}_exam");
+            taskInfoData = new TaskInfoData($"{id}_info");
+            taskStructureData = new TaskStructureData($"{id}_structure");
+            taskInspectionData = new TaskInspectionData($"{id}_inspection");
         }
 
         // TODO: M1a 工厂 —— GetTask 工厂方法，按 TaskType 获取对应数据
@@ -400,6 +386,17 @@ namespace MCV_Module.Models.Project
                     return "仿真实验提供一个可交互的虚拟实验环境，按引导步骤带领学生逐步操作：先准备与检查器材，再分步执行实验、观察现象并记录数据，每步完成后再进入下一步，在不接触真实设备的情况下安全、有序地完成实训操作";
                 case TaskType.Test:
                     return "小测验通过一组选择题检验学生对本次实训知识点的掌握程度，即时反馈作答正确与否，帮助学生巩固与自测学习效果";
+                case TaskType.Exam:
+                    return "考核从题库中随机抽取若干道单选题，考查学生对低压电器基础知识的掌握情况，作答即时反馈对错，答对后自动进入下一题";
+                case TaskType.Info:
+                    return "简介用于展示每个实训任务所使用的简介，简介通过一个列表多个按钮点击切换更新主要画面中的模型，可以通过鼠标控制展示模型的姿态与尺寸";
+                    // TODO: 返回内容要重写
+                case TaskType.Structure:
+                    return "结构用于展示每个实训任务所使用的结构，结构通过一个列表多个按钮点击切换更新主要画面中的模型，可以通过鼠标控制展示模型的姿态与尺寸";
+                    // TODO: 返回内容要重写
+                case TaskType.Inspection:
+                    return "检测用于展示每个实训任务所使用的检测，检测通过一个列表多个按钮点击切换更新主要画面中的模型，可以通过鼠标控制展示模型的姿态与尺寸";
+                    // TODO: 返回内容要重写
                 default:
                     return "空任务类型，暂无任务描述";
 
@@ -410,10 +407,8 @@ namespace MCV_Module.Models.Project
     [Serializable]
     public abstract class TaskData<T> : TaskDataBase where T : TaskData<T>
     {        
-        /// <summary>
-        /// 该任务是否启用。可写入 JSON 配置：false 时 TaskListPanel 不装配该项（数据仍保留）。
-        /// 注意：必须为 public 才会被 Newtonsoft 序列化（protected 字段不进 JSON）。
-        /// </summary>
+        // WHY: 必须为 public 才会被 Newtonsoft 序列化（protected 字段不进 JSON）。
+        /// <summary>该任务是否启用；可写入 JSON 配置，false 时 TaskListPanel 不装配该项（数据仍保留）。</summary>
         public bool taskActive = true;
         public override TaskType TaskType => TaskType.None;
         public override bool TaskActive => taskActive;
@@ -440,6 +435,7 @@ namespace MCV_Module.Models.Project
     {
         public override TaskType TaskType => TaskType.Purpose;
         public string contentText;
+        public string contentTextEn;                       // 英文列（空 = 回退中文）
         public string prefabKey;
         public TaskPurposeData(string id)
         {
@@ -503,13 +499,74 @@ namespace MCV_Module.Models.Project
             displayName = "小测验";
         }
     }
+    [Serializable]
+    public class TaskInfoData : TaskData<TaskInfoData>
+    {
+        public override TaskType TaskType => TaskType.Info;
+        public string contentText;
+        public string contentTextEn;                       // 英文列（空 = 回退中文）
 
+        /// <summary>简介模型（器件 3D 展示物体）id（= ProjectData.json 的 taskInfoData.prefabKey，形如 contactor_info_model）；为空则只装配图集与文案，不做物体渲染。</summary>
+        public string prefabKey;
+
+        // WHY: 保留此字段是为让 JSON 里已写好的键能被正常反序列化，不再被静默忽略。
+        /// <summary>简介主图 key（预留，命名 {器件}_image）；当前无消费方，图集一律走 images。</summary>
+        public string imageKey;
+
+        /// <summary>简介图集（有序）id 列表（形如 contactor_info_01），运行时按 id 批量加载成 Sprite。</summary>
+        public List<string> images = new List<string>();
+
+        public TaskInfoData(string id)
+        {
+            this.id = id;
+            displayName = "简介";
+        }
+    }
+    [Serializable]
+    public class TaskStructureData : TaskData<TaskStructureData>
+    {
+        public override TaskType TaskType => TaskType.Structure;
+        public string prefabKey;
+        public TaskStructureData(string id)
+        {
+            this.id = id;
+            displayName = "结构";
+        }
+    }
+    [Serializable]
+    public class TaskInspectionData : TaskData<TaskInspectionData>
+    {
+        public override TaskType TaskType => TaskType.Inspection;
+
+        /// <summary>检测预制体（包配置 id，形如 <c>contactor_inspection_model</c>）。</summary>
+        public string prefabKey;
+
+        public TaskInspectionData(string id)
+        {
+            this.id = id;
+            displayName = "检测";
+        }
+    }
+
+    [Serializable]
+    public class TaskExamData : TaskData<TaskExamData>
+    {
+        public override TaskType TaskType => TaskType.Exam;
+        public List<QuestionClip> questionClips = new List<QuestionClip>();
+        public TaskExamData(string id)
+        {
+            this.id = id;
+            displayName = "考核";
+        }
+    }
     [Serializable]
     public struct EquipmentStruct
     {
         public string prefabKey;
         public string title;
+        public string titleEn;                             // 英文列（空 = 回退中文）
         public string contentText;
+        public string contentTextEn;                       // 英文列（空 = 回退中文）
         public string audioName;
     }
 
@@ -517,7 +574,9 @@ namespace MCV_Module.Models.Project
     public struct PrincipleStruct
     {
         public string title;
+        public string titleEn;                             // 英文列（空 = 回退中文）
         public string contentText;
+        public string contentTextEn;                       // 英文列（空 = 回退中文）
         public string videoName;
     }
 }

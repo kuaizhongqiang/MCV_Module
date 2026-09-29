@@ -3,10 +3,7 @@ using UnityEngine;
 
 namespace MCV_Module.Steps
 {
-    /// <summary>
-    /// 进程节点 —— 承载一个进程的数据（原 ProcessingData 已融合进本组件），
-    /// 收集子 StepHandler，作为 StepManager（步骤导演）的数据源。
-    /// </summary>
+    /// <summary>进程节点：承载一个进程的数据，收集子 StepHandler，作为 StepManager 的数据源。</summary>
     public class ProcessingHandler : MonoBehaviour
     {
         [SerializeField] string id;

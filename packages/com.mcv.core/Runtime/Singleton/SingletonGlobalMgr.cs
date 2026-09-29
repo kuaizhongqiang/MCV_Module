@@ -2,31 +2,8 @@ using MCV_Module.Singleton;
 using MCV_Module.Utils;
 using UnityEngine;
 
-/// <summary>
-/// 全局管理器泛型单例基类
-///
-/// 职责：
-///   - 全局唯一单例（线程安全）
-///   - DontDestroyOnLoad 跨场景持留
-///   - 延迟初始化（通过 SingletonBase.DelayInit）
-///
-/// 用法：
-///   public class MyManager : SingletonGlobalMgr&lt;MyManager&gt;
-///   {
-///       protected override IEnumerator DelayInit()
-///       {
-///           // 初始化逻辑
-///           yield break;
-///       }
-///   }
-///
-///   // 访问
-///   MyManager.Instance.DoSomething();
-///
-/// 注意：
-///   - FindObjectsByType&lt;T&gt; 使用具体类型 T 查找，不会混淆不同子类
-///   - 每个具体类型独立持有自己的静态实例，互不干扰
-/// </summary>
+// WHY: 每个具体类型 T 独立持有自己的静态 s_Instance，勿把实例管理上移到非泛型基类，否则不同管理器会共用同一实例。
+/// <summary>全局管理器泛型单例基类：线程安全全局唯一、DontDestroyOnLoad 跨场景持留、延迟初始化。</summary>
  
 namespace MCV_Module.Singleton
 {
@@ -36,9 +13,7 @@ namespace MCV_Module.Singleton
         private static readonly object s_Lock = new object();
         private static bool s_AppQuitting;
 
-        /// <summary>
-        /// 全局唯一实例（线程安全，自动创建）
-        /// </summary>
+        /// <summary>全局唯一实例（线程安全，自动创建；退出时返回 null）。</summary>
         public static T Instance
         {
             get
@@ -87,10 +62,7 @@ namespace MCV_Module.Singleton
 
         // ── 生命周期 ──────────────────────────────────────────────
 
-        /// <summary>
-        /// Awake 中注册单例，确保只有一份实例，
-        /// 并设置 DontDestroyOnLoad
-        /// </summary>
+        /// <summary>Awake 中注册单例（仅保留一份）并设置 DontDestroyOnLoad；重复实例被销毁。</summary>
         protected virtual void Awake()
         {
             if (s_Instance == null)

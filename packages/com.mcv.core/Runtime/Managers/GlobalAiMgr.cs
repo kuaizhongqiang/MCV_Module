@@ -7,76 +7,56 @@ using UnityEngine;
 
 namespace MCV_Module.Managers
 {
-    /// <summary>
-    /// AI 全局管理器 —— 连接 AiServer(StreamingAssets/AiServer/AiServer.exe)。
-    ///
-    /// 分层原则(Unity 是纯前台):
-    ///   - Unity 只负责: 显示、输入、把 session_id + user_text 交给 EXE。
-    ///   - EXE 负责: 会话历史拼接、system/portable 组装、token 截断、预热、tool 调用等全部上下文逻辑。
-    ///
-    /// 职责:
-    ///   - 启动时自动拉起 AiServer EXE 并等待就绪(异步, 不阻塞应用启动)
-    ///   - 生成并持有 SessionId(Unity 生成 GUID, 预热与后续对话共用)
-    ///   - 【启动预热】服务就绪后立即发一次 /v1/warmup(system/portable + 固定触发消息由 EXE 组织),
-    ///     完成后 EXE 回调 warmup_done=true, 预热轮作为该 session 历史起始(前缀连续, 利于 KVCache 命中)。
-    ///   - 应用退出时关闭 EXE(优雅 /v1/shutdown + 兜底 Kill)
-    ///
-    /// 分层:
-    ///   - AiServerClient（MCV.AiClient.dll, 纯协议）: 鉴权/对话/日志/预热/模型信息
-    ///     （凭据由本管理器 Inspector 字段配置后运行时注入，DLL 内无硬编码密钥）
-    ///   - AiServerProcess（本程序集源码）: EXE 拉起/关闭（#if !UNITY_WEBGL）
-    ///
-    /// 用法(任意脚本):
-    ///   GlobalAiMgr.Instance.Ask("你好", result => { ... });
-    ///   GlobalAiMgr.Instance.AskStream("你好", chunk => {...}, result => {...});
-    /// </summary>
+    // WHY: Unity 只做前台（显示/输入/session_id + user_text），会话历史、system/portable 组装、token 截断、预热、tool 调用全在 EXE
+    // WHY: enableAi = false 时也必须照常置 isInit，否则会阻塞 Setup 启动链
+    /// <summary>AI 总入口：建客户端与 EXE 宿主、持有会话 id、等待就绪、执行启动预热，退出时关闭 EXE。</summary>
     public class GlobalAiMgr : SingletonGlobalMgr<GlobalAiMgr>
     {
         #region 参数
-        /// <summary>  是否启动 /// </summary>
-        [SerializeField,Header("是否启动")] bool ifAiStart = false;
+        /// <summary>AI 总开关：false 时不建客户端、不拉起 EXE、不预热、不允许通讯（UI 用 IsAiEnabled 判断入口）。</summary>
+        [SerializeField, Header("启用 AI（关闭则不加载 / 不预热 / 不允许通讯）")]
+        bool enableAi = true;
+
+        /// <summary>AI 是否启用（只读）。关闭时所有 AI 通讯入口直接拒绝。</summary>
+        public bool IsAiEnabled { get { return enableAi; } set { enableAi = value; } }
+
+        /// <summary>启动预热开关：false 时启动只拉起 AiServer 并发就绪，不发预热轮（调试 AI 相关 UI 用，免去每次预热的开销）。</summary>
+        [SerializeField, Header("启动预热（关闭则启动不发预热轮, UI 直接放行）")]
+        bool enableStartupWarmup = true;
+
+        /// <summary>启动是否发送预热轮（只读）。关闭时服务就绪后 IsWarmupDone 直接置 true，否则 UI 输入会被预热门控永久拦住。</summary>
+        public bool IsStartupWarmupEnabled { get { return enableStartupWarmup; } set { enableStartupWarmup = value; } }
 
         /// <summary>服务启动就绪等待超时(秒)。Node SEA EXE 首次启动(88MB+杀软扫描)可能较慢, 取 30s。</summary>
         [SerializeField, Header("AiServer 就绪超时(秒)")] float readyTimeoutSeconds = 30f;
 
-        /// <summary>
-        /// 客户端鉴权名称 —— 必须与 AiServer EXE 内嵌白名单(.env CLIENT_WHITELIST)中一组一致。
-        /// DLL 化后凭据不再硬编码，由本 Inspector 字段配置并在运行时注入 AiServerClient。
-        /// </summary>
+        // WHY: 凭据不硬编码进 DLL，由本 Inspector 字段配置后运行时注入 AiServerClient
+        /// <summary>客户端鉴权名称：必须与 EXE 内嵌白名单（.env CLIENT_WHITELIST）中一组一致。</summary>
         [SerializeField, Header("客户端鉴权(与 .env CLIENT_WHITELIST 一致)")]
         string _authName = "asdf";
 
         /// <summary>客户端鉴权令牌 —— 必须与 AiServer EXE 内嵌白名单中一组一致。</summary>
         [SerializeField] string _authToken = "asdfghjkl";
 
-        /// <summary>由 GlobalAiMgr 控制的通讯客户端（纯协议，编入 MCV.AiClient.dll）</summary>
+        /// <summary>由 GlobalAiMgr 控制的通讯客户端（纯协议，编入 MCV.AiClient.dll）。AI 关闭时为 null。</summary>
         public AiServerClient Client { get; private set; }
 
-        /// <summary>EXE 宿主进程管理（留源码，含 #if !UNITY_WEBGL）</summary>
+        /// <summary>EXE 宿主进程管理（留源码，含 #if !UNITY_WEBGL）。AI 关闭时为 null。</summary>
         AiServerProcess _process;
 
-        public bool IfAiStart => ifAiStart;
-
         /// <summary>EXE 是否已就绪(health 通过)</summary>
-        public bool IsServerReady { get { return Client != null && Client.IsReady; } }
+        public bool IsServerReady { get { return enableAi && Client != null && Client.IsReady; } }
 
         /// <summary>当前服务地址(便于调试显示)</summary>
         public string ServerUrl { get { return Client != null ? Client.BaseUrl : ""; } }
 
-        /// <summary>
-        /// 会话 id —— Unity 生成(每次应用生命周期一个), 预热与后续对话共用同一 session_id。
-        /// EXE 按此维护该会话历史并拼接上下文。
-        /// </summary>
+        /// <summary>会话 id（每次应用生命周期一个），预热与后续对话共用；EXE 按它维护历史与上下文。</summary>
         public string SessionId { get; private set; }
 
-        /// <summary>预热是否已完成(EXE 预热轮返回 warmup_done=true)。预热完成前禁止用户输入。</summary>
+        /// <summary>预热是否已完成(EXE 预热轮返回 warmup_done=true；预热开关关闭时为"无需预热"，服务就绪即置 true)。预热完成前禁止用户输入。</summary>
         public bool IsWarmupDone { get; private set; }
 
-        /// <summary>
-        /// 固定系统提示词 —— 由外部(其他系统)注入。若为空, 则回退到
-        /// <see cref="defaultPrompt"/> 的 GetSystemPrompt() 万能指导老师默认内容。
-        /// 预热时传给 EXE 记住并用于该 session 拼接。
-        /// </summary>
+        /// <summary>系统提示词：外部可注入；为空则回退到默认万能指导老师内容（预热时传给 EXE 记住）。</summary>
         [SerializeField, Header("System Prompt(可选, 覆盖默认万能指导老师)")] string _systemPrompt = "";
         public string SystemPrompt
         {
@@ -84,17 +64,11 @@ namespace MCV_Module.Managers
             set { _systemPrompt = value; }
         }
 
-        /// <summary>
-        /// 默认系统提示词 —— 万能学科指导老师结构, 改 subject 即可切换学科。
-        /// 可在 Inspector 编辑默认内容; 也可通过外部赋值覆盖 SystemPrompt。
-        /// </summary>
+        /// <summary>默认系统提示词（万能学科指导老师结构，改 subject 即换学科）。</summary>
         [SerializeField, Header("默认提示词(万能指导老师, 改 subject 切学科)")]
         AiChatSystemPrompt defaultPrompt = new AiChatSystemPrompt();
 
-        /// <summary>
-        /// 由 AiChatSystemPrompt 组装的默认系统提示词, 注入当前学习内容与目录结构描述
-        /// （来自 GlobalDataMgr.ProjectData / MenuData）。
-        /// </summary>
+        /// <summary>由 AiChatSystemPrompt 组装的默认系统提示词，注入学习内容与目录结构描述。</summary>
         string DefaultSystemPrompt
         {
             get
@@ -133,12 +107,15 @@ namespace MCV_Module.Managers
 
         protected override IEnumerator DelayInit()
         {
-            // 开关关闭时整体静默：不创建客户端/进程、不拉起 EXE、不预热，
-            // 只标记已初始化以免阻塞启动链，后续所有公开方法均空转。
-            if (!ifAiStart)
+            // WHY: AI 关闭也照常置 isInit（不加载客户端 / EXE / 会话 / 预热），否则会阻塞 Setup 启动链
+            if (!enableAi)
             {
+                Client = null;
+                _process = null;
+                SessionId = null;
+                IsWarmupDone = false;
+                Log.Info("[GlobalAiMgr] enableAi = false：不加载 AiServer、不预热、不允许通讯");
                 isInit = true;
-                Log.Info("[GlobalAiMgr] AI 开关关闭(ifAiStart=false), GlobalAiMgr 静默模式, 不初始化 AiServer。");
                 yield break;
             }
 
@@ -149,11 +126,11 @@ namespace MCV_Module.Managers
             // 生成会话 id（Unity 侧唯一标识, 传给 EXE 用于会话历史管理）
             SessionId = Guid.NewGuid().ToString("N");
 
-            // 注意: 这里不等待服务就绪, 置 isInit 后立即返回,
-            // 避免阻塞 Setup 启动链 —— AI 服务就绪 + 预热是异步的。
+            // WHY: 不在这里等服务就绪，置 isInit 后立即返回 —— 就绪与预热都是异步的，不能阻塞 Setup 启动链
             isInit = true;
 
-            StartCoroutine(EnsureReadyAndWarmupAsync());
+            // WHY: 预热开关只管启动这一次 —— false 时仍拉起服务等待就绪, 只是不发预热轮
+            StartCoroutine(EnsureReadyAndWarmupAsync(enableStartupWarmup));
             yield break;
         }
 
@@ -166,11 +143,24 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 公开方法
-        /// <summary>后台拉起并等待 AiServer 就绪, 就绪后执行启动预热(幂等, 可重复调用)。开关关闭时静默。</summary>
-        public IEnumerator EnsureReadyAndWarmupAsync()
+        /// <summary>通讯守卫：AI 关闭时记警告并回错误，返回 true 表示已拒绝（调用方应 yield break）。</summary>
+        bool RejectIfAiDisabled(Action<string> onError, string api)
         {
-            if (!ifAiStart || Client == null)
+            if (enableAi) return false;
+            Log.Warning($"[GlobalAiMgr] AI 已关闭（enableAi = false），拒绝 {api}");
+            onError?.Invoke("AI 已关闭");
+            return true;
+        }
+
+        /// <summary>后台拉起并等待 AiServer 就绪, 就绪后执行启动预热(幂等, 可重复调用)。AI 关闭时直接返回。warmup = false 时只等就绪、跳过预热轮。</summary>
+        public IEnumerator EnsureReadyAndWarmupAsync(bool warmup = true)
+        {
+            if (!enableAi)
+            {
+                Log.Warning("[GlobalAiMgr] AI 已关闭（enableAi = false），跳过就绪等待与预热");
                 yield break;
+            }
+            if (Client == null) yield break;
 
             bool ready = false;
             yield return Client.EnsureReadyAsync(_process.TryLaunch, ok => ready = ok, readyTimeoutSeconds);
@@ -183,6 +173,14 @@ namespace MCV_Module.Managers
 
             Log.Info($"[GlobalAiMgr] AiServer 就绪: {Client.BaseUrl}");
 
+            // WHY: 不预热也要放行 UI —— AiDialogController 只认 IsWarmupDone, 保持 false 会让输入被预热门控永久拦住
+            if (!warmup)
+            {
+                IsWarmupDone = true;
+                Log.Info("[GlobalAiMgr] 预热开关关闭（enableStartupWarmup = false），跳过预热轮, IsWarmupDone 视为 true");
+                yield break;
+            }
+
             // 服务就绪后执行预热（若尚未完成）
             if (!IsWarmupDone)
             {
@@ -190,26 +188,24 @@ namespace MCV_Module.Managers
             }
         }
 
-        /// <summary>一次性对话(整段返回)。EXE 负责历史拼接。</summary>
+        /// <summary>一次性对话(整段返回)。EXE 负责历史拼接。AI 关闭时直接回错误。</summary>
         public IEnumerator Ask(string userText, Action<AiChatResult> onDone, Action<string> onError = null)
         {
             return ChatAsync(new AiChatRequest(SessionId, userText, stream: false), null, onDone, onError);
         }
 
-        /// <summary>流式对话(逐段回调增量, 含思考内容增量)。EXE 负责历史拼接。</summary>
+        /// <summary>流式对话(逐段回调增量, 含思考内容增量)。EXE 负责历史拼接。AI 关闭时直接回错误。</summary>
         public IEnumerator AskStream(string userText, Action<AiChatChunk> onDelta,
             Action<AiChatResult> onDone, Action<string> onError = null)
         {
             return ChatAsync(new AiChatRequest(SessionId, userText, stream: true), onDelta, onDone, onError);
         }
 
-        /// <summary>完整对话入口(自定义 provider / model / reasoning 参数)。</summary>
+        /// <summary>完整对话入口(自定义 provider / model / reasoning 参数)。AI 关闭时直接回错误。</summary>
         public IEnumerator ChatAsync(AiChatRequest request, Action<AiChatChunk> onDelta,
             Action<AiChatResult> onDone, Action<string> onError = null)
         {
-            // 开关关闭时静默: 不执行任何对话逻辑
-            if (!ifAiStart || Client == null)
-                yield break;
+            if (RejectIfAiDisabled(onError, "ChatAsync")) yield break;
 
             if (string.IsNullOrEmpty(request.sessionId))
                 request.sessionId = SessionId;
@@ -231,20 +227,27 @@ namespace MCV_Module.Managers
             });
         }
 
-        /// <summary>拉取 AiServer 最近日志(排障用)。</summary>
+        /// <summary>拉取 AiServer 最近日志(排障用)。AI 关闭时回空串。</summary>
         public IEnumerator FetchServerLogsAsync(int tail, Action<string> onResult)
         {
-            if (!ifAiStart || Client == null)
+            if (!enableAi)
+            {
+                Log.Warning("[GlobalAiMgr] AI 已关闭（enableAi = false），拒绝 FetchServerLogsAsync");
+                onResult?.Invoke("");
                 yield break;
+            }
+            if (Client == null)
+            {
+                onResult?.Invoke("");
+                yield break;
+            }
             yield return Client.FetchLogsAsync(tail, onResult);
         }
 
-        /// <summary>
-        /// 拉取 models 目录（providers/模型/能力，对齐 dsh-llm listProviders 概念）。
-        /// 供 UI 展示可选 provider/model；需服务就绪并鉴权。
-        /// </summary>
+        /// <summary>拉取 models 目录（providers / 模型 / 能力），供 UI 展示可选项；需服务就绪并鉴权。</summary>
         public IEnumerator FetchModelsAsync(Action<AiModelsResult> onResult, Action<string> onError = null)
         {
+            if (RejectIfAiDisabled(onError, "FetchModelsAsync")) yield break;
             if (Client == null)
             {
                 onError?.Invoke("AiServerClient 未初始化");
@@ -253,9 +256,10 @@ namespace MCV_Module.Managers
             yield return Client.FetchModelsAsync(onResult, onError);
         }
 
-        /// <summary>拉取服务信息（版本/默认 provider/活跃会话/能力目录）。</summary>
+        /// <summary>拉取服务信息（版本/默认 provider/活跃会话/能力目录）。AI 关闭时直接回错误。</summary>
         public IEnumerator FetchInfoAsync(Action<AiInfoResult> onResult, Action<string> onError = null)
         {
+            if (RejectIfAiDisabled(onError, "FetchInfoAsync")) yield break;
             if (Client == null)
             {
                 onError?.Invoke("AiServerClient 未初始化");
@@ -266,13 +270,11 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 启动预热
-        /// <summary>
-        /// 执行启动预热: 调 /v1/warmup, 由 EXE 组织 system/portable + 固定触发消息并发送上游。
-        /// EXE 完成后回调 warmup_done=true, 预热轮作为该 session 历史起始。
-        /// 预热失败不阻塞启动, 但 IsWarmupDone 保持 false(用户输入会被拦截)。
-        /// </summary>
+        // WHY: 预热轮是该 session 的历史起始（前缀连续利于 KVCache 命中）；IsWarmupDone=false 时用户输入会被拦截
+        /// <summary>启动预热：调 /v1/warmup，成功后 IsWarmupDone = true；失败不阻塞启动但保持 false。</summary>
         IEnumerator StartWarmupAsync()
         {
+            if (!enableAi) yield break;
             if (Client == null) yield break;
 
             // 提示词由 Unity 提供(字符串), 预热时传给 EXE 记住, 用于该 session 拼接

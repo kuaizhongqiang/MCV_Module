@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace MCV_Module.Objects.Interactives.Elements
 {
+    /// <summary>按钮开关（SB）：按下/抬起边沿驱动位移动画并发布状态变化事件。</summary>
     public class ElementButtonSwitchObj : ElementObjBase
     {
         List<ElementPointObj> points = new List<ElementPointObj>();
@@ -26,7 +27,7 @@ namespace MCV_Module.Objects.Interactives.Elements
             elementMoveAnimation = newAnim;
 
             elementMoveAnimation.Reset();
-            // 按钮初始抬起（释放态），避免位置推断导致初始按下，确保流程不需先点一次
+            // WHY: 强制初始为抬起态，避免按位置推断出「已按下」导致流程要先点一次
             elementMoveAnimation.Open = true;
 
             HighlightPluginInit(elementMoveAnimation.moveObj.gameObject);
@@ -46,7 +47,7 @@ namespace MCV_Module.Objects.Interactives.Elements
 
         protected override void MoDownEvent()
         {
-            // 仅在 抬起→按下 的边沿发布一次状态事件，避免按住期间重复发送
+            // WHY: 只在 抬起→按下 的边沿发一次事件，否则按住期间会重复发布
             if (!elementMoveAnimation.Open) return;
             elementMoveAnimation.Open = false;
             EventBus<ElementStateChangeEventData>.Publish(new ElementStateChangeEventData(this));
@@ -54,7 +55,7 @@ namespace MCV_Module.Objects.Interactives.Elements
 
         protected override void MoUpEvent()
         {
-            // 仅在 按下→抬起 的边沿发布一次状态事件，避免重复发送
+            // WHY: 只在 按下→抬起 的边沿发一次事件，否则会重复发布
             if (elementMoveAnimation.Open) return;
             elementMoveAnimation.Open = true;
             EventBus<ElementStateChangeEventData>.Publish(new ElementStateChangeEventData(this));

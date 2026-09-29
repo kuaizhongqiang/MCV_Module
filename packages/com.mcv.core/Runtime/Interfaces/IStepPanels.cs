@@ -2,11 +2,8 @@ using System;
 
 namespace MCV_Module.Interfaces
 {
-    /// <summary>
-    /// 步骤功能面板最小契约 —— Tool/UI/Question 三类条件通过 GlobalControllerMgr 按名字查找面板控制器，
-    /// 依赖接口而非具体类。当前项目尚未实现对应面板控制器时，条件会打告警并跳过（不阻塞流程）；
-    /// 后续实现面板后，控制器实现这些接口即可接通完整交互。
-    /// </summary>
+    // WHY: 条件按名字经 GlobalControllerMgr 查找面板控制器、依赖接口而非具体类；当前未实现时打告警并跳过，绝不阻塞步骤流程。
+    /// <summary>步骤功能面板最小契约：Tool/UI/Question 三类面板均由条件按名字查找。</summary>
 
     /// <summary>工具面板契约：注册工具项 + 用户按下工具起拖 + 拖拽光标状态</summary>
     public interface IStepToolPanel : IController

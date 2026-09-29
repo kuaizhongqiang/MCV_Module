@@ -10,9 +10,9 @@ namespace MCV_Module.UI.Panels
     {
         [SerializeField] Text titleText;
         [SerializeField] Transform questionParent;
-        QuestionData currentQuestion;
+        QuestionClip currentQuestion;
 
-        readonly QuestionClip questionList = new QuestionClip();
+        readonly QuestionData questionList = new QuestionData();
 
         public void Init(QuestionClip question)
         {
@@ -24,7 +24,7 @@ namespace MCV_Module.UI.Panels
             Init(question);
         }
 
-        public void SelectQuestion(QuestionData data)
+        public void SelectQuestion(QuestionClip data)
         {
             currentQuestion = data;
         }

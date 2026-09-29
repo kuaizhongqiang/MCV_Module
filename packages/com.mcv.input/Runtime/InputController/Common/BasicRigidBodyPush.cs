@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 
+/// <summary>角色碰撞推动受击刚体：命中非运动学刚体时按强度施加水平冲量</summary>
 public class BasicRigidBodyPush : MonoBehaviour
 {
 	public LayerMask pushLayers;

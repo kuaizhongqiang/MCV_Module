@@ -2,12 +2,8 @@ using UnityEngine;
 
 namespace MCV_Module.Utils.Pool
 {
-    /// <summary>
-    /// 池内实例的归属标记（由 <see cref="GameObjectPool"/> 自动挂在实例根节点上）。
-    ///
-    /// 作用：拿到一个 GameObject 就能反查它属于哪个池、哪个 key，避免「还错池」「重复归还」。
-    /// 注意：由池自动维护，**不要手工添加/删除**；实例被销毁时标记会自行摘除所属关系。
-    /// </summary>
+    // WHY: 由池自动添加并维护，手工增删会让 Spawn 归属反查失败；实例销毁时 OnDestroy 会摘除所属关系。
+    /// <summary>池内实例的归属标记（由 GameObjectPool 自动挂到实例根节点），用于反查所属池与 key，避免还错池、重复归还。</summary>
     [DisallowMultipleComponent]
     public sealed class PooledObject : MonoBehaviour
     {

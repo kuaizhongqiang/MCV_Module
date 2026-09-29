@@ -10,26 +10,7 @@ using UnityEngine.SceneManagement;
 
 namespace MCV_Module.Managers.InstManagers
 {
-    /// <summary>
-    /// 实例对象管理器基类 —— 「按包配置 id 加载预制体 → 对象池取用 / 归还」，
-    /// 目前由 <see cref="InstShowManager"/>（仅展示）继承。
-    ///
-    /// 四条主线：
-    ///   ① **资源走标准包管线**：预制体一律经 <c>GlobalAssetsMgr.LoadPrefabAsync</c> →
-    ///      <c>GlobalAddressableMgr</c>（AA / AB / Default 三链路），本类不直接 Resources.Load / AssetBundle.LoadAsset；
-    ///   ② **对象池**：每个包配置 id 一个 <see cref="GameObjectPool"/>（见 <c>Utils/Pool</c>），
-    ///      频繁取用/归还时零 Instantiate、零磁盘 IO；
-    ///   ③ **预加载**：<see cref="DelayInit"/> 把 packageKeys 的预制体全部加载进内存并建池，
-    ///      之后 <see cref="Spawn(string,Transform)"/> 是同步的；未预加载的包用 <see cref="SpawnAsync"/> 兜底；
-    ///   ④ **归属登记**：实例由 <c>GlobalAddressableMgr.InstantiatePrefab</c> 创建，
-    ///      卸载资源包时能按包把相关实例一起销毁，不会留下丢失资源的"粉红"物体。
-    ///
-    /// 实例侧复位约定：需要复位姿态/缩放/计时器的组件请实现 <see cref="IPoolable"/>（出池 OnSpawn / 回池 OnDespawn）。
-    ///
-    /// ⚠ 包边界：本类（module）引用了 <c>InputControllerBase</c>/<c>GlobalInputMgr</c>（input 包）与
-    /// <c>GlobalAssetsMgr</c>/<c>GlobalAddressableMgr</c>（core 包）—— 平铺形态（/bare）在同一程序集内合法；
-    /// 包化形态需要在 <c>MCV.Module.asmdef</c> 补 <c>MCV.Input</c> 引用（交付侧动作，见 §7.1 D / D-10）。
-    /// </summary>
+    /// <summary>实例管理器基类：按包配置 id 加载预制体，再经对象池取用/归还（InstShowManager、InspectionManager 继承它）。</summary>
     public abstract class InstManagerBase : SingletonBase
     {
         #region 序列化参数
@@ -70,14 +51,7 @@ namespace MCV_Module.Managers.InstManagers
         /// <summary>是否可操控型（由子类决定：仅展示 = false，可操控 = true）。</summary>
         protected bool isControlled = false;
 
-        /// <summary>
-        /// 是否允许 <see cref="packageKeys"/> 留空（true = 按需加载型，由子类决定）。
-        ///
-        /// 按需型不预加载：包由业务在首次 <see cref="SpawnAsync"/> 时注入并建池，空配置不报错；
-        /// 预加载型（默认）在 <see cref="maxWaitTime"/> 内等不到配置会记一条错误日志。
-        /// 之所以要区分：预加载型必须在 DelayInit 就把包备好（Spawn 才能同步），
-        /// 而按需型（如简介页的模型展示，8 个器件可能随时切换）只想加载当前用到的那一个包。
-        /// </summary>
+        /// <summary>是否允许 packageKeys 留空：true = 按需加载型（子类决定），空配置不预加载也不报错。</summary>
         protected virtual bool AllowEmptyPackageKeys => false;
 
         /// <summary>全部包的预制体是否已加载完成（Spawn 的同步前提）。</summary>
@@ -111,10 +85,7 @@ namespace MCV_Module.Managers.InstManagers
         #endregion
 
         #region 生命周期
-        /// <summary>
-        /// 子类 Awake 应先绑静态单例（并处理重复实例），再调 <c>base.Awake()</c>。
-        /// 基类只做「池容器就位」这一件事，不碰任何静态单例。
-        /// </summary>
+        /// <summary>只做池容器就位；子类先绑自己的静态单例，再调 base.Awake()。</summary>
         protected virtual void Awake()
         {
             EnsurePool();
@@ -165,10 +136,7 @@ namespace MCV_Module.Managers.InstManagers
         #endregion
 
         #region 包加载（走标准包管线）
-        /// <summary>
-        /// 加载全部包预制体并建池。单个包失败只记日志并跳过，不中断其余包。
-        /// 子类可重写以追加自己的装配逻辑（记得调 base 或自行建池）。
-        /// </summary>
+        /// <summary>加载全部包预制体并建池；单个包失败只记日志跳过，不中断其余包。</summary>
         protected virtual IEnumerator LoadPackageAsync(string[] keys, Action<bool> onComplete)
         {
             // Inst* 不在 Setup 的启动链上，不能假设 GlobalAddressableMgr 已初始化 → 自行等待
@@ -325,10 +293,7 @@ namespace MCV_Module.Managers.InstManagers
             return component;
         }
 
-        /// <summary>
-        /// 异步取用：包已预加载则同步回调；否则先加载预制体、建池再取用。
-        /// 用于运行时才知道要哪个包的场合（如按数据 prefabKey 切换模型）。
-        /// </summary>
+        /// <summary>异步取用：已建池则同步回调，否则先加载建池再取用（用于运行时才知道包 id 的场合）。</summary>
         public void SpawnAsync(string packageId, Transform parent, Action<GameObject> onSpawned, Action<string> onError = null)
         {
             if (string.IsNullOrEmpty(packageId))
@@ -413,10 +378,7 @@ namespace MCV_Module.Managers.InstManagers
         #endregion
 
         #region 场景根与池容器
-        /// <summary>
-        /// 取实例场景（<see cref="InstSceneName"/>）根下的 <see cref="InstRootName"/> 容器；
-        /// 场景未加载时返回 null，容器不存在时创建。
-        /// </summary>
+        /// <summary>取 1_Content 场景根下的 InstRoot 容器（场景未加载返回 null，容器不存在则创建）。</summary>
         protected Transform GetSceneRoot()
         {
             var scene = SceneManager.GetSceneByName(InstSceneName);

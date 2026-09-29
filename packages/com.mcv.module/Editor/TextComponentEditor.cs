@@ -1,18 +1,17 @@
 using MCV_Module.Models;
 using MCV_Module.Models.System;
 using MCV_Module.UI.Components;
+using MCV_Module.Utils;
 using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
-/*
-    TextComponent 的 Inspector 扩展（SO 驱动）：
-    1. 检查当前物体名是否已作为 LanguageClip.displayName 注册进 LanguageDataSO。
-    2. 未注册时「生成语言 Clip」：写入 SO（id 用新 GUID）、同步组件字段，并导出 JSON。
-    3. 已注册时「删除语言 Clip」：从 SO 移除、清空组件字段，并导出 JSON。
-    运行时 TextComponent 按字段 id 从 JSON 反向找回最新内容显示。
-*/
+// WHY: 运行时 TextComponent 按 languageKey 从 LanguageData 反查最新文案，故 SO 改动后必须重新导出 JSON 才生效。
+/// <summary>
+/// TextComponent 的 Inspector 扩展（key 驱动）：显示当前 languageKey 是否已在 LanguageDataSO 登记；
+/// 未登记可生成（中文原文进 clips[0]，英文留空），已登记可删除；两种情况都会把 SO 重新导出成 JSON。
+/// </summary>
 [CustomEditor(typeof(TextComponent))]
 public class TextComponentEditor : Editor
 {
@@ -21,10 +20,8 @@ public class TextComponentEditor : Editor
         DrawDefaultInspector();
 
         var comp = (TextComponent)target;
-        string clipName = comp.gameObject.name;
-
         GUILayout.Space(8);
-        EditorGUILayout.LabelField("语言 Clip 注册", EditorStyles.boldLabel);
+        EditorGUILayout.LabelField("多语言 key", EditorStyles.boldLabel);
 
         LanguageDataSO so = FindLanguageSO();
         if (so == null)
@@ -34,142 +31,107 @@ public class TextComponentEditor : Editor
             return;
         }
 
-        LanguageData data = so.data ??= new LanguageData();
-        bool exists = data.languageClips != null
-                      && data.languageClips.Exists(c => c.displayName == clipName);
-
-        if (exists)
+        string key = comp.LanguageKey;
+        if (string.IsNullOrEmpty(key))
         {
-            EditorGUILayout.HelpBox($"「{clipName}」已注册为语言 Clip。", MessageType.Info);
-            if (GUILayout.Button("删除语言 Clip"))
+            EditorGUILayout.HelpBox("本节点未填 languageKey（当前显示字面量）。可以先生成一个可读的 key，再按需改名。",
+                MessageType.Info);
+            if (GUILayout.Button($"生成 key：ui.{comp.gameObject.name}"))
             {
-                if (EditorUtility.DisplayDialog("删除语言 Clip",
-                        $"确定删除「{clipName}」？\n将同时从 SO/JSON 移除并清空组件字段。",
+                SetKey($"ui.{comp.gameObject.name}");
+                Repaint();
+            }
+            return;
+        }
+
+        LanguageData data = so.data ??= new LanguageData();
+        LanguageClip clip = data.languageClips?.Find(c => c.id == key);
+        if (clip != null)
+        {
+            EditorGUILayout.HelpBox($"「{key}」已登记（displayName：{clip.displayName}）。", MessageType.Info);
+            if (GUILayout.Button("删除该语言条目"))
+            {
+                if (EditorUtility.DisplayDialog("删除语言条目",
+                        $"确定删除「{key}」？\n将同时从 SO 与 LanguageData.json 移除，并清空本组件的 key。",
                         "删除", "取消"))
                 {
-                    DeleteClip(so, clipName);
-                    Repaint(); // 立即刷新存在性状态
+                    DeleteClip(so, key);
+                    Repaint();
                 }
             }
+            return;
         }
-        else
+
+        EditorGUILayout.HelpBox($"「{key}」尚未登记。", MessageType.Warning);
+        if (GUILayout.Button("登记该语言条目"))
         {
-            EditorGUILayout.HelpBox($"「{clipName}」未注册语言 Clip。", MessageType.Warning);
-            if (GUILayout.Button("生成语言 Clip"))
-            {
-                GenerateClip(so, clipName);
-                Repaint(); // 立即刷新存在性状态
-            }
+            GenerateClip(so, comp, key);
+            Repaint();
         }
     }
 
-    /// <summary>查找项目中的 LanguageDataSO 资产；多个时使用第一个并提示。</summary>
+    /// <summary>查找项目中的 LanguageDataSO；多个时用第一个并告警。</summary>
     LanguageDataSO FindLanguageSO()
     {
-        var guids = AssetDatabase.FindAssets("t:LanguageDataSO");
+        string[] guids = AssetDatabase.FindAssets("t:LanguageDataSO");
         if (guids.Length == 0) return null;
         if (guids.Length > 1)
-            Debug.LogWarning($"[TextComponentEditor] 存在多个 LanguageDataSO，使用第一个：{AssetDatabase.GUIDToAssetPath(guids[0])}");
+            Log.Warning($"[TextComponentEditor] 存在多个 LanguageDataSO，使用第一个：{AssetDatabase.GUIDToAssetPath(guids[0])}");
         return AssetDatabase.LoadAssetAtPath<LanguageDataSO>(AssetDatabase.GUIDToAssetPath(guids[0]));
     }
 
-    void GenerateClip(LanguageDataSO so, string clipName)
+    /// <summary>登记一条：id = languageKey，displayName = 物体名（人可读），中文原文进 clips[0]，其余语言留空。</summary>
+    void GenerateClip(LanguageDataSO so, TextComponent comp, string key)
     {
         so.data ??= new LanguageData();
         so.data.languageClips ??= new List<LanguageClip>();
 
-        // 每次生成新的 GUID 作 id，避免重复；displayName 仍用物体名（人可读）
-        string clipId = Guid.NewGuid().ToString("N");
-        // 组件字段里已填的文本优先沿用，否则按语言数开空槽
-        string[] clips = ReadComponentClips() ?? CreateEmptyClips();
+        string[] clips = CreateEmptyClips();
+        if (!string.IsNullOrEmpty(comp.RawText)) clips[0] = comp.RawText;
+
         so.data.languageClips.Add(new LanguageClip
         {
-            id = clipId,
-            displayName = clipName,
+            id = key,
+            displayName = comp.gameObject.name,
             clips = clips,
         });
 
-        so.Export(); // SO → JSON，运行时即生效
+        so.Export(); // WHY: SO → JSON，运行时按 key 反查才拿得到
         EditorUtility.SetDirty(so);
-        AssignToComponent(clipId, clipName, clips);
-        Debug.Log($"[TextComponentEditor] 已生成语言 Clip：{clipName}（id={clipId}）");
+        Log.Info($"[TextComponentEditor] 已登记语言条目：{key}（displayName={comp.gameObject.name}）");
     }
 
-    /// <summary>从 SO 移除 displayName 匹配的 Clip，清空组件字段，并导出 JSON。</summary>
-    void DeleteClip(LanguageDataSO so, string clipName)
+    /// <summary>按 id 移除条目，清空组件 key，并把 SO 重新导出。</summary>
+    void DeleteClip(LanguageDataSO so, string key)
     {
-        if (so.data == null || so.data.languageClips == null) return;
-        int removed = so.data.languageClips.RemoveAll(c => c.displayName == clipName);
+        if (so.data?.languageClips == null) return;
+        int removed = so.data.languageClips.RemoveAll(c => c.id == key);
         if (removed <= 0)
         {
-            Debug.LogWarning($"[TextComponentEditor] 未找到可删除的 Clip：{clipName}");
+            Log.Warning($"[TextComponentEditor] 未找到可删除的条目：{key}");
             return;
         }
         so.Export();
         EditorUtility.SetDirty(so);
-        ClearComponentClip();
-        Debug.Log($"[TextComponentEditor] 已删除语言 Clip：{clipName}（移除 {removed} 条）");
+        SetKey(string.Empty);
+        Log.Info($"[TextComponentEditor] 已删除语言条目：{key}（移除 {removed} 条）");
     }
 
-    /// <summary>把 Clip 同步进组件的 languageClip 字段（id/displayName + clips）。</summary>
-    void AssignToComponent(string clipId, string clipName, string[] clips)
+    /// <summary>写组件的 languageKey 字段（走 SerializedProperty，保证进 Undo 与脏标记）。</summary>
+    void SetKey(string value)
     {
-        var prop = serializedObject.FindProperty("languageClip");
-        var idProp = prop?.FindPropertyRelative("id");
-        var displayProp = prop?.FindPropertyRelative("displayName");
-        var clipsProp = prop?.FindPropertyRelative("clips");
-        if (idProp == null || displayProp == null || clipsProp == null)
+        var prop = serializedObject.FindProperty("languageKey");
+        if (prop == null)
         {
-            Debug.LogWarning("[TextComponentEditor] languageClip 字段无法写入，仅写入了 SO/JSON");
+            Log.Warning("[TextComponentEditor] 找不到 languageKey 字段");
             return;
         }
-        idProp.stringValue = clipId;
-        displayProp.stringValue = clipName;
-        clipsProp.arraySize = clips.Length;
-        for (int i = 0; i < clips.Length; i++)
-            clipsProp.GetArrayElementAtIndex(i).stringValue = clips[i];
+        prop.stringValue = value;
         serializedObject.ApplyModifiedProperties();
         EditorUtility.SetDirty(target);
     }
 
-    /// <summary>
-    /// 把组件的 languageClip 字段重置为默认态：id/displayName 置空（运行时走静态文本），
-    /// clips 恢复为按语言数量开空槽。
-    /// </summary>
-    void ClearComponentClip()
-    {
-        var prop = serializedObject.FindProperty("languageClip");
-        var idProp = prop?.FindPropertyRelative("id");
-        var displayProp = prop?.FindPropertyRelative("displayName");
-        var clipsProp = prop?.FindPropertyRelative("clips");
-        if (idProp == null || displayProp == null || clipsProp == null) return;
-        idProp.stringValue = string.Empty;
-        displayProp.stringValue = string.Empty;
-        string[] emptyClips = CreateEmptyClips();
-        clipsProp.arraySize = emptyClips.Length;
-        for (int i = 0; i < emptyClips.Length; i++)
-            clipsProp.GetArrayElementAtIndex(i).stringValue = emptyClips[i];
-        serializedObject.ApplyModifiedProperties();
-        EditorUtility.SetDirty(target);
-    }
-
-    /// <summary>读取组件 languageClip 字段里已填的 clips；未填或全空返回 null。</summary>
-    string[] ReadComponentClips()
-    {
-        var prop = serializedObject.FindProperty("languageClip");
-        var clipsProp = prop?.FindPropertyRelative("clips");
-        if (clipsProp == null || clipsProp.arraySize == 0) return null;
-        var clips = new string[clipsProp.arraySize];
-        bool anyFilled = false;
-        for (int i = 0; i < clips.Length; i++)
-        {
-            clips[i] = clipsProp.GetArrayElementAtIndex(i).stringValue;
-            if (!string.IsNullOrEmpty(clips[i])) anyFilled = true;
-        }
-        return anyFilled ? clips : null;
-    }
-
-    /// <summary>每个语言各一个空文本槽位，后续在 SO/JSON 中填写。</summary>
+    /// <summary>每个语言各一个空槽位（数量按 LanguageType 枚举）。</summary>
     static string[] CreateEmptyClips()
     {
         int count = Enum.GetNames(typeof(LanguageType)).Length;

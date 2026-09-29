@@ -24,21 +24,8 @@ namespace MCV_Module.Utils
         public string Message;
     }
 
-    /// <summary>
-    /// 统一的打印系统 —— 在 Debug.Log 之上提供更丰富、可开关、可屏幕可视化的日志。
-    ///
-    /// Console 方向：
-    ///   - 级别着色（Info/Success/Warning/Error/Verbose），富文本 <color> 便于在 Console 中区分；
-    ///   - 可选时间戳前缀、模块 tag；
-    ///   - Verbose 仍可整体开关（VerboseEnabled），默认行为与 Debug.Log 一致。
-    ///
-    /// GUI 方向（屏幕调试）：
-    ///   - GuiEnabled = true 时自动挂载 LogOverlay 到 DontDestroyOnLoad 对象（零配置）；
-    ///   - 上下文面板展示当前 SceneState / TaskType / 场景 / FPS 等信息；
-    ///   - 日志流面板展示最近 MaxHistory 条日志。
-    ///
-    /// 错误/警告始终输出，不受 VerboseEnabled 影响。
-    /// </summary>
+    // WHY: 这是全项目唯一日志出口，内部直接调 Debug.Log/LogWarning/LogError 是其实现、不可替换或转发；Error/Warning 始终输出，只有 Verbose/Tagged 受 VerboseEnabled 控制。
+    /// <summary>统一打印系统：在 Debug.Log 之上提供级别、时间戳、模块 tag 与屏幕浮层双通道输出。</summary>
     public static class Log
     {
         #region 开关与配置
@@ -92,8 +79,7 @@ namespace MCV_Module.Utils
             Write(LogLevel.Verbose, null, string.Format(format, args), null);
         }
 
-        /// <summary>带模块标记的详细日志（可开关）。便于按模块过滤。</summary>
-        /// <param name="tag">模块标记，如 "AddrMgr" / "StepMgr"。</param>
+        /// <summary>带模块标记的详细日志（可开关）。</summary>
         public static void Tagged(string tag, object message)
         {
             if (!VerboseEnabled) return;
@@ -118,9 +104,6 @@ namespace MCV_Module.Utils
         public static void ErrorFormat(string format, params object[] args) => Write(LogLevel.Error, null, string.Format(format, args), null);
 
         /// <summary>带模块标记 + 级别的通用日志入口。</summary>
-        /// <param name="tag">模块标记（可为 null）。</param>
-        /// <param name="level">日志级别。</param>
-        /// <param name="message">日志内容。</param>
         public static void Tag(string tag, LogLevel level, object message)
         {
             Write(level, tag, message, null);
@@ -163,17 +146,11 @@ namespace MCV_Module.Utils
             }
         }
 
-        /// <summary>
-        /// 首次写日志时懒创建浮层宿主（挂到 DontDestroyOnLoad 对象）。
-        /// 这样即使只通过静态构造函数把 GuiEnabled 置 true（未走 setter），
-        /// 第一次打印日志也能把浮层挂载起来，无需额外初始化调用。
-        /// </summary>
+        /// <summary>首次写日志时懒创建浮层宿主（挂到 DontDestroyOnLoad 对象），无需额外初始化调用。</summary>
         static void EnsureGuiCreated()
         {
             if (m_Overlay != null) return;
-            // 仅在真实运行时（Play 模式）创建浮层：
-            // EditMode 测试等非 Play 环境下不挂 DontDestroyOnLoad 对象，避免测试环境副作用；
-            // 屏幕浮层本身也只在运行时才有意义。
+            // WHY: 只在 Play 模式创建浮层——EditMode 测试等非 Play 环境挂 DontDestroyOnLoad 对象会产生测试副作用。
             if (!Application.isPlaying) return;
             var go = new GameObject("[LogOverlay]");
             Object.DontDestroyOnLoad(go);

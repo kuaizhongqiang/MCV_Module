@@ -2,19 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using MCV_Module.Interfaces;
+using MCV_Module.Models;
 using MCV_Module.Models.Addressable;
 using MCV_Module.Models.Project;
 
-/// <summary>
-/// 「一个 TaskData → 一个预制体」型 Provider 的通用实现（info / structure / measure 三种任务都是这个形态）。
-///
-/// 产出 id = JSON 里写的 <c>taskXxxData.prefabKey</c>（形如 <c>contactor_structure_model</c>），
-/// 素材路径 = <c>{ModelRoot}/{id}.prefab</c> —— **文件名必须与 id 逐字符一致**。
-/// <c>prefabKey</c> 为空视为「该 clip 不需要这个模型」，静默跳过（JSON 是唯一源）。
-///
-/// 新增同类模型只需在 <c>ContentBundleTools.Providers</c> 里再 <c>new</c> 一行（给目录、任务段、取值委托），
-/// 不需要新建类。
-/// </summary>
+// WHY: 产出 id = JSON 的 taskXxxData.prefabKey，素材路径 = {ModelRoot}/{id}.prefab，文件名必须与 id 逐字符一致；prefabKey 为空视为该 clip 不需要此模型、静默跳过（JSON 是唯一源）；新增同类模型只需在 ContentBundleTools.Providers 里再 new 一行，不需要新建类。
+/// <summary>「一个 TaskData → 一个预制体」型 Provider 的通用实现（info / structure / inspection 三种任务都是这个形态）。</summary>
 public class ModelPrefabProvider : IContentProvider
 {
     readonly string name;
@@ -22,10 +15,7 @@ public class ModelPrefabProvider : IContentProvider
     readonly string taskSegment;
     readonly Func<ProjectClip, string> keySelector;
 
-    /// <param name="name">对账报告里的来源名（如 <c>StructureModel</c>）</param>
-    /// <param name="modelRoot">模型素材目录（<c>Assets/Prefabs/Models/...</c>）</param>
-    /// <param name="taskSegment">任务段（<see cref="ContentNaming.TaskInfo"/> / <c>TaskStructure</c> / <c>TaskMeasure</c>）</param>
-    /// <param name="keySelector">从 ProjectClip 取该任务 prefabKey 的委托（走公开的 <c>GetTaskData&lt;T&gt;</c>）</param>
+    /// <summary>构造：来源名 / 模型素材目录 / 任务段 / 从 ProjectClip 取该任务 prefabKey 的委托（走公开的 <c>GetTaskData&lt;T&gt;</c>）。</summary>
     public ModelPrefabProvider(string name, string modelRoot, string taskSegment, Func<ProjectClip, string> keySelector)
     {
         this.name = name;
@@ -42,7 +32,7 @@ public class ModelPrefabProvider : IContentProvider
         if (clip == null || keySelector == null) return list;
 
         string id = keySelector(clip);
-        if (string.IsNullOrEmpty(id)) return list;      // 未配置 = 该 clip 不需要这个模型
+        if (string.IsNullOrEmpty(id)) return list;      // WHY: 未配置 = 该 clip 不需要这个模型，静默跳过
 
         string expectedId = ContentNaming.ConfigId(device, taskSegment, ContentNaming.ResourceModel);
         string path = $"{modelRoot}/{id}.prefab";

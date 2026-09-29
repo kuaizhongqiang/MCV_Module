@@ -8,15 +8,13 @@ using UnityEditor.AddressableAssets.Build;
 using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
-/// <summary>
-/// AA 场景一键工具 —— 三合一流水线。
-/// </summary>
+/// <summary>AA 场景一键工具 —— 三合一流水线。</summary>
 public static class SceneAddressableTools
 {
     private const string CONFIG_PATH = "Assets/Resources/Config/SceneAAConfig.asset";
     private const string GROUP_NAME = "Scenes";
 
-    [MenuItem("MCV/AA 场景三合一流水线", false, 50)]
+    [MenuItem("MCV Build/AA 场景三合一流水线", false, 50)]
     public static void AAPipeline()
     {
         // ── ① 注册场景到 AA ────────────────────────────────
@@ -74,45 +72,43 @@ public static class SceneAddressableTools
         }
 
         // ── ② 构建 AA 内容包 ───────────────────────────────
+        // WHY: 编辑器若停留在「脚本编译失败」状态（上一次编译/构建被中断后很常见），SBP 的 BuildPlayerScripts 会直接抛 "Error building Player because scripts have compile errors in the editor" 并秒退（构建 0.x 秒结束即此征兆），故提前拦下并给出可操作提示。
+        if (EditorUtility.scriptCompilationFailed)
+        {
+            Debug.LogError("[SceneAA] 编辑器处于脚本编译失败状态，已中止 AA 构建");
+            EditorUtility.DisplayDialog("AA 场景流水线",
+                "编辑器当前停留在「脚本编译失败」状态，Addressables 无法构建。\n\n" +
+                "常见原因：上一次编译/构建被中断，失败状态残留。\n" +
+                "注意：此时 Console 里可能已经看不到任何红色报错了，但状态依然卡住。\n\n" +
+                "处理方法：\n" +
+                "1) 先把 Console 中的脚本报错清干净；\n" +
+                "2) 若已无报错，执行菜单 Assets > Reimport（或随便改一下某个 .cs 触发重新编译）\n" +
+                "   来清除残留的失败状态；\n" +
+                "3) 再重跑本流水线。",
+                "确定");
+            return;
+        }
+
         if (EditorUtility.DisplayDialog("AA 场景流水线",
                 $"已注册 {added} 个场景到 Addressables\n\n" +
                 "是否立即构建 AA 内容包？\n" +
                 "（构建输出到 Addressables 本地包目录，打包 Player 时随 StreamingAssets/aa 一起进包）",
                 "构建", "取消"))
         {
-            // 前置检查：编辑器若停留在「脚本编译失败」状态（上一次编译/构建被中断后很常见），
-            // SBP 的 BuildPlayerScripts 会直接抛 "Error building Player because scripts have
-            // compile errors in the editor" 并退 —— 构建 0.x 秒结束就是这个征兆。
-            // 这里提前拦下并给出可操作提示，而不是让人对着一句报错猜。
-            if (EditorUtility.scriptCompilationFailed)
-            {
-                Debug.LogError("[SceneAA] 编辑器处于脚本编译失败状态，已中止 AA 构建");
-                EditorUtility.DisplayDialog("AA 场景流水线",
-                    "编辑器当前停留在「脚本编译失败」状态，Addressables 无法构建。\n\n" +
-                    "常见原因：上一次编译/构建被中断，失败状态残留。\n" +
-                    "注意：此时 Console 里可能已经看不到任何红色报错了，但状态依然卡住。\n\n" +
-                    "处理方法：\n" +
-                    "1) 先把 Console 中的脚本报错清理干净；\n" +
-                    "2) 若已无报错，执行菜单 Assets > Reimport（或随便改一下某个 .cs 触发重新编译）\n" +
-                    "   来清除残留的失败状态；\n" +
-                    "3) 再重跑本流水线。",
-                    "确定");
-                return;
-            }
-
             AddressablesPlayerBuildResult result;
             AddressableAssetSettings.BuildPlayerContent(out result);
-            // 构建失败必须显式报错：旧写法不看返回值，无论成败都打印「构建完成」并弹成功框，
-            // 会把 "scripts have compile errors" 这类失败伪装成成功。
+
+            // WHY: 构建必须显式判错 —— 旧写法不看返回值，无论成败都打印「构建完成」并弹成功框，会把 "scripts have compile errors" 这类失败伪装成成功。
             if (result == null || !string.IsNullOrEmpty(result.Error))
             {
                 var err = result == null ? "未返回构建结果" : result.Error;
                 Debug.LogError($"[SceneAA] AA 内容构建失败: {err}");
                 EditorUtility.DisplayDialog("AA 场景流水线失败",
-                    $"✘ AA 内容构建失败，未产出有效资源包\n\n{err}\n\n请查看 Console 完整报错后重试。",
+                    $"✖ AA 内容构建失败，未产出有效资源包\n\n{err}\n\n请查看 Console 完整报错后重试。",
                     "确定");
                 return;
             }
+
             Debug.Log($"[SceneAA] AA 内容构建完成，用时 {result.Duration:F1}s → {result.OutputPath}");
             EditorUtility.DisplayDialog("AA 流水线完成",
                 $"✔ 已注册 {added} 个场景\n" +
@@ -129,7 +125,7 @@ public static class SceneAddressableTools
         }
     }
 
-    [MenuItem("MCV/清理 AA 场景", false, 51)]
+    [MenuItem("MCV Build/清理 AA 场景", false, 51)]
     public static void CleanAAScenes()
     {
         var settings = AddressableAssetSettingsDefaultObject.Settings;

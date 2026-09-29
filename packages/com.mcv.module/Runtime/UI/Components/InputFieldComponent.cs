@@ -6,10 +6,7 @@ using UnityEngine;
 
 namespace MCV_Module.UI.Components
 {
-    /// <summary>
-    /// 输入框组件：包装 TMP_InputField，按序列化配置初始化并提供取值/赋值 API。
-    /// 统一采用 TMP 体系（与 TextComponent 一致），避免同一 UI 内新旧文本混用。
-    /// </summary>
+    /// <summary>输入框组件：包装 TMP_InputField，按序列化配置初始化并提供取值 / 赋值 / 清空 API。</summary>
     public class InputFieldComponent : ComponentBase
     {
         #region 参数

@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace MCV_Module.Objects.Interactives.Elements
 {
+    /// <summary>断路器（QS）：点击开/合闸，播放旋转动画并发布状态变化事件。</summary>
     public class ElementBreakerObj : ElementObjBase
     {
         List<ElementPointObj> points = new List<ElementPointObj>();

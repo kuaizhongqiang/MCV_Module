@@ -4,6 +4,7 @@ using MCV_Module.Models;
 
 namespace MCV_Module.UI
 {
+    /// <summary>UI 最小单元基类：找到所属面板并自注册，面板据此按类型取组件。</summary>
     public abstract class ComponentBase : UIBase
     {
         public virtual ComponentType ComponentType{get;}

@@ -46,10 +46,8 @@ namespace MCV_Module.Managers
         {
             if (!isInit) return;
 
-            // 输入门控：鼠标静止且无按键事件时，悬停/点击状态不可能变化，跳过射线检测。
-            // 鼠标是否静止由 GlobalInputMgr 统一判定（0.1s 窗口 + 位移阈值）后经事件同步过来，
-            // 这里不再自己读 delta，避免两处各判一套。
-            // （代价：物体在静止光标下移动时，移入/移出事件延迟到下一次输入才触发 —— 教学场景可接受）
+            // WHY: 静止判定只在 GlobalInputMgr 做，这里不再读 delta，避免两处各判一套
+            // （代价：物体在静止光标下移动时，移入/移出延迟到下一次输入才触发 —— 教学场景可接受）
             if (m_MouseIdle
                 && !mouse.leftButton.wasPressedThisFrame
                 && !mouse.leftButton.wasReleasedThisFrame
@@ -70,10 +68,7 @@ namespace MCV_Module.Managers
             isInit = true;
         }
 
-        /// <summary>
-        /// 鼠标移动状态同步（GlobalInputMgr 发布）：静止时跳过每帧射线检测；
-        /// 恢复移动的下一帧 Update 会自然做一次检测，这里不用额外补检测。
-        /// </summary>
+        /// <summary>同步鼠标静止状态（GlobalInputMgr 发布）；恢复移动后由下一帧 Update 自然补检测。</summary>
         void OnMouseMoveStateChanged(MouseMoveStateEventData e)
         {
             if (e == null) return;
@@ -94,10 +89,7 @@ namespace MCV_Module.Managers
             Instance.objDict.Remove(interactive);
         }
 
-        /// <summary>
-        /// 按类型收集当前已登记的交互物（结果写入调用方列表，不产生 GC；销毁/取消登记的会自动消失）。
-        /// 供"在全部交互物里找出某类对象"的场景使用 —— 不要用 FindObjectsOfType / 遍历场景。
-        /// </summary>
+        /// <summary>按类型收集已登记的交互物（写入调用方列表，不产生 GC）；替代 FindObjectsOfType / 遍历场景。</summary>
         public static void CollectRegistered<T>(List<T> results) where T : InteractiveBase
         {
             if (results == null) return;
@@ -114,11 +106,7 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 私有方法
-        /// <summary>
-        /// 每帧核心检测：射线命中交互物体时直接派发该物体的 Mo* 事件（O(1)，替代全量广播过滤），
-        /// 并发布池化的 GlobalInteractionEventData 供全局逻辑（连线状态机、步骤条件）订阅；
-        /// 未命中时派发 Exit，并在左键释放时发布 Target=null 的 Click（空白点击）。
-        /// </summary>
+        /// <summary>每帧射线检测：命中即直接派发该物体的 Mo* 事件，并发布池化的全局交互事件供订阅。</summary>
         void CoreDetect()
         {
             ray = cam.ScreenPointToRay(mouse.position.ReadValue());

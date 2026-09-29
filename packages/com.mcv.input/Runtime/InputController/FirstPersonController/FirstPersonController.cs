@@ -8,6 +8,7 @@ namespace MCV_Module.InputController.FirstPersonController
 {
     [RequireComponent(typeof(CharacterController))]
     [RequireComponent(typeof(PlayerInput))]
+    /// <summary>第一人称控制器：角色移动/跳跃/重力、Cinemachine 视角旋转与瞬移</summary>
     public class FirstPersonController : InputControllerBase
     {
         [Header("玩家")]
@@ -157,8 +158,7 @@ namespace MCV_Module.InputController.FirstPersonController
 
             // 一个简化的加速和减速逻辑，便于移除、替换或迭代
 
-            // 注意：Vector2 的 == 运算符使用近似比较，不会出现浮点误差，且比 magnitude 更高效
-            // 如果没有输入，则将目标速度设为 0
+            // 无输入则目标速度为 0（Vector2 的 == 为近似比较，无浮点误差且比 magnitude 高效）
             if (_input.move == Vector2.zero) targetSpeed = 0.0f;
 
             // 获取玩家当前水平速度的引用
@@ -263,7 +263,6 @@ namespace MCV_Module.InputController.FirstPersonController
             // 选中时，在着地检测碰撞体的位置绘制与半径匹配的 Gizmo 球体
             Gizmos.DrawSphere(new Vector3(transform.position.x, transform.position.y - GroundedOffset, transform.position.z), GroundedRadius);
         }
-        // 在FirstPersonController类中添加以下代码
 
         [Header("瞬移")]
         [Tooltip("瞬移时是否保留垂直速度")]
@@ -272,14 +271,7 @@ namespace MCV_Module.InputController.FirstPersonController
         [Tooltip("瞬移时是否立即更新地面检测")]
         public bool ImmediateGroundedCheck = true;
 
-        /// <summary>
-        /// 瞬移方法
-        /// </summary>
-        /// <param name="targetPosition">目标位置</param>
-        /// <param name="targetRotation">目标朝向</param>
-        /// <param name="obstacleLayers">障碍物层级（传入时启用安全检测）</param>
-        /// <param name="checkRadius">安全检测半径</param>
-        /// <returns>是否成功瞬移</returns>
+        /// <summary>瞬移玩家到目标位姿：可选障碍物检测，返回是否成功</summary>
         private bool Teleport(Vector3 targetPosition, Quaternion targetRotation, LayerMask? obstacleLayers = null, float checkRadius = 0.5f)
         {
             // 障碍物安全检测

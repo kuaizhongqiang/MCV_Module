@@ -8,13 +8,8 @@ using UnityEngine.UI;
 
 namespace MCV_Module.UI.Tools
 {
-    /// <summary>
-    /// UI 音效基类：挂在 Button / Toggle / 任意可被射线命中的 UI 组件上，
-    /// 鼠标划过（Enter/Exit）与点击（Click）时播放对应音效。
-    /// 事件来源：UGUI 事件系统（IPointerEnter/Exit/ClickHandler），
-    /// 与 3D 物体交互（GlobalInteractiveMgr 的射线）互不干扰。
-    /// 子类可重写 Mo* 方法，在音效之外扩展表现。
-    /// </summary>
+    // WHY: 音效走 UGUI 事件系统（IPointerEnter/Exit/ClickHandler），与 GlobalInteractiveMgr 的 3D 射线互不干扰；组件被失活或不可交互时收不到任何事件。
+    /// <summary>UI 音效基类：挂在可被射线命中的 UI 上，划过/离开/点击时播放音效，Mo* 可被子类重写。</summary>
     public abstract class UiAudioEffectBase : UIBase, IUiEffect,
         IPointerEnterHandler, IPointerExitHandler, IPointerClickHandler
     {
@@ -91,9 +86,7 @@ namespace MCV_Module.UI.Tools
         #endregion
     }
 
-    /// <summary>
-    /// UI 音效（默认实现）：直接挂到任意 UI 组件上即可获得划过/点击音效。
-    /// </summary>
+    /// <summary>UI 音效默认实现：直接挂到任意 UI 组件上即可获得划过/点击音效。</summary>
     public class UiAudioEffect : UiAudioEffectBase
     {
     }

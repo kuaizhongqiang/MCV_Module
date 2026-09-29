@@ -8,6 +8,7 @@ namespace MCV_Module.Models
     {
         public string id;
         public string displayName;
+        public string displayNameEn;   // 英文列（空 = 回退中文）
         public string description;
     }
 }

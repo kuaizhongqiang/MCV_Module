@@ -6,20 +6,15 @@ using UnityEngine;
 
 namespace MCV_Module.Objects.Interactives
 {
+    /// <summary>可交互物基类：注册到 GlobalInteractiveMgr，把指针事件转成 Mo* 事件并托管悬停高亮。</summary>
     public abstract class InteractiveBase : MonoBehaviour,IObj
     {
         [SerializeField] protected bool isInteractable = true;
         [SerializeField] protected Color highlightColor = new Color(0, 1, 0, 0.5f);
 
-        /// <summary>
-        /// 是否可交互。可写：运行期需要临时"关掉/恢复"某个交互物时直接赋值，
-        /// 不必再另设一套开关字段（GlobalInteractiveMgr 的射线命中判定每帧读它）。
-        /// </summary>
-        public bool IsInteractable
-        {
-            get => isInteractable;
-            set => isInteractable = value;
-        }
+        // WHY: Awake 里 isInteractable 只决定是否自订阅 Mo* 事件，运行期改本属性不会补/拆订阅，也不改显隐。
+        /// <summary>是否可交互（Inspector 可配、运行时可切）；为 false 时该物体等同「没被点到」。</summary>
+        public bool IsInteractable { get => isInteractable; set => isInteractable = value; }
         public event Action MoEnter;
         public event Action MoExit;
         public event Action MoClick;
@@ -132,7 +127,7 @@ namespace MCV_Module.Objects.Interactives
         {
             if (highlightTarget == null) highlightTarget = gameObject;
             var service = IHighlightService.Instance;
-            // 未注入宿主高亮服务（HighlightPlusAdapter）→ 静默降级为无高亮
+            // WHY: 未注入宿主高亮服务（HighlightPlusAdapter）时静默降级为无高亮，不可改成报错或直连 HighlightPlus
             if (service == null) return;
             if (isHighlight) service.ApplyHighlight(highlightTarget, highlightColor);
             else service.ClearHighlight(highlightTarget);

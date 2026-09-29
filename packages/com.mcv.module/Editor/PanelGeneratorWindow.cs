@@ -4,18 +4,13 @@ using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
-/// <summary>
-/// UI Panel 生成器（MCV/创建/UI Panel...）：
-/// 一键生成 Panel 类 + Controller 类 + Prefab 骨架（Assets/Resources/UI/）。
-/// 归属灵活：module 包（mcv-framework）/ 宿主 / 自定义路径；命名空间可覆写。
-/// 不绑定 Canvas：面板是可复用资产，由各 CanvasBase 子类按自己的状态逻辑调用同一面板。
-/// 设计文档：docs/panel-generator-design.md
-/// </summary>
+// WHY: 不绑定 Canvas —— 面板是可复用资产，由各 CanvasBase 子类按自己的状态逻辑调用同一面板。
+/// <summary>UI Panel 生成器（MCV Editor/创建/UI Panel...）：一键生成 Panel 类 + Controller 类 + Prefab 骨架（Assets/Prefabs/UI/Panels/），归属可选 module 包（mcv-framework）/ 宿主 / 自定义路径，命名空间可覆写（面板清单与装配机制见 `Docs/design_ai/UI.md`）。</summary>
 public class PanelGeneratorWindow : EditorWindow
 {
     #region 输入
     string m_PanelName = "";
-    int m_Ownership = 1;          // 0=module包 1=宿主(默认) 2=自定义
+    int m_Ownership = 1;          // WHY: 0=module包 1=宿主(默认) 2=自定义
     string m_CustomPath = "";
     string m_NamespaceOverride = "";
     string m_ControllerNamespaceOverride = "";
@@ -28,12 +23,14 @@ public class PanelGeneratorWindow : EditorWindow
     const string HostScriptsRoot = "Assets/Scripts";
     const string DefaultPanelNs = "MCV_Module.UI.Panels";
     const string DefaultControllerNs = "MCV_Module.Controllers";
-    const string PrefabDir = "Assets/Resources/UI";
+    // WHY: B1.5 起面板 prefab 不再放 Resources —— 它由 UI 全局包（UI/ui，条目 id = ui_{类名}）承载，
+    // 故生成目录必须是包源目录；生成完还要重跑 MCV Build/UI prefab AB，否则运行期取到的仍是旧包。
+    const string PrefabDir = "Assets/Prefabs/UI/Panels";
     static readonly string[] OwnershipLabels = { "module 包（通用，git）", "宿主（项目专属，Plastic）", "自定义路径" };
     #endregion
 
     #region 窗口
-    [MenuItem("MCV/创建/UI Panel...")]
+    [MenuItem("MCV Editor/创建/UI Panel...")]
     static void OpenWindow()
     {
         var win = GetWindow<PanelGeneratorWindow>(true, "UI Panel 生成器");
@@ -57,10 +54,10 @@ public class PanelGeneratorWindow : EditorWindow
 
         EditorGUILayout.Space(6);
         m_GenerateController = EditorGUILayout.Toggle("生成 Controller（标配）", m_GenerateController);
-        m_GeneratePrefab = EditorGUILayout.Toggle("生成 Prefab 骨架（Assets/Resources/UI/）", m_GeneratePrefab);
+        m_GeneratePrefab = EditorGUILayout.Toggle("生成 Prefab 骨架（Assets/Prefabs/UI/Panels/）", m_GeneratePrefab);
 
         EditorGUILayout.Space(10);
-        EditorGUILayout.HelpBox("Prefab 固定生成到 Assets/Resources/UI/（框架契约路径，与归属无关）；不绑定任何 Canvas——在任意 CanvasBase 子类的 OnRebuild 中调用 CreatePanel<XxxPanel>() 即可使用。", MessageType.Info);
+        EditorGUILayout.HelpBox("Prefab 固定生成到 Assets/Prefabs/UI/Panels/（UI 全局包 UI/ui 的来源目录，与归属无关；生成后须重跑 MCV Build/UI prefab AB 才进包）；不绑定任何 Canvas——在任意 CanvasBase 子类的 OnRebuild 中调用 CreatePanel<XxxPanel>() 即可使用。", MessageType.Info);
 
         EditorGUILayout.Space(8);
         GUI.enabled = CanGenerate(out string error);
@@ -176,7 +173,7 @@ public class PanelGeneratorWindow : EditorWindow
 
         AssetDatabase.Refresh();
 
-        // 3. Prefab 骨架（需面板类型编译完成后才能挂组件 → delayCall）
+        // WHY: Prefab 骨架需面板类型编译完成后才能挂组件，故用 delayCall
         if (m_GeneratePrefab)
         {
             EditorApplication.delayCall += () => CreatePrefabSkeleton(prefabPath, panelFullName, panelName);
@@ -194,7 +191,7 @@ public class PanelGeneratorWindow : EditorWindow
         string dir = Path.GetDirectoryName(path);
         if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
         string content =
-$@"// 由 MCV/创建/UI Panel 生成器生成（{DateTime.Now:yyyy-MM-dd}）—— 请按需补充业务代码
+$@"// 由 MCV Editor/创建/UI Panel 生成器生成（{DateTime.Now:yyyy-MM-dd}）—— 请按需补充业务代码
 using MCV_Module.UI;
 
 namespace {PanelNamespace}
@@ -217,8 +214,8 @@ namespace {PanelNamespace}
         string dir = Path.GetDirectoryName(path);
         if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
         string content =
-$@"// 由 MCV/创建/UI Panel 生成器生成（{DateTime.Now:yyyy-MM-dd}）—— 请按需补充业务代码
-using MCV_Module.Controllers;
+$@"// 由 MCV Editor/创建/UI Panel 生成器生成（{DateTime.Now:yyyy-MM-dd}）—— 请按需补充业务代码
+using MCV_Module.Controller;
 
 namespace {ControllerNamespace}
 {{

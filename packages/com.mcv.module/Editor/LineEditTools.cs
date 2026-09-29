@@ -4,14 +4,11 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>
-/// 线编辑工具 —— 批量生成/清除/校验场景中的 ElementLineObj。
-/// isStatic=true 生成线；isStatic=false 为运行期实例化线段，编辑期仅清除网格。
-/// 注：生成的网格是运行时对象，不随场景序列化，运行期由 ElementLineObj.DelayInit 重建。
-/// </summary>
+// WHY: 生成的网格是运行时对象，不随场景序列化，运行期由 ElementLineObj.DelayInit 重建。
+/// <summary>线编辑工具 —— 批量生成/清除/校验场景中的 ElementLineObj（isStatic=true 生成线，isStatic=false 为运行期实例化线段，编辑期仅清除网格）。</summary>
 public static class LineEditTools
 {
-    [MenuItem("MCV/线编辑/生成所有静态线", false, 60)]
+    [MenuItem("MCV Editor/线编辑/生成所有静态线", false, 60)]
     public static void GenerateAllStaticLines()
     {
         var lines = FindAllLines();
@@ -34,7 +31,7 @@ public static class LineEditTools
             "确定");
     }
 
-    [MenuItem("MCV/线编辑/清除所有线网格", false, 61)]
+    [MenuItem("MCV Editor/线编辑/清除所有线网格", false, 61)]
     public static void DestroyAllLines()
     {
         var lines = FindAllLines();
@@ -50,7 +47,7 @@ public static class LineEditTools
         EditorUtility.DisplayDialog("线编辑", $"✔ 已清除 {lines.Count} 条线的网格", "确定");
     }
 
-    [MenuItem("MCV/线编辑/校验线配置", false, 62)]
+    [MenuItem("MCV Editor/线编辑/校验线配置", false, 62)]
     public static void ValidateLines()
     {
         var lines = FindAllLines();
@@ -75,21 +72,17 @@ public static class LineEditTools
         EditorUtility.DisplayDialog("线校验", msg, "确定");
     }
 
-    /// <summary>
-    /// 快捷键 Alt+L：把选中物体中的点（按选中顺序）赋给选中的线物体，并执行生成。
-    /// 要求恰好选中 1 个 ElementLineObj 且 ≥2 个 ElementPointObj。
-    /// 不新建任何物体，只做赋值 + 生成。
-    /// </summary>
-    [MenuItem("MCV/线编辑/赋值选中点并生成线 _&L", false, 63)]
+    /// <summary>快捷键 Alt+L：把选中物体中的点（按选中顺序）赋给选中的线物体并生成；要求恰好选中 1 个 ElementLineObj 且 ≥2 个 ElementPointObj，不新建任何物体。</summary>
+    [MenuItem("MCV Editor/线编辑/赋值选中点并生成线 _&L", false, 63)]
     public static void AssignAndGenerateLine()
     {
         var line = GetSelectedLine();
         var points = GetSelectedPoints();
-        if (line == null || points.Count < 2) return; // 已被校验函数拦截，防御性返回
+        if (line == null || points.Count < 2) return; // WHY: 已被校验函数拦截，防御性返回
 
         Undo.RecordObject(line, "赋值选中点并生成线");
         line.EditLinePoint(points);
-        line.IsStatic = true; // 赋值生成的线视为静态，运行期自动重建
+        line.IsStatic = true; // WHY: 赋值生成的线视为静态，运行期自动重建
         line.CreateLine();
         EditorUtility.SetDirty(line);
 
@@ -99,8 +92,8 @@ public static class LineEditTools
             "确定");
     }
 
-    // 校验：选中恰好 1 个 line 且 ≥2 个 point 时菜单才可用
-    [MenuItem("MCV/线编辑/赋值选中点并生成线 _&L", true, 63)]
+    // WHY: 选中恰好 1 个 line 且 ≥2 个 point 时菜单才可用
+    [MenuItem("MCV Editor/线编辑/赋值选中点并生成线 _&L", true, 63)]
     public static bool ValidateAssignAndGenerateLine()
     {
         return GetSelectedLine() != null && GetSelectedPoints().Count >= 2;
@@ -117,7 +110,7 @@ public static class LineEditTools
             if (go == null) continue;
             var l = go.GetComponent<ElementLineObj>();
             if (l == null) continue;
-            if (line != null) return null; // 选中了多个 line，视为无效
+            if (line != null) return null; // WHY: 选中了多个 line，视为无效
             line = l;
         }
         return line;

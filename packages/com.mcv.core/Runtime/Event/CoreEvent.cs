@@ -3,6 +3,7 @@ using MCV_Module.Models;
 using MCV_Module.Models.Project;
 using MCV_Module.Models.User;
 using MCV_Module.Objects.Interactives;
+using MCV_Module.Utils;
 using UnityEngine;
 
 namespace MCV_Module.Event
@@ -89,13 +90,8 @@ namespace MCV_Module.Event
 
     // ────────────────────── 内容包（一 ProjectClip 一包） ──────────────────────
 
-    /// <summary>
-    /// 内容包就绪事件：某个 ProjectClip 的 AB 包已**全部**加载完成（遮罩随即关闭）。
-    ///
-    /// 为什么需要它：面板的 <c>OnViewBound</c> 必然早于包加载完成（同一帧里 UI 建面板、资源才开始异步加载），
-    /// 所以同步取件只能拿到空。消费方订阅本事件补一次取用 —— 收到即代表
-    /// <c>GlobalAssetsMgr.GetSpriteByPackageId</c> / <c>GetPrefabByPackageId</c> 能取到东西了。
-    /// </summary>
+    // WHY: 面板 OnViewBound 必然早于包加载完成，同步取件只能拿到空；收到本事件才代表 GetSpriteByPackageId / GetPrefabByPackageId 能取到东西。
+    /// <summary>内容包就绪事件：某个 ProjectClip 的 AB 包已全部加载完成（遮罩随即关闭）。</summary>
     public class ClipReadyEvent
     {
         /// <summary>就绪的 ProjectClip.id（形如 clip_contactor）。</summary>
@@ -106,10 +102,7 @@ namespace MCV_Module.Event
 
     // ── 登录事件 ──────────────────────────────────────────────
 
-    /// <summary>
-    /// 登录通过事件数据（白名单验证通过后由 LoginController 发布。
-    /// 「登录成功后的执行」暂为空：后续业务在此订阅做场景切换等处理）。
-    /// </summary>
+    /// <summary>登录通过事件数据（白名单验证通过后由 LoginController 发布）。</summary>
     public class LoginSuccessEvent
     {
         /// <summary>登录用户信息（含用户名/用户类型/登录时间）</summary>
@@ -131,13 +124,11 @@ namespace MCV_Module.Event
         public SceneStateChangeEventData(SceneState state)
         {
             State = state;
+            Log.Info("SceneStateChangeEventData: " + state);
         }
     }
 
-    /// <summary>
-    /// 任务类型变化事件数据（用户切换任务时发布，驱动 UI Canvas 任务面板重建）。
-    /// 订阅方：GlobalUIMgr（重建面板）、TaskListController（同步当前任务状态）。
-    /// </summary>
+    /// <summary>任务类型变化事件数据（用户切换任务时发布，驱动 UI Canvas 任务面板重建）。</summary>
     public class TaskTypeChangeEventData
     {
         public ProjectClip Clip;
@@ -157,6 +148,18 @@ namespace MCV_Module.Event
         public SceneSwitchRequestEvent(string sceneName) { SceneName = sceneName; }
     }
 
+    // ── 漫游房间 ────────────────────────────────────────────
+
+    // WHY: 房间场景进内容页时会被 UnloadSwitchedScene() 卸载、HUD 随之销毁，确认结果要等用户点完按钮才回来，跳转必须发生在常驻的 MenuController（由 GlobalControllerMgr 常驻持有）上。
+    /// <summary>房间项目 HUD「进入项目」请求事件（漫游房间里点展品标签时由 RoomMenuObj 发布）。</summary>
+    public class RoomMenuEnterRequestEvent
+    {
+        /// <summary>请求进入的项目（由发布方按 ProjectClip.id 解析好后带过来，处理方不再查）</summary>
+        public ProjectClip Clip { get; }
+
+        public RoomMenuEnterRequestEvent(ProjectClip clip) { Clip = clip; }
+    }
+
     // ── 全局交互事件（统一事件驱动）──────────────────────────────
 
     /// <summary>全局交互类型</summary>
@@ -165,11 +168,7 @@ namespace MCV_Module.Event
         Enter, Exit, Down, Up, Click, ClickRight, ClickDouble, Move
     }
 
-    /// <summary>
-    /// 全局交互事件数据（GlobalInteractiveMgr 统一发布；
-    /// 元件 Mo* 事件由管理器直接派发；连线状态机、步骤条件等全局逻辑订阅本事件处理）。
-    /// 同步分发（Publish 返回后无人持有），经对象池 Get/Release 复用，降低每帧分配。
-    /// </summary>
+    /// <summary>全局交互事件数据（GlobalInteractiveMgr 统一发布；经对象池 Get/Release 复用，降低每帧分配）。</summary>
     public class GlobalInteractionEventData
     {
         /// <summary>事件目标；Exit 为原悬停物体；空白点击（无目标）为 null</summary>
@@ -205,12 +204,9 @@ namespace MCV_Module.Event
         private GlobalInteractionEventData() { }
     }
 
-    // ── 输入事件 ─────────────────────────────────────────────
+    // ── 鼠标移动状态事件（GlobalInputMgr 统一判定并发布）──────────────
 
-    /// <summary>
-    /// 鼠标移动状态变化事件（GlobalInputMgr 在状态翻转时发布，不逐帧发）。
-    /// 订阅方：GlobalInteractiveMgr（静止时跳过射线检测）等。
-    /// </summary>
+    /// <summary>鼠标移动状态变化事件数据（GlobalInputMgr 判定状态翻转时发布，只在变化时发一次、不逐帧发）。</summary>
     public class MouseMoveStateEventData
     {
         /// <summary>新状态</summary>
@@ -230,6 +226,19 @@ namespace MCV_Module.Event
     /// <summary>全部进程/步骤执行完成事件</summary>
     public class AllStepsCompletedEvent
     {
+    }
+
+    // WHY: EventBus<T> 的泛型约束是 where T : class，本事件必须定义为 class，不能改成 struct。
+    /// <summary>简化步骤系统（InstControlledManager）跑完全部步骤的完成事件，携带发起执行的项目数据。</summary>
+    public class StructInteractiveCompletedEvent
+    {
+        /// <summary>发起本次简化步骤的项目数据；未传入时为 null</summary>
+        public ProjectClip clip;
+
+        public StructInteractiveCompletedEvent(ProjectClip clip = null)
+        {
+            this.clip = clip;
+        }
     }
 
     /// <summary>下一步请求事件（完成当前步骤，流程进入下一步）</summary>
@@ -263,31 +272,27 @@ namespace MCV_Module.Event
 
     // ── 对话框事件（DialogPanel / DialogController 事件驱动）──────────────
 
-    /// <summary>
-    /// 打开对话框请求事件（业务/步骤/交互系统发布，DialogController 订阅并显示）。
-    /// 订阅方：DialogController。
-    /// 结构：标题 + 文字 + 两个按钮（确认/取消），按钮可按 ShowConfirm/ShowCancel 决定显隐。
-    /// </summary>
+    /// <summary>打开对话框请求事件（业务/步骤/交互系统发布，DialogController 订阅并显示）。</summary>
     public class DialogRequestEvent
     {
-        /// <summary>对话框标题</summary>
-        public string Title;
+        /// <summary>对话框身份（回传结果时原样带回，发布方按它认领；纯提示框可传 None）</summary>
+        public DialogId Id;
         /// <summary>正文内容</summary>
         public string Content;
-        /// <summary>确认按钮文案（默认「确认」）</summary>
+        /// <summary>确认按钮文案；null/空 = 面板按语言取默认（ui.dialog.confirm）</summary>
         public string ConfirmLabel;
-        /// <summary>取消按钮文案（默认「取消」）</summary>
+        /// <summary>取消按钮文案；null/空 = 面板按语言取默认（ui.dialog.cancel）</summary>
         public string CancelLabel;
         /// <summary>是否显示确认按钮（false 时仅文字无按钮）</summary>
         public bool ShowConfirm;
         /// <summary>是否显示取消按钮（false 时隐藏取消按钮）</summary>
         public bool ShowCancel;
 
-        public DialogRequestEvent(string title, string content,
+        public DialogRequestEvent(DialogId id, string content,
             bool showConfirm = true, bool showCancel = true,
-            string confirmLabel = "确认", string cancelLabel = "取消")
+            string confirmLabel = null, string cancelLabel = null)
         {
-            Title = title;
+            Id = id;
             Content = content;
             ShowConfirm = showConfirm;
             ShowCancel = showCancel;
@@ -296,28 +301,22 @@ namespace MCV_Module.Event
         }
     }
 
-    /// <summary>
-    /// 对话框结果事件（用户操作后由 DialogController 发布，业务系统订阅）。
-    /// Confirmed 为 true 表示点击了确认按钮，false 表示点击了取消按钮。
-    /// </summary>
+    /// <summary>对话框结果事件（用户操作后由 DialogController 发布，业务系统订阅）。</summary>
     public class DialogResultEvent
     {
-        /// <summary>本次结果对应的请求标题（用于区分并发对话框）</summary>
-        public string Title;
+        /// <summary>本次结果对应的对话框身份（发布方按它认领；同一 Id 只应有一个订阅方处理）</summary>
+        public DialogId Id;
         /// <summary>是否点击确认（取消为 false）</summary>
         public bool Confirmed;
 
-        public DialogResultEvent(string title, bool confirmed)
+        public DialogResultEvent(DialogId id, bool confirmed)
         {
-            Title = title;
+            Id = id;
             Confirmed = confirmed;
         }
     }
 
-    /// <summary>
-    /// 应用退出请求事件（业务系统确认「退出」后发布，由常驻管理器如 GlobalSceneMgr 订阅并执行最终退出）。
-    /// 区别于直接调用 Application.Quit()，走事件总线便于统一收口（资源清理 / 进程退出顺序控制）。
-    /// </summary>
+    /// <summary>应用退出请求事件（业务系统确认「退出」后发布，由常驻管理器如 GlobalSceneMgr 订阅并执行最终退出）。</summary>
     public class AppQuitEvent
     {
     }

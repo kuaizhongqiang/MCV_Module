@@ -2,21 +2,22 @@
 using System.Collections.Generic;
 using MCV_Module.Utils;
 using System.Reflection;
+using MCV_Module.Interfaces;
 using MCV_Module.Managers;
+using MCV_Module.UI.Tools;
 using UnityEngine;
+using System.Collections;
+using UnityEngine.UI;
 
 namespace MCV_Module.UI
 {
+    /// <summary>面板基类：Start 时绑定控制器，并维护本面板下挂的组件注册表。</summary>
     public abstract class PanelBase : UIBase
     {
         protected CanvasBase m_Canvas;
         List<ComponentBase> m_Components = new List<ComponentBase>();
 
-        /// <summary>
-        /// 生命周期绑定：面板每次初始化都是全新实例，Start 恰好触发一次 = 每次初始化绑一次。
-        /// 优先按 [RequireController] 特性指定类型绑定（编译期安全）；
-        /// 无特性时回退 1:1 名字约定（TitlePanel → TitleController）。
-        /// </summary>
+        /// <summary>绑定控制器：优先 [RequireController] 特性，无特性时回退 XxxPanel → XxxController 命名约定。</summary>
         protected virtual void Start()
         {
             BindController();
@@ -28,8 +29,10 @@ namespace MCV_Module.UI
             var attr = GetType().GetCustomAttribute<RequireControllerAttribute>(false);
             if (attr != null && attr.ControllerType != null)
             {
+                // WHY: 控制器不再挂场景、由 GlobalControllerMgr 按类型创建，这里按类型取（强绑定不受改名影响）；
+                //      名称兜底保留，免得历史面板的 [RequireController] 与 ControllerName 不一致时直接失联。
                 string controllerName = attr.ControllerType.Name;
-                var controller = GlobalControllerMgr.Instance.Find(controllerName);
+                var controller = FindByType(attr.ControllerType) ?? GlobalControllerMgr.Instance.Find(controllerName);
                 if (controller != null)
                 {
                     controller.Bind(this);
@@ -57,6 +60,26 @@ namespace MCV_Module.UI
             else
             {
                 Log.Warning($"[PanelBase] 未找到对应 Controller：{controllerNameLegacy}，面板 {GetType().Name} 未绑定");
+            }
+        }
+
+        // WHY: 控制器类型来自特性，编译期拿不到泛型实参，只能反射调 GlobalControllerMgr.Find<T>()；这条路径每次面板重建才走一次，开销可忽略。
+        static IController FindByType(System.Type controllerType)
+        {
+            var mgr = GlobalControllerMgr.Instance;
+            if (mgr == null || controllerType == null) return null;
+
+            var method = typeof(GlobalControllerMgr).GetMethod(nameof(GlobalControllerMgr.Find), System.Type.EmptyTypes);
+            if (method == null) return null;
+
+            try
+            {
+                return method.MakeGenericMethod(controllerType).Invoke(mgr, null) as IController;
+            }
+            catch (System.Exception e)
+            {
+                Log.Error($"[PanelBase] 按类型查找 Controller {controllerType.Name} 失败：{e.Message}");
+                return null;
             }
         }
 
@@ -92,5 +115,89 @@ namespace MCV_Module.UI
             }
             return null;
         }
+
+        #region 布局重建
+        /// <summary>进行中的布局重建协程（重复请求时先停掉上一次，只保留最后一次）。</summary>
+        Coroutine m_LayoutRebuildCoroutine;
+
+        // WHY: 文本 / 子物体状态变完之后**不能同帧**直接 ForceRebuildLayoutImmediate，两个理由都有实测：
+        //  ① TMP 形态下 TextComponent 换形态跨帧（先禁用卸载 Legacy、等一帧才挂 TMP），未 ready 的写入只进 pending 缓冲，
+        //     同帧量到的是「空文本」的尺寸（浮动框塌成只有内边距）；
+        //  ② 面板 prefab 普遍是「子节点自带 ContentSizeFitter + 父级 LayoutGroup（父级 childControlWidth = false，
+        //     量的是子节点当前 sizeDelta）」，而单次重建里父级先于子级算 ⇒ 必须自下而上才收敛。
+        // WHY: 另外两条现场经验：取值必须走 UILayoutRebuilder 的收集（不依赖任何 Text 字段 —— TMP 形态下那些字段是
+        //     "假 null"，用它们取节点会让整段重建静默失效）；重复请求只保留最后一次，所以要刷多个子树时传公共父节点。
+        /// <summary>请求一次布局重建（等一帧、按深度自下而上）：文本写入 / 子节点显隐之后统一调它；root 省略时刷整个面板。</summary>
+        protected void RequestLayoutRebuild(Transform root = null)
+        {
+            if (!isActiveAndEnabled)
+            {
+                // WHY: 未激活层级既起不了协程（Unity 直接报错），ForceRebuild 也会被 LayoutRebuilder 静默跳过；激活时 OnEnable 的脏标记会兜底
+                Log.Verbose($"[{GetType().Name}] 未激活，本次布局重建被跳过（激活后的自动布局会兜底）");
+                return;
+            }
+
+            if (m_LayoutRebuildCoroutine != null) StopCoroutine(m_LayoutRebuildCoroutine);
+            m_LayoutRebuildCoroutine = StartCoroutine(UILayoutRebuilder.RebuildSubtreeNextFrame(root != null ? root : transform));
+        }
+
+        protected override void OnDestroy()
+        {
+            // WHY: 面板随 Canvas 重建被 ClearPanels 销毁，协程跟着一起收；字段置空免得留下已停句柄
+            if (m_LayoutRebuildCoroutine != null)
+            {
+                StopCoroutine(m_LayoutRebuildCoroutine);
+                m_LayoutRebuildCoroutine = null;
+            }
+
+            base.OnDestroy();
+        }
+        #endregion
+    
+        #region 呼吸灯闪烁
+        /// <summary>呼吸灯：让一组 Image 的透明度按正弦在 minAlpha~maxAlpha 之间往复，period 为一个完整呼吸周期（秒）。</summary>
+        // WHY: 原实现 `Color.white * Mathf.Sin(time)` 是把 RGB 与 alpha 一起乘 sin —— sin 取负值时颜色发黑、alpha 变成非法负值，
+        //      而且会把 Image 原始颜色强行拉白；这里只改 alpha，并用 (sin + 1) / 2 把值域从 [-1,1] 映射到 [0,1] 后再 Lerp 到区间。
+        // WHY: 原实现 `time += Time.deltaTime` 却 `yield return new WaitForSeconds(sequence)`，累加与恢复不同步，实际每 sequence 秒才跳变一次；
+        //      改为每帧推进（yield return null），呼吸才连续可控。
+        protected IEnumerator BreathLightenAnim(List<Image> images, float period, float minAlpha = 0.3f, float maxAlpha = 1f)
+        {
+            if (images == null || images.Count == 0)
+            {
+                yield break;
+            }
+
+            // WHY: period 为 0 会让 sin 的相位恒定，退化成常亮，这里兜一个默认周期
+            if (period <= 0f)
+            {
+                period = 1.5f;
+            }
+
+            float time = 0f;
+
+            while (true)
+            {
+                float k = (Mathf.Sin(time / period * Mathf.PI * 2f) + 1f) * 0.5f;
+                float alpha = Mathf.Lerp(minAlpha, maxAlpha, k);
+
+                for (int i = 0; i < images.Count; i++)
+                {
+                    var image = images[i];
+                    // WHY: 元素可能被销毁，逐个判空，避免整个协程抛 NullReferenceException 停掉
+                    if (image == null)
+                    {
+                        continue;
+                    }
+
+                    var color = image.color;
+                    color.a = alpha;
+                    image.color = color;
+                }
+
+                time += Time.deltaTime;
+                yield return null;
+            }
+        }
+        #endregion
     }
 }

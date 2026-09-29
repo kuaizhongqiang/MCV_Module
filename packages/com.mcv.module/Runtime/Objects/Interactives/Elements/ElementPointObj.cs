@@ -9,6 +9,7 @@ using UnityEngine;
 
 namespace MCV_Module.Objects.Interactives.Elements
 {
+    /// <summary>接线端子（点）：负责拖线预览/临时线与端点成线，名字即接线语义。</summary>
     public class ElementPointObj : ElementObjBase, IElePoint
     {
         public override ElementType Type {get => ElementType.Point;}
@@ -37,17 +38,13 @@ namespace MCV_Module.Objects.Interactives.Elements
         }
 
         #region 接口实现
-        /// <summary>
-        /// 创建一条从本点出发的临时拖线（起始点重合），返回该对象供后续 UpdateTmpLine 更新。
-        /// </summary>
+        /// <summary>创建从本点出发的临时拖线（起止点重合），返回该对象供 UpdateTmpLine 更新。</summary>
         public GameObject CreateTmpLine()
         {
             return CreateTmpLine(GetDrawData());
         }
 
-        /// <summary>
-        /// 以显式绘制参数创建临时拖线（供连线管理器传入统一的临时线参数）。
-        /// </summary>
+        /// <summary>以显式绘制参数创建临时拖线（先销毁旧临时线）。</summary>
         public GameObject CreateTmpLine(LineDrawData data)
         {
             DestroyLine();
@@ -55,9 +52,7 @@ namespace MCV_Module.Objects.Interactives.Elements
             return tmpLine;
         }
 
-        /// <summary>
-        /// 更新临时拖线：本点 → 当前悬停的目标点（无目标或悬停自身时收缩回本点）。
-        /// </summary>
+        /// <summary>更新临时拖线到当前悬停的目标点（无目标或悬停自身时收缩回本点）。</summary>
         public void UpdateTmpLine(GameObject line)
         {
             if (line == null) return;
@@ -66,36 +61,26 @@ namespace MCV_Module.Objects.Interactives.Elements
             UpdateTmpLine(line, to, GetDrawData());
         }
 
-        /// <summary>
-        /// 更新临时拖线到显式终点（供连线管理器传虚拟平面交点等动态端点）。
-        /// </summary>
+        /// <summary>更新临时拖线到显式终点（供连线管理器传虚拟平面交点等动态端点）。</summary>
         public void UpdateTmpLine(GameObject line, Vector3 to)
         {
             UpdateTmpLine(line, to, GetDrawData());
         }
 
-        /// <summary>
-        /// 以显式绘制参数更新临时拖线到显式终点（供连线管理器传入统一的临时线参数）。
-        /// </summary>
+        /// <summary>以显式绘制参数更新临时拖线到显式终点。</summary>
         public void UpdateTmpLine(GameObject line, Vector3 to, LineDrawData data)
         {
             if (line == null) return;
             LineDraw.UpdateLine(line, new Vector3[] { transform.position, to }, data);
         }
 
-        /// <summary>
-        /// 结束连线：若悬停在有效目标点上，则实例化正式 ElementLineObj 并绘制，随后销毁临时线。
-        /// 无目标或悬停自身时视为取消。
-        /// </summary>
+        /// <summary>结束连线：悬停在有效目标点时实例化正式 ElementLineObj 并绘制，随后销毁临时线；无目标/悬停自身视为取消。</summary>
         public void CreateLine()
         {
             CreateLine(GetHoverPoint());
         }
 
-        /// <summary>
-        /// 以显式目标点结束连线（供连线管理器传入已确认的目标点，避免二次解析悬停）。
-        /// target 为 null 或自身时视为取消。
-        /// </summary>
+        /// <summary>以显式目标点结束连线（避免二次解析悬停）；target 为 null 或自身时取消。</summary>
         public void CreateLine(ElementPointObj target)
         {
             if (target == null || target == this)
@@ -117,33 +102,24 @@ namespace MCV_Module.Objects.Interactives.Elements
             DestroyLine();
         }
 
-        /// <summary>
-        /// 销毁临时拖线。
-        /// </summary>
+        /// <summary>销毁临时拖线（运行时用 Destroy，编辑器用 DestroyImmediate）。</summary>
         public void DestroyLine()
         {
             if (tmpLine == null) return;
-            // 先释放 LineDraw 为该临时线独占创建的网格（否则网格要等下一次建线时的
-            // PruneDestroyed 兜底回收；拖线预览是高频路径，这里确定性回收）
-            LineDraw.ReleaseLine(tmpLine);
             if (Application.isPlaying) Destroy(tmpLine);
             else DestroyImmediate(tmpLine);
             tmpLine = null;
         }
         #endregion
 
-        /// <summary>
-        /// 当前鼠标悬停的连线目标点（通过 GlobalInteractiveMgr.Current 查询）。
-        /// </summary>
+        /// <summary>当前鼠标悬停的连线目标点（取自 GlobalInteractiveMgr.Current）。</summary>
         ElementPointObj GetHoverPoint()
         {
             var current = GlobalInteractiveMgr.Instance != null ? GlobalInteractiveMgr.Instance.Current : null;
             return current as ElementPointObj;
         }
 
-        /// <summary>
-        /// 获取绘制参数；未配置时返回可用的默认值（细线）。
-        /// </summary>
+        /// <summary>获取绘制参数；未配置时返回默认细线参数（避免零宽线不可见）。</summary>
         public LineDrawData GetDrawData()
         {
             if (lineData.width <= 0 || lineData.sectionSegments < 1)
@@ -169,9 +145,9 @@ namespace MCV_Module.Objects.Interactives.Elements
             Highlight(false);
         }
 
+        // WHY: 连线交互由控制器/任务模式（LineConnection）驱动，此处刻意留空，不要自行实现拖线循环。
         protected override void MoClickEvent()
         {
-            // 连线交互由控制器/任务模式驱动（LineConnection），此处预留
         }
 
         protected override string GetName()

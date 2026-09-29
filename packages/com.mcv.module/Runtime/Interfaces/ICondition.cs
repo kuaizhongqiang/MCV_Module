@@ -4,11 +4,8 @@ using MCV_Module.Steps;
 
 namespace MCV_Module.Interfaces
 {
-    /// <summary>
-    /// 步骤条件接口 —— 纯 C# 类，三阶段协程模型（对齐 Tuanjie v2.0）。
-    /// 由 StepManager 协程 yield 驱动：Prepare → Waiting → Complete。
-    /// NextStep/Skip 通过 ForceComplete() 协作式打断 Waiting；跳转前置 ResetCondition() 全员归位。
-    /// </summary>
+    // WHY: NextStep/Skip 靠 ForceComplete() 协作式打断 Waiting，跳转前必须 ResetCondition() 全员归位；漏置会让 Waiting 永不退出、残留 EventBus 订阅。
+    /// <summary>步骤条件接口：纯 C# 三阶段协程（Prepare → Waiting → Complete），由 StepManager 协程 yield 驱动。</summary>
     public interface ICondition
     {
         /// <summary>条件类型（与枚举 ConditionType 一一对应）</summary>

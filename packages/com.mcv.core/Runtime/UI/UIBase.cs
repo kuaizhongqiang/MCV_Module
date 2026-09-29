@@ -6,6 +6,7 @@ using UnityEngine;
 namespace MCV_Module.UI
 {
     [RequireComponent(typeof(CanvasGroup))]
+    /// <summary>UI 元素基类：经 CanvasGroup 做显隐淡入淡出，并支持「收起动画播完再回调」。</summary>
     public abstract class UIBase : MonoBehaviour
     {
         protected CanvasGroup canvasGroup;
@@ -37,21 +38,13 @@ namespace MCV_Module.UI
         }
 
         #region 显示控制
-        /// <summary>
-        /// 设置UI显示
-        /// </summary>
-        /// <param name="isActive"></param>
+        /// <summary>设置 UI 显示（带淡入淡出动画）。</summary>
         public virtual void SetUIActive(bool isActive)
         {
             SetUIActive(isActive, null);
         }
 
-        /// <summary>
-        /// 设置 UI 显示，并可在「收起动画播放完成」后执行回调。
-        /// 用于"先播完收起动画再通知业务方"，避免面板提前失活导致 StartCoroutine 报错。
-        /// </summary>
-        /// <param name="isActive">是否显示。</param>
-        /// <param name="onHidden">isActive=false 且收起动画完成后回调（面板 SetActive(false) 之前）。</param>
+        /// <summary>设置 UI 显示，可在「收起动画播完」后回调（在面板 SetActive(false) 之前执行）。</summary>
         public virtual void SetUIActive(bool isActive, Action onHidden)
         {
             StopRunningAnim();
@@ -73,10 +66,7 @@ namespace MCV_Module.UI
 
             ActiveAnimCoroutine = StartCoroutine(Anim(isActive));
         }
-        /// <summary>
-        /// 设置UI显示并立即
-        /// </summary>
-        /// <param name="isActive"></param>
+        /// <summary>立即设置 UI 显示（无动画）。</summary>
         public virtual void SetUIActiveImmediately(bool isActive)
         {
             StopRunningAnim();
@@ -91,10 +81,7 @@ namespace MCV_Module.UI
             }
         }
 
-        /// <summary>
-        /// 停止当前进行中的显示动画，并复位相关状态。
-        /// 判空处理：协程可能被外部 Stop 掉导致 ActiveAnimCoroutine 为 null，避免 StopCoroutine(null) 抛 "routine is null"。
-        /// </summary>
+        /// <summary>停止当前显示动画并复位状态（判空：协程可能被外部 Stop 掉，StopCoroutine(null) 会抛异常）。</summary>
         void StopRunningAnim()
         {
             if (isAnimating)

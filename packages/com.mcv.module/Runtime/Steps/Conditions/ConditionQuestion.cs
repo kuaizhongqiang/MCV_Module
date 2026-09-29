@@ -8,17 +8,14 @@ using UnityEngine;
 
 namespace MCV_Module.Steps
 {
-    /// <summary>
-    /// 答题条件 —— 用 usingId(questionId) 弹出答题面板，用户答对即完成。
-    /// 通过 IStepQuestionPanel 契约查找面板控制器；未实现时告警并跳过。
-    /// </summary>
+    /// <summary>答题条件：用 usingId（题目 id）弹答题面板，答对即完成。</summary>
     public class ConditionQuestion : ConditionBase
     {
         public override ConditionType Type => ConditionType.Question;
 
         IStepQuestionPanel ResolvePanel() =>
             GlobalControllerMgr.Instance != null
-                ? GlobalControllerMgr.Instance.Find("StepQuestionPanelController") as IStepQuestionPanel
+                ? GlobalControllerMgr.Instance.Find("StepQuestionController") as IStepQuestionPanel
                 : null;
 
         protected override void OnPrepare()

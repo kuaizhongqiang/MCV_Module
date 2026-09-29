@@ -12,44 +12,26 @@ using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 
-/// <summary>
-/// 内容 AB 流水线 —— **一个 ProjectClip 一个 AssetBundle**（bundle：<c>Content/clip_{器件小写}</c>）。
-///
-/// 三条铁律：
-///   ① 包粒度 = ProjectClip（该 clip 下各 TaskData 引用的资源全部进同一个包）；
-///   ② 包配置 id = <c>ProjectData.json</c> 里**实际写的键值**（规则 <c>{器件}_{任务}_{资源}</c>）；
-///   ③ 视频不入包（裸露在 <c>StreamingAssets/Video</c>）。
-///
-/// 一键做五件事：跑 Provider 收集 → 分级对账 → 生成/更新包配置 → 汇入 <c>PackageDB_Master</c> →
-/// 构建到 <c>Assets/StreamingAssets/Content/</c>（Temp 中转，只落 bundle 本体，不带 .manifest）。
-///
-/// **新增一类内容的唯一登记点**是 <see cref="Providers"/>：加一个 <see cref="IContentProvider"/> 实现即可，
-/// id 规则、配置生成、清单同步、构建、对账、旧产物清理全部复用本流程。
-///
-/// ⚠ 与 LOW 的差异（本工程实情）：
-///   - **不登记** <c>InfoSpriteProvider</c>（图集型，决策 F-8 不移植）；
-///   - Provider 覆盖 CUR 既有 6 种任务里**单模型型**的三种（Purpose / LineConnection / Training）；
-///     Equipment / Principle 是**列表型**（<c>equipmentStructs</c>/<c>principleStructs</c>），需要列表型
-///     Provider 才能打包，属后续增量；Info / Structure / Measure 三类数据类尚未落地（P4c/P5b）。
-/// </summary>
+// WHY: 三条铁律（规约见 Docs/design_ai/BundlePipeline.md）—— ① 包粒度 = ProjectClip（该 clip 下 4 个 TaskData 引用的资源全部进同一个包）；② 包配置 id = ProjectData.json 里**实际写的键值**（规则 {器件}_{任务}_{资源}），不是另起的名字；③ 视频不入包（裸露在 StreamingAssets/Video）。
+// WHY: **新增一类内容的唯一登记点**是 Providers —— 加一个 IContentProvider 实现即可，id 规则、配置生成、清单同步、构建、对账、旧产物清理全部复用本流程，不得另开一套。
+/// <summary>内容 AB 流水线：一个 ProjectClip 一个 AssetBundle（bundle <c>Content/clip_{器件小写}</c>），一键做五件事：跑 Provider 收集 → 分级对账 → 生成/更新包配置 → 汇入 PackageDB_Master → 构建到 StreamingAssets/Content/（Temp 中转，只落 bundle 本体，不带 .manifest）。</summary>
 public static class ContentBundleTools
 {
-    // 路径常量的唯一来源：Assets/Editor/Common/EditorPaths.cs（本文件不再自带路径字面量）
+    // WHY: 路径常量的唯一来源是 Assets/Editor/Common/EditorPaths.cs，本文件不得再自带路径字面量。
 
     #region Provider 登记
-    /// <summary>
-    /// Provider 列表（顺序即执行顺序）—— 新增一类内容只需在此登记一行。
-    ///
-    /// 形态：id = 该 TaskData 的 <c>prefabKey</c>，素材 = <c>{ModelRoot}/{id}.prefab</c>。
-    /// </summary>
+    // WHY: 数组顺序即 Provider 执行顺序，新增一类内容只需在此登记一行。
+    /// <summary>Provider 列表（顺序即执行顺序）：简介图集 <c>InfoSprite</c> + 三种「一个 TaskData → 一个预制体」的模型 <c>InfoModel</c> / <c>StructureModel</c> / <c>InspectionModel</c>，后三者形态一致、共用 <see cref="ModelPrefabProvider"/>。</summary>
     static readonly IContentProvider[] Providers =
     {
-        new ModelPrefabProvider("PurposeModel", "Assets/Prefabs/Models/PurposeObjs", ContentNaming.TaskPurpose,
-            clip => clip.GetTaskData<TaskPurposeData>(TaskType.Purpose)?.prefabKey),
-        new ModelPrefabProvider("LineConnectionModel", "Assets/Prefabs/Models/LineConnectionObjs", ContentNaming.TaskLineConnection,
-            clip => clip.GetTaskData<TaskLineConnectionData>(TaskType.LineConnection)?.prefabKey),
-        new ModelPrefabProvider("TrainingModel", "Assets/Prefabs/Models/TrainingObjs", ContentNaming.TaskTraining,
-            clip => clip.GetTaskData<TaskTrainingData>(TaskType.Training)?.prefabKey),
+        new InfoSpriteProvider(),
+
+        new ModelPrefabProvider("InfoModel", "Assets/Prefabs/Models/InfoObjs", ContentNaming.TaskInfo,
+            clip => clip.GetTaskData<TaskInfoData>(TaskType.Info)?.prefabKey),
+        new ModelPrefabProvider("StructureModel", "Assets/Prefabs/Models/StructureObjs", ContentNaming.TaskStructure,
+            clip => clip.GetTaskData<TaskStructureData>(TaskType.Structure)?.prefabKey),
+        new ModelPrefabProvider("InspectionModel", "Assets/Prefabs/Models/InspectionObjs", ContentNaming.TaskInspection,
+            clip => clip.GetTaskData<TaskInspectionData>(TaskType.Inspection)?.prefabKey),
     };
     #endregion
 
@@ -65,25 +47,25 @@ public static class ContentBundleTools
     #endregion
 
     #region 菜单
-    [MenuItem("MCV/内容 AB 流水线（按 ProjectClip 分包）", false, 80)]
+    [MenuItem("MCV Build/内容 AB 流水线（按 ProjectClip 分包）", false, 80)]
     public static void RunAll()
     {
         Run(writeConfig: true, build: true, askBeforeBuild: true);
     }
 
-    [MenuItem("MCV/内容 AB/对账（dry-run，不写盘）", false, 81)]
+    [MenuItem("MCV Build/内容 AB/对账（dry-run，不写盘）", false, 81)]
     public static void AuditOnly()
     {
         Run(writeConfig: false, build: false, askBeforeBuild: false);
     }
 
-    [MenuItem("MCV/内容 AB/仅构建", false, 82)]
+    [MenuItem("MCV Build/内容 AB/仅构建", false, 82)]
     public static void BuildOnly()
     {
         Run(writeConfig: false, build: true, askBeforeBuild: false);
     }
 
-    [MenuItem("MCV/内容 AB/仅刷新包清单", false, 83)]
+    [MenuItem("MCV Build/内容 AB/仅刷新包清单", false, 83)]
     public static void RefreshDatabaseOnly()
     {
         if (!EditorAssetUtil.IsScriptReady(EditorPaths.AbConfigScript))
@@ -93,7 +75,7 @@ public static class ContentBundleTools
         }
 
         int count = PackageDatabaseSync.Sync(EditorPaths.PackageDbAsset, null, "[ContentBundle]");
-        // 只读告警：本菜单的 AutoCollect 是全量重收，磁盘上的残留配置会被重新写回清单（这里不删残留，但不再静默）
+        // WHY: 只读告警 —— 本菜单的 AutoCollect 是全量重收，磁盘上的残留配置会被重新写回清单（这里不删残留，但不再静默）。
         WarnResiduePackages(ExpectedIdsFromJson());
 
         EditorUtility.DisplayDialog("内容 AB",
@@ -102,12 +84,26 @@ public static class ContentBundleTools
                 : $"✔ 包清单已同步：{count} 条\n{EditorPaths.PackageDbAsset}",
             "确定");
     }
+
+    [MenuItem("MCV Build/内容 AB/清理旧产物（Info / InfoModel）", false, 84)]
+    public static void CleanLegacy()
+    {
+        List<string> removed = CleanLegacyArtifacts();
+        if (removed.Count > 0 && EditorAssetUtil.IsScriptReady(EditorPaths.AbConfigScript))
+            PackageDatabaseSync.Sync(EditorPaths.PackageDbAsset, null, "[ContentBundle]");
+
+        EditorUtility.DisplayDialog("内容 AB",
+            removed.Count > 0
+                ? $"✔ 已清理旧产物并刷新包清单：\n{string.Join("\n", removed)}"
+                : "没有需要清理的旧产物",
+            "确定");
+    }
     #endregion
 
     #region 主流程
     static void Run(bool writeConfig, bool build, bool askBeforeBuild)
     {
-        // 前置守卫：脚本没编译就绪时 CreateAsset 会产出 m_Script: {fileID: 0} 的坏配置
+        // WHY: 前置守卫 —— 脚本没编译就绪时 CreateAsset 会产出 m_Script: {fileID: 0} 的坏配置。
         if (!EditorAssetUtil.IsScriptReady(EditorPaths.AbConfigScript))
         {
             EditorUtility.DisplayDialog("内容 AB",
@@ -144,7 +140,7 @@ public static class ContentBundleTools
             return;
         }
 
-        // 本次流水线期望的 id 集合（对账体检 / 残留告警共用）
+        // WHY: 本次流水线期望的 id 集合，之后的对账体检 / 残留告警共用这一份，勿各自重算。
         var expectedIds = new HashSet<string>(plans.SelectMany(p => p.entries).Select(e => e.id));
 
         if (writeConfig)
@@ -153,16 +149,16 @@ public static class ContentBundleTools
         }
         else if (build)
         {
-            // 仅构建：确保清单收录（配置已在磁盘上）
+            // WHY: 仅构建路径只确保清单收录 —— 配置已在磁盘上，此处不重新生成。
             PackageDatabaseSync.Sync(EditorPaths.PackageDbAsset, null, "[ContentBundle]");
-            // 只读告警：本步的 AutoCollect 会把磁盘上的残留配置一并收回清单（本路径不删残留，只提示）
+            // WHY: 只读告警 —— 本步的 AutoCollect 会把磁盘上的残留配置一并收回清单（本路径不删残留，只提示）。
             WarnResiduePackages(expectedIds);
         }
-        // dry-run 到此为止：**不碰数据库**（AutoCollect 是全量重写，会让「不写盘」的承诺落空、也产生无意义的版本 diff）
+        // WHY: dry-run 到此为止**不碰数据库** —— AutoCollect 是全量重写，会让「不写盘」的承诺落空、也产生无意义的版本 diff。
 
         if (!build)
         {
-            // 只读体检：把「dry-run 真的不写盘」从代码注释的承诺变成弹窗里可见的数字
+            // WHY: 只读体检 —— 把「dry-run 真的不写盘」从代码注释的承诺变成弹窗里可见的数字（P1-2 / §8.2 反驳 4）。
             var audit = PackageDatabaseSync.Audit(EditorPaths.PackageDbAsset, expectedIds);
             Debug.Log($"[ContentBundle] 只读体检：{audit.Summary()}" +
                       (audit.Missing.Count > 0 ? $"\n   未收录：{string.Join(", ", audit.Missing)}" : "") +
@@ -220,7 +216,7 @@ public static class ContentBundleTools
             }
 
             if (plan.entries.Count > 0) plans.Add(plan);
-            // else：该 clip 没有任何资源（如四步全 null）→ 跳过，不产出空 AssetBundleBuild
+            // WHY: else 分支 —— 该 clip 没有任何资源（如 clip_quiz 四步全 null）时跳过，不产出空 AssetBundleBuild。
         }
 
         return plans;
@@ -293,8 +289,7 @@ public static class ContentBundleTools
 
         try
         {
-            // 与运行时同一口径（JsonReaderWriter → Newtonsoft）；ProjectClip 的 taskXxxData 是
-            // [SerializeField, JsonProperty] 私有字段，JsonProperty 保证 Newtonsoft 能写入
+            // WHY: 与运行时同一口径（JsonReaderWriter → Newtonsoft）—— ProjectClip 的 taskXxxData 是 [SerializeField, JsonProperty] 私有字段，JsonProperty 保证 Newtonsoft 能写入。
             return JsonConvert.DeserializeObject<ProjectData>(File.ReadAllText(EditorPaths.ProjectDataJson));
         }
         catch (Exception e)
@@ -314,8 +309,7 @@ public static class ContentBundleTools
         foreach (ClipPlan plan in plans)
             foreach (ContentResourceEntry e in plan.entries) expected.Add(e.id);
 
-        // 先删掉目录里不属于本次产出的配置：否则 AutoCollect（全工程按类型全量重收）会把残留 id 收回来，
-        // 运行时就出现两套可解析的 id，漏改的 JSON 键变成「配置在、包不在」的隐性问题。
+        // WHY: 必须先删掉目录里不属于本次产出的配置 —— 否则 AutoCollect（全工程按类型全量重收）会把残留 id 收回来，运行时就出现两套可解析的 id，漏改的 JSON 键变成「配置在、包不在」的隐性问题。
         List<string> removed = EditorAssetUtil.DeleteAssetsNotIn<ABPackageConfigSO>(
             EditorPaths.ContentConfigDir, expected, config => config.id, "[ContentBundle]");
 
@@ -327,16 +321,14 @@ public static class ContentBundleTools
                 ABPackageConfigSO created = PackageConfigWriter.CreateOrUpdate(
                     EditorPaths.ContentConfigDir, e.id, "[ContentBundle]",
                     config => PackageConfigWriter.ApplyContent(config, e.id, plan.clipId, plan.bundleName, e.assetPath, e.kind));
-                if (created != null) generated.Add(created);      // 创建失败时 PackageConfigWriter 已报错，这里只跳过错项
+                if (created != null) generated.Add(created);      // WHY: 创建失败时 PackageConfigWriter 已报错，这里只跳过错项
             }
         }
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        // 自检：回读磁盘资产确认脚本解析正常。
-        // 历史坑：类没写在「与类名同名」的 .cs 里、或脚本未编译完就 CreateAsset 时，m_Script 会写成
-        // {fileID: 0}，资产加载为 null（表现为「配置在、清单里却是 None」）。
+        // WHY: 自检必须回读磁盘资产确认脚本解析正常 —— 历史坑：类没写在「与类名同名」的 .cs 里、或脚本未编译完就 CreateAsset 时，m_Script 会写成 {fileID: 0}，资产加载为 null（表现为「配置在、PackageDB 里却是 None」）。
         List<string> broken = EditorAssetUtil.FindBrokenAssets<ABPackageConfigSO>(EditorPaths.ContentConfigDir, expected);
         if (broken.Count > 0)
         {
@@ -351,12 +343,10 @@ public static class ContentBundleTools
         Debug.Log($"[ContentBundle] 配置就绪：新建/更新 {generated.Count} 个，清理旧配置 {removed.Count} 个 → {EditorPaths.ContentConfigDir}");
     }
 
-    /// <summary>
-    /// 当前 JSON 期望的内容 id 集合（**只读**）。读不到 JSON 时返回 null = 无法判定 → 调用方跳过残留检查。
-    /// </summary>
+    /// <summary>当前 JSON 期望的内容 id 集合（**只读**）；读不到 JSON 时返回 null = 无法判定 → 调用方跳过残留检查。</summary>
     static HashSet<string> ExpectedIdsFromJson()
     {
-        if (!File.Exists(EditorPaths.ProjectDataJson)) return null;      // 不调用 ReadProjectData，避免无谓的 LogError
+        if (!File.Exists(EditorPaths.ProjectDataJson)) return null;      // WHY: 不调用 ReadProjectData，避免无谓的 LogError
 
         ProjectData data = ReadProjectData();
         if (data == null) return null;
@@ -368,13 +358,8 @@ public static class ContentBundleTools
         return ids;
     }
 
-    /// <summary>
-    /// 只读残留告警：<c>AutoCollect</c> 是「全工程按类型全量重收」，磁盘上残留的旧配置会被重新写回主清单，
-    /// 运行时就多出「配置在、包不在」的可解析 id。
-    ///
-    /// 这里**只报警、不删**：删残留配置只发生在 <see cref="GenerateConfigs"/>（流水线主菜单）里，
-    /// 「仅构建 / 仅刷新包清单」保持原有的"不删文件"语义，但不再静默。
-    /// </summary>
+    // WHY: 这里**只报警、不删** —— 删残留配置只发生在 GenerateConfigs（流水线主菜单）里，「仅构建 / 仅刷新包清单」保持原有的"不删文件"语义，但不再静默。
+    /// <summary>只读残留告警：<c>AutoCollect</c> 是「全工程按类型全量重收」，磁盘上残留的旧配置会被重新写回主清单，运行时就多出「配置在、包不在」的可解析 id（见审核反馈 §4.2）。</summary>
     static void WarnResiduePackages(ISet<string> expectedIds)
     {
         if (expectedIds == null || expectedIds.Count == 0) return;
@@ -385,20 +370,23 @@ public static class ContentBundleTools
         Debug.LogWarning($"[ContentBundle] 清单里有 {audit.Residue.Count} 个不属于本次产出的残留内容包" +
                          "（AutoCollect 会把它们收回清单，运行时会多出「配置在、包不在」的 id）：\n   " +
                          string.Join("\n   ", audit.Residue) +
-                         "\n   → 跑一次「MCV/内容 AB 流水线（按 ProjectClip 分包）」会删掉这些残留配置");
+                         "\n   → 跑一次「MCV Build/内容 AB 流水线（按 ProjectClip 分包）」会删掉这些残留配置");
     }
+
     #endregion
 
-    #region 构建
+    #region 构建与清理
     static void BuildBundles(List<ClipPlan> plans)
     {
+        CleanLegacyArtifacts();          // WHY: 新旧不能并存，顺手清掉 StreamingAssets/Info、InfoModel
+
         var builds = plans.Select(p => new AssetBundleBuild
         {
             assetBundleName = p.bundleName,
             assetNames = p.entries.Select(e => e.assetPath).ToArray()
         }).ToArray();
 
-        // Temp 中转 + 只落 bundle 本体 + 清掉不属于本次产出的残留
+        // WHY: sweepStale=true —— Temp 中转 + 只落 bundle 本体 + 清掉不属于本次产出的残留（修 P1-3：此前 Content 侧不清目标目录）。
         BuildOutcome outcome = BundleBuilder.Build(
             EditorPaths.StreamingAssetsRoot, EditorPaths.ContentBundleDirName,
             EditorPaths.TempRoot("ContentBundles"), builds,
@@ -415,5 +403,28 @@ public static class ContentBundleTools
                 : "构建失败，请看 Console",
             "确定");
     }
+
+    /// <summary>清理旧产物（P1 迁移用）：旧配置目录 + 旧 bundle 目录；返回被删路径。</summary>
+    static List<string> CleanLegacyArtifacts()
+    {
+        var removed = new List<string>();
+
+        foreach (string dir in EditorPaths.LegacyConfigDirs.Concat(EditorPaths.LegacyBundleDirs))
+        {
+            if (!AssetDatabase.IsValidFolder(dir)) continue;
+            AssetDatabase.DeleteAsset(dir);
+            removed.Add(dir);
+        }
+
+        if (removed.Count > 0)
+        {
+            AssetDatabase.Refresh();
+            Debug.Log($"[ContentBundle] 已清理旧产物：\n   {string.Join("\n   ", removed)}");
+        }
+
+        return removed;
+    }
+
+    // WHY: IsConfigScriptReady / EnsureFolder 已收敛到 Common/EditorAssetUtil，本文件不得再各持一份（此前两文件逐字重复）。
     #endregion
 }

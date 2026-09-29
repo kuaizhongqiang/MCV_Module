@@ -8,10 +8,7 @@ using UnityEngine;
 
 namespace MCV_Module.Steps
 {
-    /// <summary>
-    /// 工具条件 —— 从工具面板选择工具（usingId）拖到 targetObj 上松开命中即完成。
-    /// 通过 IStepToolPanel 契约查找面板控制器；未实现面板时告警并跳过（不阻塞流程）。
-    /// </summary>
+    /// <summary>工具条件：从工具面板选工具（usingId）拖到 targetObj 上松开命中即完成。</summary>
     public class ConditionTool : ConditionBase
     {
         public override ConditionType Type => ConditionType.Tool;

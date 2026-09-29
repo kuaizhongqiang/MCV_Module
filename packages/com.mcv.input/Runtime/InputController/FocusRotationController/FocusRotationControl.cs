@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace MCV_Module.InputController.FocusRotationController
 {
+    /// <summary>聚焦环绕相机：右键拖拽环绕聚焦目标并带惯性，可平滑切换目标、双击复位</summary>
     public class FocusRotationControl : InputControllerBase
     {
         [SerializeField] Transform _target;
@@ -50,8 +51,7 @@ namespace MCV_Module.InputController.FocusRotationController
         {
             if (_target == null) return;
 
-            // 初始观察位姿由 InitializeOrbit 推导出的轨道角决定，下一帧 HandlePos 会还原出同一位置/朝向；
-            // 这里再 SetPositionAndRotation(startPos, startRot) 是无效操作（同一帧就会被覆盖），故不写。
+            // WHY: 初始位姿由 InitializeOrbit 的轨道角决定，再 SetPositionAndRotation 会在同一帧被 HandlePos 覆盖，故不写
             InitializeOrbit(_target);
         }
 
@@ -80,8 +80,7 @@ namespace MCV_Module.InputController.FocusRotationController
 
         private void InitializeOrbit(Transform target)
         {
-            // Debug：核对 Awake 记录的初始位姿与被调时的瞬时位姿是否一致。
-            // 如果偏差非零，说明位姿在 Awake 之后被动过（轨道角按 startPos 推导，第一帧就会瞬移）。
+            // WHY: 偏差非零说明位姿在 Awake 后被改过；轨道角按 startPos 推导，第一帧就会瞬移
             float posDiff = Vector3.Distance(startPos, transform.position);
             float rotDiff = Quaternion.Angle(startRot, transform.rotation);
             string poseCompare = string.Format(
@@ -109,13 +108,8 @@ namespace MCV_Module.InputController.FocusRotationController
                 Log.Info(poseCompare + orbitInfo);
         }
 
-        /// <summary>
-        /// 由「相机世界位置」推导环绕角与半径，必须与 ApplyOrbit 的
-        /// pos = target + Euler(_pitch,_yaw,0) * (back * distance) 同源推导：
-        /// 该式展开后「目标→相机」单位向量 = (-cos(pitch)sin(yaw), sin(pitch), -cos(pitch)cos(yaw))，
-        /// 所以 yaw = atan2(-dir.x, -dir.z)。若写成 atan2(dir.x, dir.z) 会差 180°，相机会翻到目标另一侧。
-        /// 相机与目标重合时返回 false（角度无意义）。
-        /// </summary>
+        // WHY: yaw 必须用 atan2(-dir.x, -dir.z) 与 ApplyOrbit 同源；写成 atan2(dir.x, dir.z) 会差 180°，相机翻到目标另一侧
+        /// <summary>由相机世界位置反推环绕角与半径；相机与目标重合时返回 false</summary>
         private static bool TryGetOrbit(Vector3 camPos, Transform target, out float yaw, out float pitch, out float radius)
         {
             yaw = 0f;
@@ -131,10 +125,7 @@ namespace MCV_Module.InputController.FocusRotationController
             return true;
         }
 
-        /// <summary>
-        /// 按当前 _yaw/_pitch/distance 摆放相机，并始终让相机看向目标。
-        /// 逐帧环绕（HandlePos）与平滑复位（SmoothResetBack）共用，保证两者位置与朝向的算法完全一致。
-        /// </summary>
+        /// <summary>按当前 _yaw/_pitch/distance 摆放相机并始终看向目标；逐帧环绕与平滑复位共用</summary>
         private void ApplyOrbit(Transform target)
         {
             Quaternion rot = Quaternion.Euler(_pitch, _yaw, 0f);
@@ -148,12 +139,8 @@ namespace MCV_Module.InputController.FocusRotationController
             ApplyOrbit(_target);
         }
 
-        /// <summary>
-        /// 复位过渡的一帧：把位置沿轨道插值到「初始位姿所在的轨道」上，朝向交给 ApplyOrbit 统一对准目标，
-        /// 不再对旋转单独插值（分别插值位置与旋转时，相机朝向会脱离目标，目标就绕出视野了）。
-        /// 目标轨道角每帧由 startPos 与目标当前位置重新推导：目标在过渡中移动时，终点仍是 startPos，且全程对准目标。
-        /// 无聚焦目标或位姿退化时返回 false，调用方退回「位姿直接插值」。
-        /// </summary>
+        // WHY: 只插值位置、朝向交给 ApplyOrbit 统一对准目标；若位置与旋转分别插值，相机会脱离目标、目标绕出视野
+        /// <summary>复位过渡的一帧：把位置沿轨道插值到初始轨道并面向目标；无目标或位姿退化时返回 false</summary>
         private bool ApplyResetFrame(float t, float fromYaw, float fromPitch, float fromDistance)
         {
             if (_target == null) return false;
@@ -213,9 +200,7 @@ namespace MCV_Module.InputController.FocusRotationController
             }
         }
 
-        /// <summary>
-        /// 双击鼠标左键 → 滑动回到初始位姿。用 unscaledTime 计时，暂停/慢动作下同样有效。
-        /// </summary>
+        /// <summary>双击鼠标左键滑动回到初始位姿；用 unscaledTime 计时，暂停/慢动作下同样有效</summary>
         void HandleResetInput()
         {
             var mouse = Mouse.current;
@@ -239,9 +224,7 @@ namespace MCV_Module.InputController.FocusRotationController
 
         #region 公开方法
 
-        /// <summary>
-        /// 重置相机到初始位置 + 恢复FOV + 重新瞄准目标
-        /// </summary>
+        /// <summary>重置相机到初始位置、恢复 FOV 并重新瞄准目标</summary>
         public void ResetPos()
         {
             if (_smoothFollowCoroutine != null)
@@ -257,8 +240,7 @@ namespace MCV_Module.InputController.FocusRotationController
 
             SetAllCamerasFov(defaultFov);
 
-            // 有聚焦目标：直接按「初始位姿 → 轨道角」重算并立刻对准目标，
-            // 不要停留在 startRot（它不一定看向目标），否则目标会有一两帧跑出视野。
+            // WHY: 必须按初始位姿重算轨道角并立刻对准目标，不要停留在 startRot（它不一定看向目标），否则目标会跑出视野
             float yaw, pitch, radius;
             if (_target != null && TryGetOrbit(startPos, _target, out yaw, out pitch, out radius))
             {
@@ -276,10 +258,7 @@ namespace MCV_Module.InputController.FocusRotationController
             }
         }
 
-        /// <summary>
-        /// 滑动（缓动）回到初始位姿 + 恢复初始 FOV + 重新瞄准目标。
-        /// 与 ResetPos() 的区别：ResetPos 是瞬移，本方法带 resetDuration 秒过渡，可打断平移/缩放过渡。
-        /// </summary>
+        /// <summary>缓动回到初始位姿、恢复 FOV 并重新瞄准目标；带 resetDuration 过渡，可打断平移/缩放</summary>
         public void ResetPosSmooth()
         {
             if (_resetBackCoroutine != null)
@@ -290,10 +269,7 @@ namespace MCV_Module.InputController.FocusRotationController
 
         #endregion
 
-        /// <summary>
-        /// 从当前位姿/FOV 缓动回 startPos/defaultFov。
-        /// 过渡中每帧都是「先移动位置、再面向目标」（ApplyOrbit），不再单独插值旋转。
-        /// </summary>
+        /// <summary>从当前位姿/FOV 缓动回 startPos/defaultFov；每帧先移位置再面向目标，不单独插值旋转</summary>
         IEnumerator SmoothResetBack()
         {
             // 打断正在进行的平移与缩放过渡，避免两者同时写 transform/FOV
@@ -313,8 +289,7 @@ namespace MCV_Module.InputController.FocusRotationController
             Vector3 fromPos = transform.position;
             Quaternion fromRot = transform.rotation;
 
-            // 起点轨道角由「当前位姿」反推（与 ApplyOrbit 同源）。
-            // 不能直接用 _yaw/_pitch：被本协程打断的 SmoothFollow 可能刚把它们改到一半，与当前位姿不一致。
+            // WHY: 起点轨道角由当前位姿反推；被本协程打断的 SmoothFollow 可能刚改过 _yaw/_pitch，与当前位姿不一致
             float fromYaw = _yaw;
             float fromPitch = _pitch;
             float fromDistance = Mathf.Max(distance, 1e-4f);
@@ -355,8 +330,7 @@ namespace MCV_Module.InputController.FocusRotationController
 
             SetAllCamerasFov(defaultFov);
 
-            // 有聚焦目标时：ApplyResetFrame(1) 已把位置摆到 startPos、朝向对准目标，
-            // 且 _yaw/_pitch/distance 与结果同源，下一帧 HandlePos 会复现同一结果，无需 _freezeOrbit 停一帧。
+            // WHY: 有目标时 ApplyResetFrame(1) 已摆好位置/朝向且角度同源，下一帧 HandlePos 会复现，无需 _freezeOrbit
             if (!ApplyResetFrame(1f, fromYaw, fromPitch, fromDistance))
             {
                 transform.SetPositionAndRotation(startPos, startRot);
@@ -415,8 +389,7 @@ namespace MCV_Module.InputController.FocusRotationController
 
             transform.SetPositionAndRotation(finalPos, finalRot);
 
-            // 切回轨道角度模式：直接沿用本次过渡计算出的角度（与 finalPos/finalRot 同源）。
-            // 不要再从 transform 反推 yaw，方向取反会差 180°，下一帧 HandlePos 就会翻到目标另一侧。
+            // WHY: 切回轨道模式必须沿用本次过渡算出的角度；再从 transform 反推 yaw 会差 180°，HandlePos 会翻到目标另一侧
             _yaw = targetYaw;
             _pitch = targetPitch;
 

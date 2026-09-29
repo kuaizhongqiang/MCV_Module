@@ -8,9 +8,6 @@ namespace MCV_Module.Models
     public class UserDataSO : DataSO
     {
         public UserData data = new UserData();
-
-        public override object CurrentData => data;
-
-        [ContextMenu("导出到 JSON")] public override void Export() => ExportData();
+        [ContextMenu("导出到 JSON")] public override void Export() => ExportData(data);
     }
 }

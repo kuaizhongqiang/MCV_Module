@@ -6,12 +6,8 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/*
-    ElementLineObj 编辑器 + 全局自动刷新。
-    - 全局轮询（[InitializeOnLoad]）：不依赖选中，任一静态线相关的
-      点位置/数量/参数/线变换变化都会自动重建网格 —— 拖动中间点即时刷新。
-    - Inspector 提供手动 生成/清除 按钮。
-*/
+// WHY: 全局轮询（[InitializeOnLoad]）不依赖选中，任一静态线的点位置/数量/参数/线变换变化都会自动重建网格（拖动中间点即时刷新）；Inspector 另提供手动 生成/清除 按钮。
+/// <summary>ElementLineObj 编辑器（含全局自动刷新）。</summary>
 
 [CustomEditor(typeof(ElementLineObj))]
 public class ElementLineObjEditor : Editor
@@ -36,10 +32,7 @@ public class ElementLineObjEditor : Editor
     }
 }
 
-/// <summary>
-/// 全局静态线自动刷新：每帧对比所有已打开场景中 ElementLineObj 的状态快照，
-/// 有变化即重建。与选中无关，拖动中间点也能实时更新。
-/// </summary>
+/// <summary>全局静态线自动刷新：每帧对比所有已打开场景中 ElementLineObj 的状态快照，有变化即重建（与选中无关，拖动中间点也能实时更新）。</summary>
 [InitializeOnLoad]
 public static class ElementLineSceneUpdater
 {
@@ -54,7 +47,7 @@ public static class ElementLineSceneUpdater
     {
         if (Application.isPlaying) return;
 
-        // 清理已销毁的线（避免字典无界增长）
+        // WHY: 清理已销毁的线（避免字典无界增长）
         if (lastKeys.Count > 0)
         {
             var dead = lastKeys.Keys.Where(k => k == null).ToList();
@@ -64,7 +57,7 @@ public static class ElementLineSceneUpdater
 
         foreach (var line in FindAllLines())
         {
-            // 既有场景线补挂 MeshCollider（RequireComponent 不会回补已存在的物体）
+            // WHY: 既有场景线补挂 MeshCollider（RequireComponent 不会回补已存在的物体）
             if (line.GetComponent<MeshCollider>() == null)
             {
                 var mc = line.gameObject.AddComponent<MeshCollider>();
@@ -100,10 +93,7 @@ public static class ElementLineSceneUpdater
         return result;
     }
 
-    /// <summary>
-    /// 参与重建判定的状态快照：isStatic、线的变换、绘制参数、点列表数量及每个点的世界位置。
-    /// 只要其中任一变化（点被移动、点增删、参数改动、线整体移动）key 就会变，从而触发重建。
-    /// </summary>
+    /// <summary>参与重建判定的状态快照：isStatic、线的变换、绘制参数、点列表数量及每个点的世界位置；任一变化 key 就会变，从而触发重建。</summary>
     static string BuildStateKey(ElementLineObj line)
     {
         var sb = new StringBuilder();

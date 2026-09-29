@@ -7,17 +7,32 @@ using UnityEngine;
 
 namespace MCV_Module.Controllers
 {
-    /// <summary>
-    /// 功能面板控制器 —— 调度 FunctionPanel 的按钮事件。
-    /// 仅在此绑定事件，具体业务逻辑（跳转/处理）暂不实现，留待后续填充。
-    /// </summary>
+    /// <summary>功能面板控制器 —— 调度 FunctionPanel 的按钮事件（仅绑定事件；退出/返回走二次确认，设置/资源/提交/录制/静音为 TODO）。</summary>
     public class FunctionController : ControllerBase<FunctionPanel>
     {
-        // 对话框标题（同时用于 DialogResultEvent 按 Title 区分是「退出」还是「返回」的确认）
-        const string ExitDialogTitle = "退出";
-        const string BackDialogTitle = "返回";
+        // 对话框身份（DialogResultEvent 按 DialogId 区分是「退出」还是「返回」的确认）
+        const DialogId ExitDialogId = DialogId.Exit;
+        const DialogId BackDialogId = DialogId.Back;
 
-        protected override void OnViewBound()
+        // WHY: Controller 常驻, 订阅一次即可, 不再向 GlobalUIMgr 拉取当前状态
+        /// <summary>当前导航状态（由 SceneStateChangeEventData 缓存）。</summary>
+        SceneState m_CurrentState = SceneState.Setup;
+
+        public override void OnInit()
+        {
+            base.OnInit();
+            EventBus<SceneStateChangeEventData>.Unsubscribe(OnSceneStateChanged);
+            EventBus<SceneStateChangeEventData>.Subscribe(OnSceneStateChanged);
+        }
+
+        /// <summary>导航状态变化：只更新本地缓存，供返回链路判断来源/目标。</summary>
+        void OnSceneStateChanged(SceneStateChangeEventData e)
+        {
+            if (e == null) return;
+            m_CurrentState = e.State;
+        }
+
+        public override void OnViewBound()
         {
             // 先清后加，避免面板重建（Canvas 重挂）后重复订阅
             View.OnFunctionExitClick           -= OnExitClick;
@@ -41,7 +56,7 @@ namespace MCV_Module.Controllers
             EventBus<DialogResultEvent>.Subscribe(OnDialogResult);
         }
 
-        protected override void OnDestroy()
+        public override void OnDispose()
         {
             if (View != null)
             {
@@ -54,7 +69,8 @@ namespace MCV_Module.Controllers
                 View.OnFunctionMuteClick           -= OnMuteClick;
             }
             EventBus<DialogResultEvent>.Unsubscribe(OnDialogResult);
-            base.OnDestroy();
+            EventBus<SceneStateChangeEventData>.Unsubscribe(OnSceneStateChanged);
+            base.OnDispose();
         }
 
         // ───────────── 事件处理（具体业务逻辑待实现） ─────────────
@@ -63,18 +79,16 @@ namespace MCV_Module.Controllers
         void OnExitClick()
         {
             EventBus<DialogRequestEvent>.Publish(
-                new DialogRequestEvent(ExitDialogTitle, "确定要退出应用吗？当前进度将不会保存。",
+                new DialogRequestEvent(ExitDialogId, "确定要退出应用吗？当前进度将不会保存。",
                     showConfirm: true, showCancel: true));
         }
 
-        /// <summary>
-        /// 返回按钮：按 running-flow 的返回链路「Task → Menu → Login」逐级回退。
-        /// 先根据当前 SceneState 判断「从哪返回哪」，再弹动态拼接的确认框。
-        /// </summary>
+        // WHY: 按 running-flow「Task → Menu → Login」逐级回退, 先按当前 SceneState 判断「从哪返回哪」, 再弹动态拼接的确认框
+        /// <summary>返回按钮。</summary>
         void OnBackClick()
         {
-            // 当前所处界面
-            SceneState current = GlobalUIMgr.GetCurrentState();
+            // 当前所处界面（事件订阅缓存，不向 GlobalUIMgr 拉取）
+            SceneState current = m_CurrentState;
 
             // 解析返回目标（无上级可返回的状态直接忽略）
             SceneState targetState;
@@ -85,14 +99,12 @@ namespace MCV_Module.Controllers
             string source = DescribeCurrentSource(current);
             string message = $"确定从{source}返回{targetName}吗？";
             EventBus<DialogRequestEvent>.Publish(
-                new DialogRequestEvent(BackDialogTitle, message,
+                new DialogRequestEvent(BackDialogId, message,
                     showConfirm: true, showCancel: true));
         }
 
-        /// <summary>
-        /// 解析当前状态的返回目标（running-flow：Task → Menu → Login）。
-        /// Task 态（UI/Roaming）返回到 Menu；Menu 态返回到 Login；其余无可返回目标。
-        /// </summary>
+        // WHY: running-flow 固定 Task → Menu → Login; Task 态(UI/Roaming)返回 Menu, Menu 态返回 Login, 其余无可返回目标
+        /// <summary>解析当前状态的返回目标。</summary>
         bool ResolveBackTarget(SceneState current, out SceneState targetState, out string targetName)
         {
             targetState = SceneState.Setup;
@@ -114,10 +126,8 @@ namespace MCV_Module.Controllers
             }
         }
 
-        /// <summary>
-        /// 拼接当前返回来源描述：Task 态用「项目名·任务类型」，Menu 态用「菜单界面」。
-        /// 例：《电机维修实训》·仿真实验。数据未就绪时返回通用兜底文案。
-        /// </summary>
+        // WHY: 数据未就绪时返回通用兜底文案, 避免拼出「《》·空」这类残句
+        /// <summary>拼接当前返回来源描述：Task 态用「项目名·任务类型」，Menu 态用「菜单界面」。</summary>
         string DescribeCurrentSource(SceneState current)
         {
             if (current == SceneState.UI || current == SceneState.Roaming)
@@ -130,10 +140,10 @@ namespace MCV_Module.Controllers
                 {
                     // 当前项目名
                     var clip = GlobalDataMgr.GetProjectClip();
-                    projectName = clip?.displayName;
+                    projectName = Localized.Name(clip);
 
-                    // 当前任务类型（转中文）
-                    taskName = TaskTypeToChinese(GlobalDataMgr.Instance.ProjectData.currentTaskType);
+                    // 当前任务类型（唯一源，转中文）
+                    taskName = TaskTypeToChinese(GlobalDataMgr.GetCurrentTaskType());
                 }
 
                 if (!string.IsNullOrEmpty(projectName))
@@ -157,26 +167,34 @@ namespace MCV_Module.Controllers
             return SceneStateToChinese(current);
         }
 
-        /// <summary>TaskType 枚举 → 中文名（与 EnumAll.cs 的 InspectorName 保持一致）。</summary>
+        // WHY: 口径 = EnumAll.cs 的 InspectorName, **新增枚举值时必须同步这里**; None 返回空串, 调用方按"无任务名"处理
+        /// <summary>TaskType 枚举 → 中文名。</summary>
         static string TaskTypeToChinese(TaskType type)
         {
             switch (type)
             {
+                case TaskType.None:           return "";
                 case TaskType.Purpose:        return "任务目的";
                 case TaskType.Equipment:      return "实验仪器";
                 case TaskType.Principle:      return "实验原理";
                 case TaskType.LineConnection: return "电路连接";
                 case TaskType.Training:       return "仿真实验";
                 case TaskType.Test:           return "小测验";
+                case TaskType.Info:           return "简介";
+                case TaskType.Structure:      return "结构";
+                case TaskType.Inspection:     return "检测";
+                case TaskType.Exam:           return "考核";
                 default:                      return "";
             }
         }
 
+        // WHY: 口径 = EnumAll.cs 的 InspectorName, **新增枚举值时必须同步这里**; UI 取"任务界面"而非枚举字面量 "UI", 更贴合「从/返回 XX 界面」的文案
         /// <summary>SceneState 枚举 → 中文名。</summary>
         static string SceneStateToChinese(SceneState state)
         {
             switch (state)
             {
+                case SceneState.Setup:   return "初始化界面";
                 case SceneState.Start:   return "开始界面";
                 case SceneState.Login:   return "登录界面";
                 case SceneState.Menu:    return "菜单界面";
@@ -192,27 +210,24 @@ namespace MCV_Module.Controllers
         void OnRecordClick()         { /* TODO: 录制逻辑 */ }
         void OnMuteClick()           { /* TODO: 静音逻辑 */ }
 
-        /// <summary>
-        /// 对话框结果处理：按 Title 区分是哪个确认框，Confirmed 为 true 时才执行真实动作。
-        /// </summary>
+        // WHY: 按 DialogId 区分是哪个确认框, 必须 Confirmed 为 true 才执行真实动作
+        /// <summary>对话框结果处理。</summary>
         void OnDialogResult(DialogResultEvent result)
         {
             if (result == null || !result.Confirmed) return;
 
-            if (result.Title == ExitDialogTitle)
+            if (result.Id == ExitDialogId)
             {
                 ExitApplication();
             }
-            else if (result.Title == BackDialogTitle)
+            else if (result.Id == BackDialogId)
             {
                 GoBackByState();
             }
         }
 
-        /// <summary>
-        /// 真正的退出动作。
-        /// Editor 下直接停止播放；真机下发布 AppQuitEvent，由 GlobalSceneMgr（最终出口）统一做资源清理后退出。
-        /// </summary>
+        // WHY: Editor 下直接停播, 真机下必须经 AppQuitEvent 由 GlobalSceneMgr(最终出口)做资源清理后退出
+        /// <summary>真正的退出动作。</summary>
         void ExitApplication()
         {
 #if UNITY_EDITOR
@@ -223,16 +238,21 @@ namespace MCV_Module.Controllers
 #endif
         }
 
-        /// <summary>
-        /// 真正的返回动作：按 running-flow 返回链路「Task → Menu → Login」逐级回退。
-        /// 通过 SceneStateChangeEventData 切换状态（GlobalUIMgr 据此激活对应 Canvas）。
-        /// </summary>
+        // WHY: 通过 SceneStateChangeEventData 切换状态(GlobalUIMgr 据此激活对应 Canvas), 不直接操作 Canvas
+        /// <summary>真正的返回动作：按 running-flow「Task → Menu → Login」逐级回退。</summary>
         void GoBackByState()
         {
-            SceneState current = GlobalUIMgr.GetCurrentState();
+            SceneState current = m_CurrentState;
             SceneState targetState;
             string targetName;
             if (!ResolveBackTarget(current, out targetState, out targetName)) return;
+
+            // WHY: 离开漫游必须先卸掉房间场景(AA 场景), 不卸载会导致再次进入时叠加出第二份房间实例
+            if (current == SceneState.Roaming &&
+                GlobalSceneMgr.Exists && GlobalSceneMgr.Instance != null)
+            {
+                GlobalSceneMgr.Instance.UnloadSwitchedScene();
+            }
 
             Log.Info($"[FunctionController] 从{SceneStateToChinese(current)}返回{targetName}");
             EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(targetState));

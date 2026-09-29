@@ -7,6 +7,7 @@ using UnityEngine;
 
 namespace MCV_Module.Objects.Interactives.Elements
 {
+    /// <summary>电动机（M）：通过转动动画实现启停，支持指定转速启动。</summary>
     public class ElementMotorObj : ElementObjBase
     {
         List<ElementPointObj> points = new List<ElementPointObj>();
@@ -24,7 +25,7 @@ namespace MCV_Module.Objects.Interactives.Elements
                 old.runSpeed,
                 old.speedChangeDuration);
             runAnimation = newAnim;
-            // 立即采集初始状态（默认转速/初始角度），避免首次 Play 时才初始化导致第一轮点击无效
+            // WHY: 必须在此采集初始状态，否则首次 Play 才初始化，第一轮点击会无效
             runAnimation.Reset();
         }
 

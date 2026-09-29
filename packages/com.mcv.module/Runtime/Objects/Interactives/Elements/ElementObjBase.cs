@@ -8,6 +8,7 @@ using UnityEngine;
 
 namespace MCV_Module.Objects.Interactives.Elements
 {
+    /// <summary>元件基类：持有 DataBase，等父级 ElementManagerBase 就绪后完成命名与注册。</summary>
     public abstract class ElementObjBase : InteractiveBase, IElement
     {
         [SerializeField] protected DataBase data = new DataBase();
@@ -28,10 +29,9 @@ namespace MCV_Module.Objects.Interactives.Elements
             if (ElementManagerBase.Instance != null) ElementManagerBase.Instance.UnregisterElement(this);
         }
 
+        // WHY: 父级 Manager 的 Awake 先于子元素，必须轮询等到 mgr 非空再注册；缓存父级只为避免每帧 GetComponentInParent。
         protected virtual IEnumerator DelayInit()
         {
-            // 父级 Manager 的 Awake 先于子元素执行；此处仅在父级变更时重新查找，
-            // 避免每帧 GetComponentInParent（场景元素首帧即解析，运行时实例化元素等待挂载）。
             var mgr = GetManagerCached();
             while (mgr == null)
             {
@@ -115,9 +115,8 @@ namespace MCV_Module.Objects.Interactives.Elements
     }
 
     
-    // 元器件名称映射
-    // 覆盖全部 ElementType / ElementPointNameType（含 Point/Line），
-    // 反查使用双向索引（O(1)）；正查缺键时返回 "None" 而非抛异常。
+    // WHY: 缺键一律返回 None/"None" 而非抛异常；符号重复（Fuse 与 Resistor 同为 "R"）保留先插入项。
+    /// <summary>元器件/端子枚举 ↔ 显示符号的双向映射（符号会写进 gameObject.name）。</summary>
     public static class ElementNameMap
     {
         static readonly Dictionary<ElementType, string> ElementRemap = new Dictionary<ElementType, string>()
@@ -182,7 +181,7 @@ namespace MCV_Module.Objects.Interactives.Elements
             {ElementPointNameType.NinetySix, "96"},
         };
 
-        // 反向索引：名称 → 枚举。值重复时保留先插入的（与原线性扫描语义一致，如 Fuse/R 与 Resistor/R）。
+        // WHY: 由正向表在静态构造里翻转生成，值重复保留先插入项，勿改成后写覆盖。
         static readonly Dictionary<string, ElementType> ElementReverse;
         static readonly Dictionary<string, ElementPointNameType> PointReverse;
 

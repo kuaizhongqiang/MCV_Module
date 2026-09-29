@@ -7,24 +7,11 @@ using UnityEngine;
 
 namespace MCV_Module.EditorTools.Common
 {
-    /// <summary>
-    /// 包清单（<see cref="PackageDatabaseSO"/>）同步与**只读**体检。
-    ///
-    /// 关键边界：
-    ///   - <c>AutoCollect()</c> 是**全工程按类型全量重收**、会重写整个 <c>packages</c> 列表
-    ///     → 只允许在主流程明确「要写」时调用（<see cref="Sync"/> 是唯一写入口）；
-    ///   - dry-run 一律走 <see cref="Audit"/>（**绝不写盘**）。
-    /// </summary>
+    // WHY: 关键边界 —— AutoCollect() 是全工程按类型全量重收、会重写整个 packages 列表，只允许在明确「要写」时调用（Sync 是唯一写入口）；dry-run 一律走 Audit（绝不写盘，P0-3「dry-run 会写盘」的根因）。
+    /// <summary>包清单（<see cref="PackageDatabaseSO"/>）同步与只读体检。</summary>
     public static class PackageDatabaseSync
     {
-        /// <summary>
-        /// 同步主清单：全量 <c>AutoCollect</c> + 本次产出兜底补入（AutoCollect 可能漏收）。
-        /// **会写盘**（<c>SaveAssets</c>），是本类唯一的写入口。
-        /// </summary>
-        /// <param name="dbAssetPath">主清单资产路径</param>
-        /// <param name="justGenerated">本次刚生成的配置；null 表示只做全量重收</param>
-        /// <param name="logTag">日志前缀（如 <c>[ContentBundle]</c>）</param>
-        /// <returns>同步后的清单条数</returns>
+        /// <summary>同步主清单：全量 <c>AutoCollect</c> + 本次产出兜底补入（AutoCollect 可能漏收）；会写盘（<c>SaveAssets</c>），返回同步后的清单条数。</summary>
         public static int Sync(string dbAssetPath, IEnumerable<ABPackageConfigSO> justGenerated, string logTag)
         {
             var db = EditorAssetUtil.LoadOrCreateAsset<PackageDatabaseSO>(dbAssetPath, logTag, "已创建包清单");
@@ -36,7 +23,7 @@ namespace MCV_Module.EditorTools.Common
             {
                 foreach (ABPackageConfigSO config in justGenerated)
                 {
-                    // config == null：上游自检删掉坏资产后列表里仍持有被删对象的引用（隐式保护，别去掉）
+                    // WHY: config == null 是隐式保护，别去掉 —— 上游自检删掉坏资产后列表中仍持有被删对象的引用。
                     if (config == null || string.IsNullOrEmpty(config.id) || db.FindById(config.id) != null) continue;
                     db.packages.Add(config);
                     added++;
@@ -53,14 +40,8 @@ namespace MCV_Module.EditorTools.Common
             return db.Count;
         }
 
-        /// <summary>
-        /// 只读体检（**绝不写盘、绝不调用 AutoCollect**）：与预期 id 集合求差集。
-        ///
-        /// 为什么需要：删除残留配置时只会打一条 Log，而「反向残留」（配置已删、bundle 仍在）
-        /// 任何菜单都不报告 —— 这里把它变成可见数字。
-        /// </summary>
-        /// <param name="dbAssetPath">主清单资产路径</param>
-        /// <param name="expectedIds">本次流水线的预期 id 集合（内容包 id）</param>
+        // WHY: 落实 Docs/design_ai/BundlePipeline.md「清单中不属于本次产出的 AB 配置要有报告」的承诺（P1-2）—— 此前只在删除残留配置时打一条 Log，反向残留（配置已删、bundle 仍在）任何菜单都不报告。
+        /// <summary>只读体检（绝不写盘、绝不调用 AutoCollect）：与预期 id 集合求差集，返回 <see cref="DatabaseAudit"/>。</summary>
         public static DatabaseAudit Audit(string dbAssetPath, ISet<string> expectedIds)
         {
             var audit = new DatabaseAudit
@@ -98,8 +79,7 @@ namespace MCV_Module.EditorTools.Common
                     if (!present.Contains(id)) audit.Missing.Add(id);
             }
 
-            // 反向残留只看「内容包」（AB 且 clipId 非空）：AA 等非内容包不属于本流水线的产出，
-            // 一律报出来只会淹没有效信息。
+            // WHY: 反向残留只看「内容包」（AB 且 clipId 非空）—— AA / CameraBg 等全局包不属于本流水线产出，一律报出只会淹没有效信息。
             foreach (PackageConfigSO package in db.packages)
             {
                 var ab = package as ABPackageConfigSO;

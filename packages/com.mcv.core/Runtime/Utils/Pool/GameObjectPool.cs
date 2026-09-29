@@ -5,29 +5,11 @@ using UnityEngine;
 
 namespace MCV_Module.Utils.Pool
 {
-    /// <summary>
-    /// 池内实例的创建工厂（默认 <c>Object.Instantiate(prefab, parent)</c>）。
-    ///
-    /// 注入它可以让资源管线接管实例化 —— 例如 <c>GlobalAddressableMgr.InstantiatePrefab</c>
-    /// 会在创建时登记「实例 → 包配置 id」，卸载资源包时就能把相关实例一起销毁。
-    /// </summary>
-    /// <param name="key">池的键（通常是包配置 id）</param>
-    /// <param name="prefab">池管理的预制体</param>
-    /// <param name="parent">创建时的父节点（池的闲置容器）</param>
+    /// <summary>池内实例的创建工厂（默认 Object.Instantiate(prefab, parent)）；注入它可让资源管线接管实例化并登记实例归属。</summary>
     public delegate GameObject PoolInstantiateFunc(string key, GameObject prefab, Transform parent);
 
-    /// <summary>
-    /// 单个预制体的 GameObject 对象池。
-    ///
-    /// 语义：
-    ///   - <see cref="Spawn(Transform)"/> 取用：优先复用闲置实例（零 Instantiate、零磁盘 IO），池空则新建；
-    ///   - <see cref="Despawn"/> 归还：先回调 <see cref="IPoolable.OnDespawn"/>，再挂回闲置容器并失活；
-    ///   - 闲置数量超过 <see cref="MaxIdleCount"/> 时归还即销毁，避免内存无限增长；
-    ///   - 实例被外部 <c>Destroy</c> 后，池在下次取用时跳过空槽并新建，不会报错。
-    ///
-    /// 注意（Unity 池化的固有约束）：预制体若是激活状态，实例化瞬间就会跑一次 Awake/OnEnable，
-    /// 之后才被失活；因此**业务启动逻辑请写在 <see cref="IPoolable.OnSpawn"/> 里**，不要依赖 OnEnable 只跑一次。
-    /// </summary>
+    // WHY: 预制体若为激活态，实例化瞬间会先跑一次 Awake/OnEnable 再被失活，业务启动逻辑必须写在 IPoolable.OnSpawn，不能依赖 OnEnable 只跑一次。
+    /// <summary>单个预制体的 GameObject 对象池：优先复用闲置实例，闲置超上限归还即销毁，实例被外部销毁时下次取用自动跳过空槽。</summary>
     public sealed class GameObjectPool
     {
         #region 字段与属性
@@ -62,11 +44,7 @@ namespace MCV_Module.Utils.Pool
         #endregion
 
         #region 构造
-        /// <param name="key">池的键（通常是包配置 id）</param>
-        /// <param name="prefab">池管理的预制体，不可为空</param>
-        /// <param name="root">闲置容器；为空时本池自建一个（销毁池时会一并销毁）</param>
-        /// <param name="maxIdleCount">闲置上限；&lt;=0 不限</param>
-        /// <param name="instantiate">实例创建工厂；为空时用 <c>Object.Instantiate</c></param>
+        /// <summary>建池：prefab 不可为空；root 为空时自建闲置容器（销毁池时一并销毁）；maxIdleCount &lt;= 0 表示不限。</summary>
         public GameObjectPool(string key, GameObject prefab, Transform root = null,
                               int maxIdleCount = 0, PoolInstantiateFunc instantiate = null)
         {
@@ -98,7 +76,7 @@ namespace MCV_Module.Utils.Pool
             return Spawn(parent, Vector3.zero, Quaternion.identity);
         }
 
-        /// <summary>取一个实例并挂到 <paramref name="parent"/> 下，设置本地位置与旋转。</summary>
+        /// <summary>取一个实例并挂到指定父节点下，设置本地位置与旋转。</summary>
         public GameObject Spawn(Transform parent, Vector3 localPosition, Quaternion localRotation)
         {
             var instance = Acquire();
@@ -166,7 +144,7 @@ namespace MCV_Module.Utils.Pool
         #endregion
 
         #region 预热 / 清理
-        /// <summary>预热：确保池内实例总数不少于 <paramref name="count"/>，返回新建数量。</summary>
+        /// <summary>预热：确保池内实例总数不少于指定数量，返回新建数量。</summary>
         public int Preload(int count)
         {
             if (count <= 0) return 0;
@@ -183,10 +161,7 @@ namespace MCV_Module.Utils.Pool
             return created;
         }
 
-        /// <summary>
-        /// 销毁闲置实例。返回值销毁数量。
-        /// <paramref name="trimToZero"/> = true 全清；false 只清到 <see cref="MaxIdleCount"/>。
-        /// </summary>
+        /// <summary>销毁闲置实例，返回销毁数量；trimToZero=true 全清，false 只清到 MaxIdleCount。</summary>
         public int ClearIdle(bool trimToZero = true)
         {
             int keep = trimToZero ? 0 : Mathf.Max(0, MaxIdleCount);

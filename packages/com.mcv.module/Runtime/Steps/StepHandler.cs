@@ -6,10 +6,7 @@ using UnityEngine;
 
 namespace MCV_Module.Steps
 {
-    /// <summary>
-    /// 步骤节点 —— 承载单个步骤的全部数据与运行时条件（原 StepData 已融合进本组件）。
-    /// 由 ProcessingHandler 收集、StepManager（步骤导演）统一驱动。
-    /// </summary>
+    /// <summary>步骤节点：承载单个步骤的数据与运行时条件，由 ProcessingHandler 收集、StepManager 驱动。</summary>
     public class StepHandler : MonoBehaviour
     {
         [SerializeField] string id;
@@ -25,6 +22,8 @@ namespace MCV_Module.Steps
         [SerializeField] InteractiveBase dragObj;
         [SerializeField] string usingId; // 可能是 ui / tool / question
         [SerializeField] List<InteractiveBase> lines = new List<InteractiveBase>();
+        [SerializeField] List<InteractiveBase> points = new List<InteractiveBase>(); // 测量点对（ConditionMeasurePair 用，恰好 2 个检测点）
+        [SerializeField] MultimeterGearType gearType = MultimeterGearType.Off;       // 正确档位（ConditionGearAdjust 用）
 
         /// <summary>运行时条件（按 conditionType 创建）</summary>
         [NonSerialized] public ConditionBase condition;
@@ -32,6 +31,12 @@ namespace MCV_Module.Steps
         public string Id => id;
         public string DisplayName => displayName;
         public ConditionType Type => conditionType;
+        /// <summary>步骤说明（作者在 Inspector 配的文案，TipsController 取作步骤提示）</summary>
+        public string Description => description;
+        /// <summary>图文提示资源 id（预留：提示表 / AB 资源就绪后由 TipsController 使用）</summary>
+        public string TipsId => tipsId;
+        /// <summary>讲解音频 id（预留）</summary>
+        public string AudioId => audioId;
 
         /// <summary>点击/拖拽目标物体（ConditionClick/Drag/Tool 用）</summary>
         public InteractiveBase TargetObj => targetObj;
@@ -41,21 +46,22 @@ namespace MCV_Module.Steps
         public string UsingId => usingId;
         /// <summary>连线模板（ConditionLineConnect 用）</summary>
         public List<InteractiveBase> Lines => lines;
+        /// <summary>测量点对（ConditionMeasurePair 用，恰好 2 个 InspectionElementPointObj，红黑对调算同一对）</summary>
+        public List<InteractiveBase> Points => points;
+        /// <summary>正确档位（ConditionGearAdjust 用；只判功能类型，不判量程）</summary>
+        public MultimeterGearType GearType => gearType;
 
         void Awake()
         {
-            // 按层级位置生成步骤 id/displayName
+            // WHY: 显式 id 优先——为空才按层级生成，层级一挪 id 就变，有外部引用的步骤必须填死。
             var processing = transform.parent;
             int processingIndex = processing != null ? processing.GetSiblingIndex() : 0;
             int index = transform.GetSiblingIndex();
-            // 显式 id 优先（Inspector 可配置稳定 id，避免层级调整导致引用失效）；
-            // 为空时按层级位置生成兜底（与原行为一致）。
             if (string.IsNullOrEmpty(id))
                 id = $"Step_{processingIndex}_{index}";
             displayName = $"{id}_{Type}";
             gameObject.name = displayName;
 
-            // 按 conditionType 创建并初始化条件
             condition = CreateCondition();
             condition.ConditionInit(this);
         }
@@ -154,6 +160,9 @@ namespace MCV_Module.Steps
                 case ConditionType.Question: return new ConditionQuestion();
                 case ConditionType.LineConnect: return new ConditionLineConnect();
                 case ConditionType.Finish: return new ConditionFinish();
+                case ConditionType.Start: return new ConditionStart();
+                case ConditionType.MeasurePair: return new ConditionMeasurePair();
+                case ConditionType.GearAdjust: return new ConditionGearAdjust();
                 default: return new ConditionDefault();
             }
         }

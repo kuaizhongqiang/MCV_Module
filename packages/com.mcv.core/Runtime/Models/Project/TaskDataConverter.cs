@@ -5,10 +5,7 @@ using Newtonsoft.Json.Linq;
 
 namespace MCV_Module.Models.Project
 {
-    /// <summary>
-    /// 任务数据转换器 —— 在不同表示形式间转换 TaskData。
-    /// 支持 ProjectClip JSON 配置的导入导出。
-    /// </summary>
+    /// <summary>任务数据转换器：在不同表示形式间转换 TaskData，支持 ProjectClip JSON 配置的导入导出。</summary>
     public static class TaskDataConverter
     {
         /// <summary>将 JSON 字符串解析为 TaskDataBase</summary>
@@ -26,6 +23,11 @@ namespace MCV_Module.Models.Project
                     TaskType.LineConnection => JsonConvert.DeserializeObject<TaskLineConnectionData>(json),
                     TaskType.Training => JsonConvert.DeserializeObject<TaskTrainingData>(json),
                     TaskType.Test => JsonConvert.DeserializeObject<TaskTestData>(json),
+                    TaskType.Exam => JsonConvert.DeserializeObject<TaskExamData>(json),
+                    TaskType.Info => JsonConvert.DeserializeObject<TaskInfoData>(json),
+                    TaskType.Structure => JsonConvert.DeserializeObject<TaskStructureData>(json),
+                    TaskType.Inspection => JsonConvert.DeserializeObject<TaskInspectionData>(json),
+
                     _ => null,
                 };
             }

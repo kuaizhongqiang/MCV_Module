@@ -9,20 +9,15 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Controller 占位挂载工具 —— 在 1_Content 的 ControllerRoot 下，为每个
-/// MCV_Module.Controllers 命名空间的 Controller 脚本创建子物体并挂组件。
-///
-/// 幂等设计：已挂载的同名物体自动跳过，新增 Controller 后重复执行即可补齐。
-/// 通过类型 API 挂组件，不依赖脚本 guid，因此不生成 .meta 也不会出问题。
-/// </summary>
+// WHY: 幂等设计——已挂载的同名物体自动跳过，新增 Controller 后重复执行即可补齐；通过类型 API 挂组件、不依赖脚本 guid，因此不生成 .meta 也不会出问题。
+/// <summary>Controller 占位挂载工具：在 1_Content 的 ControllerRoot 下为 MCV_Module.Controllers 命名空间的每个 Controller 脚本创建子物体并挂组件。</summary>
 public static class ControllerPlaceholderTools
 {
     private const string SCENE_PATH = "Assets/Scenes/1_Content.unity";
     private const string ROOT_NAME = "ControllerRoot";
     private const string CONTROLLER_NS = "MCV_Module.Controllers";
 
-    [MenuItem("MCV/挂载 Controller 占位到场景", false, 52)]
+    [MenuItem("MCV Editor/挂载 Controller 占位到场景", false, 52)]
     public static void MountControllers()
     {
         // ── ① 定位 1_Content 场景 ────────────────────────────
@@ -33,7 +28,7 @@ public static class ControllerPlaceholderTools
         }
         else
         {
-            // 若当前场景有未保存改动，Unity 会弹窗询问
+            // WHY: 若当前场景有未保存改动，Unity 会弹窗询问
             scene = EditorSceneManager.OpenScene(SCENE_PATH, OpenSceneMode.Single);
         }
 
@@ -52,7 +47,7 @@ public static class ControllerPlaceholderTools
             return;
         }
 
-        // 已挂载的同名物体跳过（幂等）
+        // WHY: 已挂载的同名物体跳过（幂等）
         var mounted = new HashSet<string>(controllerRoot.GetComponentsInChildren<IController>(true)
             .Select(c => c.ControllerName));
         var toCreate = types.Where(t => !mounted.Contains(t.Name)).ToList();

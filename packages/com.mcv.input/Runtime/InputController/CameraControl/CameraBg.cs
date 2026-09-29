@@ -1,61 +1,40 @@
 using System.Collections;
-using MCV_Module.Event;
 using MCV_Module.Managers;
-using MCV_Module.Models;
+using MCV_Module.Utils;
 using UnityEngine;
 
 namespace MCV_Module.InputController.CameraControl
 {
+    /// <summary>相机背景板：按相机 FOV/宽高比缩放平面，并支持 AB 加载双纹理淡入切换</summary>
     public class CameraBg : MonoBehaviour
     {
         Camera cam;
-        //float distance = 500f;
         Vector2 screenSize;
         float lastFov;
         float lastAspect;
         float lastLocalZ;
         MeshRenderer meshRenderer;
         Material material;
-        //string bgName = "";
         Coroutine TexFadeCoroutine;
         const string MatTexture_1 = "_Texture_1";
         const string MatTexture_2 = "_Texture_2";
         const string ChangeTextureBool = "_TexOrColor";         // 这是一个float属性数据 0 = 颜色 1 = 纹理
         const string TexCutFade = "_CutTex";                    // 这是一个float属性数据0-1 平滑切换1 和2 两个纹理
+
+        // WHY: 包 id 必须与 Assets/Editor/BuildTools/CameraBgBundleTools.cs 的 Ids 一致，下标 0=_Texture_1、1=_Texture_2
+        /// <summary>背景图的包配置 id 数组（顺序对应材质 _Texture_1 / _Texture_2）</summary>
+        static readonly string[] BgPackageIds = { "camerabg_room", "camerabg_contactor" };
         
         void Awake()
         {
             StartCoroutine(DelayInit());
             screenSize = new Vector2(Screen.width, Screen.height);
             InitMesh();
-
-            // 场景状态变化：进入漫游（Roaming）时关掉背景遮挡面，否则它会挡住 3D 视角。
-            // 订阅放在本组件（而非 GlobalCameraMgr）是为了保持依赖方向正确：
-            // 包归属上 InputController/ 属 com.mcv.input、Managers/Global* 属 com.mcv.core，
-            // 而 input 依赖 core；反过来引用会形成循环依赖。
-            EventBus<SceneStateChangeEventData>.Subscribe(OnSceneStateChange);
-        }
-
-        void OnDestroy()
-        {
-            EventBus<SceneStateChangeEventData>.Unsubscribe(OnSceneStateChange);
-        }
-
-        /// <summary>进入漫游时隐藏自身（背景遮挡面），其他状态恢复显示。</summary>
-        void OnSceneStateChange(SceneStateChangeEventData data)
-        {
-            if (data == null) return;
-
-            // SetActive 传入相同值时是无操作，不必自己判重
-            gameObject.SetActive(data.State != SceneState.Roaming);
         }
 
         IEnumerator DelayInit()
         {
-            // 关键：先等一帧再访问 GlobalCameraMgr。
-            // StartCoroutine 会把协程体同步执行到第一个 yield，而本组件可能正是
-            // GlobalCameraMgr.GetCamera() 在 Instantiate(MainCamera) 时被创建的 ——
-            // 若在这里同步取 Camera，就会「实例化 → Awake → 再实例化」无限递归（栈溢出）。
+            // WHY: 必须先等一帧再取 Camera；StartCoroutine 会同步跑到首个 yield，本组件可能正由 Instantiate 触发，同步取会「实例化→Awake→再实例化」栈溢出
             yield return null;
 
             while(GlobalCameraMgr.Camera == null)
@@ -71,6 +50,34 @@ namespace MCV_Module.InputController.CameraControl
                 lastLocalZ = transform.localPosition.z;
                 SetScale();
             }
+
+            // 启动时加载两张背景图（同一个 AB 包；不阻塞相机初始化，加载完再写材质）
+            LoadBgTextures();
+        }
+
+        /// <summary>启动时从 AB 包加载两张背景图，按 Sprite 加载后取 .texture 写入材质</summary>
+        void LoadBgTextures()
+        {
+            if (material == null)
+            {
+                Log.Error("[CameraBg] 材质为空，背景图无法写入");
+                return;
+            }
+
+            GlobalAssetsMgr.LoadSpritesByPackageIdsAsync(BgPackageIds, sprites =>
+            {
+                if (sprites == null || sprites.Count < BgPackageIds.Length || sprites[0] == null || sprites[1] == null)
+                {
+                    Log.Error($"[CameraBg] 背景图加载不完整（{sprites?.Count ?? 0}/{BgPackageIds.Length}），保持材质默认颜色");
+                    return;
+                }
+
+                SetTwoTexture(sprites[0].texture, sprites[1].texture);
+                material.SetFloat(ChangeTextureBool, 1f);   // 0 = 颜色、1 = 纹理：切到纹理模式
+                material.SetFloat(TexCutFade, 0f);          // 起始显示 _Texture_1
+                Log.Info($"[CameraBg] 背景图已加载：_Texture_1 = {sprites[0].name}，_Texture_2 = {sprites[1].name}");
+            },
+            error => Log.Error($"[CameraBg] 背景图加载失败：{error}"));
         }
 
         void Update()

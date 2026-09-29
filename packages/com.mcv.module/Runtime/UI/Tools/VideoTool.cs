@@ -5,10 +5,8 @@ using UnityEngine.Video;
 
 namespace MCV_Module.UI.Tools
 {
-    /// <summary>
-    /// 视频播放工具：对 Unity 自带 VideoPlayer 提供统一封装。
-    /// AVProVideo 已解耦（见 IVideoPlayer/VideoPlayerFactory）：宿主注册 AVPro 实现，未注册时回退 Unity VideoPlayer。
-    /// </summary>
+    // WHY: 这里只封装 Unity 原生 VideoPlayer，AVPro 一律走 IVideoPlayer/VideoPlayerFactory，把插件类型带进来就又钉死了第三方依赖。
+    /// <summary>Unity VideoPlayer 的静态封装（AVPro 由 IVideoPlayer/VideoPlayerFactory 承担）。</summary>
     public static class VideoTool
     {
         public static void InitVideoPlayer(VideoPlayer player)
@@ -19,9 +17,8 @@ namespace MCV_Module.UI.Tools
             player.aspectRatio = VideoAspectRatio.Stretch;
         }
 
-        /// <summary>
-        /// 预加载视频。加载完成后触发 onComplete（失败也会触发）。
-        /// </summary>
+        // WHY: 失败(errorReceived)也必须回调 onComplete，否则调用方永远等不到结果；回调前先解绑两个事件，防止重复触发。
+        /// <summary>预加载视频：Prepare 完成后触发 onComplete，失败也触发。</summary>
         public static void VideoPlayerPreload(VideoPlayer player, string path, Action onComplete = null)
         {
             player.url = path;
@@ -80,17 +77,13 @@ namespace MCV_Module.UI.Tools
             player.time = time;
         }
 
-        /// <summary>
-        /// 获取当前播放时间（秒）。
-        /// </summary>
+        /// <summary>获取当前播放时间（秒）。</summary>
         public static float GetTime(VideoPlayer player)
         {
             return (float)player.time;
         }
 
-        /// <summary>
-        /// 获取视频总时长（秒），未准备好时可能返回 0。
-        /// </summary>
+        /// <summary>获取视频总时长（秒），未准备好时可能返回 0。</summary>
         public static float GetDuration(VideoPlayer player)
         {
             return (float)player.length;
@@ -102,25 +95,19 @@ namespace MCV_Module.UI.Tools
             player.SetDirectAudioVolume(0, Mathf.Clamp01(volume));
         }
 
-        /// <summary>
-        /// 获取音量。
-        /// </summary>
+        /// <summary>获取音量（Direct 输出模式下的第 0 路）。</summary>
         public static float GetVolume(VideoPlayer player)
         {
             return player.GetDirectAudioVolume(0);
         }
 
-        /// <summary>
-        /// 是否正在播放。
-        /// </summary>
+        /// <summary>是否正在播放。</summary>
         public static bool IsPlaying(VideoPlayer player)
         {
             return player.isPlaying;
         }
 
-        /// <summary>
-        /// 通过工厂创建统一视频播放器（宿主 AVPro 实现优先，未注册回退 Unity VideoPlayer）。
-        /// </summary>
+        /// <summary>通过工厂创建统一播放器（宿主 AVPro 优先，未注册回退 Unity VideoPlayer）。</summary>
         public static IVideoPlayer CreatePlayer(GameObject host)
         {
             return VideoPlayerFactory.Create(host);

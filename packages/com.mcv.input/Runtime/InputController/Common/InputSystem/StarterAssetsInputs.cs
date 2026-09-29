@@ -5,6 +5,7 @@ using UnityEngine.InputSystem;
 
 namespace MCV_Module.InputController.Common.InputSystem
 {
+    /// <summary>角色输入缓存：把 PlayerInput 回调的移动/视角/跳跃/冲刺值转存为字段供控制器读取</summary>
     public class StarterAssetsInputs : MonoBehaviour
     {
         [Header("Character Input Values")]
@@ -30,7 +31,6 @@ namespace MCV_Module.InputController.Common.InputSystem
         {
             //ԭ�Ҽ��������ƶ��ӽ�
             //��Ϊ����������ƶ��ӽ�
-            //if (cursorInputForLook && Input.GetMouseButton(1))
             int mouseButton = 1;
             if (Application.platform == RuntimePlatform.WebGLPlayer)
             {
@@ -86,7 +86,6 @@ namespace MCV_Module.InputController.Common.InputSystem
         private void SetCursorState(bool newState)
         {
             //�������
-            //Cursor.lockState = newState ? CursorLockMode.Locked : CursorLockMode.None;
         }
     }
 

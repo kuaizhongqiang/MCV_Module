@@ -6,6 +6,7 @@ using UnityEngine.InputSystem;
 
 namespace MCV_Module.InputController
 {
+    /// <summary>输入控制器基类：统一管理摄像机俯仰钳制与滚轮 FOV 缩放，并向 GlobalInputMgr 注册/注销自身。</summary>
     public abstract class InputControllerBase : MonoBehaviour
     {
         [SerializeField] protected bool isActive = true;
@@ -27,9 +28,7 @@ namespace MCV_Module.InputController
 
         public bool IsActive {get => isActive; set => isActive = value;}
 
-        /// <summary>
-        /// 子类在移动时设为 true，停止时设为 false
-        /// </summary>
+        /// <summary>子类在移动时设为 true、停止时设为 false，用于触发 FOV 自动恢复。</summary>
         protected bool IsMoving { get; set; }
 
         
@@ -75,20 +74,19 @@ namespace MCV_Module.InputController
         #endregion
 
         #region 私有方法
+        // WHY: 缩放与恢复共用 zoomHandleCoroutine 并互相 StopCoroutine，拆成两个句柄会并发改同一 vcam 的 FOV。
+        /// <summary>处理滚轮缩放：移动时自动恢复默认 FOV，否则按滚动量钳制并惯性调整虚拟相机 FOV。</summary>
         protected virtual void ZoomHandle()
         {
-            // 移动时自动恢复默认 FOV
             if (IsMoving)
             {
                 TryRestoreDefaultFov();
                 return;
             }
 
-            // 检测鼠标滚轮输入
             float scrollDelta = Mouse.current.scroll.ReadValue().y;
             if (Mathf.Abs(scrollDelta) < 0.01f) return;
 
-            // 输出为调整虚拟相机的lens.fov
             if (!TryGetVirtualCamera(out var vcam)) return;
             float targetFov = Mathf.Clamp(vcam.m_Lens.FieldOfView - scrollDelta * zoomSpeed, zoomMin, zoomMax);
 
@@ -97,9 +95,9 @@ namespace MCV_Module.InputController
             zoomHandleCoroutine = StartCoroutine(ZoomHandleDelay(vcam, targetFov));
         }
 
+        /// <summary>在 0.15 秒内把虚拟相机 FOV 惯性过渡到目标值。</summary>
         private IEnumerator ZoomHandleDelay(CinemachineVirtualCamera vcam, float targetFov)
         {
-            // 执行惯性处理
             float startFov = vcam.m_Lens.FieldOfView;
             float duration = 0.15f;
             float elapsed = 0f;
@@ -116,6 +114,7 @@ namespace MCV_Module.InputController
             zoomHandleCoroutine = null;
         }
 
+        /// <summary>把虚拟相机 FOV 惯性恢复到缓存的默认值（仅在已缓存默认 FOV 时生效）。</summary>
         private void TryRestoreDefaultFov()
         {
             if (!_hasDefaultFov) return;
@@ -127,6 +126,7 @@ namespace MCV_Module.InputController
             zoomHandleCoroutine = StartCoroutine(ZoomRestoreCoroutine(vcam));
         }
 
+        /// <summary>在 0.15 秒内把虚拟相机 FOV 插值回默认值。</summary>
         private IEnumerator ZoomRestoreCoroutine(CinemachineVirtualCamera vcam)
         {
             float startFov = vcam.m_Lens.FieldOfView;
@@ -145,6 +145,7 @@ namespace MCV_Module.InputController
             zoomHandleCoroutine = null;
         }
 
+        /// <summary>从 CinemachineBrain 取活动虚拟相机；首次成功取到时缓存默认 FOV。</summary>
         private bool TryGetVirtualCamera(out CinemachineVirtualCamera vcam)
         {
             vcam = null;
@@ -155,7 +156,6 @@ namespace MCV_Module.InputController
                 vcam = brain.ActiveVirtualCamera as CinemachineVirtualCamera;
             }
 
-            // 首次获取虚拟相机时缓存默认 FOV
             if (vcam != null && !_hasDefaultFov)
             {
                 defaultFov = vcam.m_Lens.FieldOfView;

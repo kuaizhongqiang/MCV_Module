@@ -4,16 +4,8 @@ using UnityEngine;
 
 namespace MCV_Module.Utils.Pool
 {
-    /// <summary>
-    /// 对象池注册表：按 key（通常是包配置 id）管理多个 <see cref="GameObjectPool"/>。
-    ///
-    /// 定位：**普通工具类，不是全局管理器** —— 不继承 <c>SingletonGlobalMgr</c>、不参与 Setup 启动链。
-    /// 谁需要谁持有：<c>InstManagerBase</c> 每人持有一个（生命周期随管理器），
-    /// <c>GlobalAssetsMgr</c> 持有一个全局共享的（供非 Inst* 场合直接取用）。
-    ///
-    /// 层级：Root（池容器根）→ 每个 key 一个子容器 → 该 key 的闲置实例。
-    /// 取用实例时把它挂到业务父节点下，归还时挂回子容器并失活。
-    /// </summary>
+    // WHY: 这是普通工具类，不是全局管理器 —— 不继承 SingletonGlobalMgr、不进 Setup 启动链，生命周期由持有者（InstManagerBase / GlobalAssetsMgr）决定。
+    /// <summary>对象池注册表：按 key（通常是包配置 id）管理多个 GameObjectPool，层级为 Root → key 子容器 → 闲置实例。</summary>
     public sealed class ObjectPoolMgr
     {
         readonly Dictionary<string, GameObjectPool> m_Pools = new Dictionary<string, GameObjectPool>();
@@ -29,7 +21,7 @@ namespace MCV_Module.Utils.Pool
         /// <summary>全部池的 key。</summary>
         public IEnumerable<string> Keys => m_Pools.Keys;
 
-        /// <param name="root">池容器根；为空时自建一个（<see cref="Dispose"/> 会一并销毁）。</param>
+        /// <summary>构造注册表：root 为空时自建容器根，Dispose 时会一并销毁。</summary>
         public ObjectPoolMgr(Transform root = null)
         {
             if (root != null)
@@ -57,14 +49,8 @@ namespace MCV_Module.Utils.Pool
         /// <summary>池是否已创建。</summary>
         public bool Contains(string key) => Get(key) != null;
 
-        /// <summary>
-        /// 建池（已存在则直接返回，不覆盖、不重复预热）。
-        /// </summary>
-        /// <param name="key">池的键（通常是包配置 id）</param>
-        /// <param name="prefab">池管理的预制体</param>
-        /// <param name="maxIdleCount">闲置上限，&lt;=0 不限</param>
-        /// <param name="preload">建池后立即预热的实例数</param>
-        /// <param name="instantiate">实例创建工厂（可为空，默认 Object.Instantiate）</param>
+        // WHY: 已存在的 key 直接返回，不覆盖也不重复预热，否则会丢失正在被复用的实例。
+        /// <summary>建池并按需预热；key 或 prefab 非法返回 null，key 已存在则原样返回。</summary>
         public GameObjectPool CreatePool(string key, GameObject prefab, int maxIdleCount = 0,
                                         int preload = 0, PoolInstantiateFunc instantiate = null)
         {

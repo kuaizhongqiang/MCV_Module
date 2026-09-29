@@ -3,7 +3,10 @@ using MCV_Module.Utils;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using MCV_Module.UI.Components;
+using MCV_Module.UI.Tools;
 using UnityEngine.UI;
+
 
 namespace MCV_Module.UI.Panels
 {
@@ -13,15 +16,14 @@ namespace MCV_Module.UI.Panels
         [SerializeField] Button switchBtn;
         readonly List<Button> functionBtns = new List<Button>();
         readonly List<GameObject> spacingObjs = new List<GameObject>();
-        // readonly Vector2 moveLimit = new Vector2(-50, 300);
-        // readonly Vector2 switchMoveLimit = new Vector2(0, -350);
         readonly Vector2 layoutSpacting = new Vector2(10, -30);
-        const string FunctionBtnPath = "UI/FunctionBtn";
-        const string SpacingObjPath = "UI/FunctionSpacing";
+        // WHY: 按钮与分隔预制体已移出 Resources 进 UI 包，这里存裸 prefab 名（UIPrefabUtil 按 ui_{name} 拼包配置 id）。
+        const string FunctionBtnPrefabName = "FunctionBtn";
+        const string SpacingObjPrefabName = "FunctionSpacing";
         bool isActiveNow = true;
         bool m_TargetActive = true;   // 当前动画/静止所朝向的目标状态，用于防重复触发
 
-        // 缓存引用，避免每帧 GetComponent
+        // WHY: 缓存引用，避免每帧 GetComponent
         HorizontalLayoutGroup m_LayoutGroup;
         CanvasGroup m_SwitchCanvasGroup;
         RectTransform m_PanelRect;
@@ -62,8 +64,7 @@ namespace MCV_Module.UI.Panels
                 Log.Error("[FunctionPanel] 缺少 CanvasGroup 组件（panel 或 switchBtn）");
             }
 
-            // 让 switchBtn 不受 panel 自身 CanvasGroup 的 alpha/interactable 影响：
-            // 否则 panel 隐藏(alpha=0) 时会把子物体 switch 也一起隐藏，导致无法点击开关重新展开
+            // WHY: 让 switchBtn 忽略父级 CanvasGroup, 否则 panel 隐藏(alpha=0) 时会把子物体 switch 一起隐藏, 导致无法点击开关重新展开
             if (m_SwitchCanvasGroup != null)
             {
                 m_SwitchCanvasGroup.ignoreParentGroups = true;
@@ -75,21 +76,12 @@ namespace MCV_Module.UI.Panels
 
             CreateFunctionBtns(DefaultBtnNames);
 
-            var rect = btnParent.GetComponent<RectTransform>();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+            // WHY: 按钮与分隔是运行时生成的（按钮文案也要等 TextComponent 装配），布局统一等一帧 + 自下而上刷
+            RequestLayoutRebuild(btnParent);
 
             m_TargetActive = isActiveNow;
             ActiveState(isActiveNow);
         }
-        // 测试方法
-        // void Update()
-        // {
-        //     if (Keyboard.current.escapeKey.wasPressedThisFrame)
-        //     {
-        //         SetUIActive(!isActiveNow);
-        //         isActiveNow = !isActiveNow;
-        //     }
-        // }
         
         public void SetFunctionBtnActive(string btnName, bool isActive)
         {
@@ -97,10 +89,11 @@ namespace MCV_Module.UI.Panels
             if (btn == null) return;
 
             btn.gameObject.SetActive(isActive);
-            // 隐藏时清空监听，避免隐藏按钮仍响应点击
+            // WHY: 隐藏时清空监听，避免隐藏按钮仍响应点击
             if (!isActive) ButtonEventClean(btn);
-            var rect = btnParent.GetComponent<RectTransform>();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(rect);
+
+            // WHY: 子按钮显隐后父级 LayoutGroup 必须重排：交给统一入口（等一帧 + 自下而上），别同帧直接 ForceRebuild
+            RequestLayoutRebuild(btnParent);
         }
 
         void CreateFunctionBtns(string[] btnNames)
@@ -128,7 +121,7 @@ namespace MCV_Module.UI.Panels
             Button btn = go.GetComponent<Button>();
             if (btn == null)
             {
-                Log.Error($"[FunctionPanel] 按钮预制体 {FunctionBtnPath} 上缺少 Button 组件：{btnName}");
+                Log.Error($"[FunctionPanel] 按钮预制体 {FunctionBtnPrefabName} 上缺少 Button 组件：{btnName}");
                 return null;
             }
 
@@ -142,10 +135,10 @@ namespace MCV_Module.UI.Panels
 
         GameObject InstantiateBtn(string btnName)
         {
-            GameObject prefab = Resources.Load<GameObject>(FunctionBtnPath);
+            GameObject prefab = UIPrefabUtil.Get(FunctionBtnPrefabName);
             if (prefab == null)
             {
-                Log.Error($"[FunctionPanel] 找不到按钮预制体：{FunctionBtnPath}");
+                Log.Error($"[FunctionPanel] 找不到按钮预制体：{FunctionBtnPrefabName}");
                 return null;
             }
             GameObject go = Instantiate(prefab, btnParent);
@@ -157,10 +150,10 @@ namespace MCV_Module.UI.Panels
 
         GameObject CreateSpacingObj()
         {
-            GameObject prefab = Resources.Load<GameObject>(SpacingObjPath);
+            GameObject prefab = UIPrefabUtil.Get(SpacingObjPrefabName);
             if (prefab == null)
             {
-                Log.Error($"[FunctionPanel] 找不到分隔预制体：{SpacingObjPath}");
+                Log.Error($"[FunctionPanel] 找不到分隔预制体：{SpacingObjPrefabName}");
                 return null;
             }
             GameObject go = Instantiate(prefab, btnParent);
@@ -168,7 +161,7 @@ namespace MCV_Module.UI.Panels
             return go;
         }
 
-        // 按钮名 -> 对应事件，统一在此映射，避免每个按钮重复写一套创建/绑定逻辑
+        // WHY: 按钮名 -> 事件的映射统一放这里, 避免每个按钮重复写一套创建/绑定逻辑
         Action GetClickEvent(string btnName)
         {
             switch (btnName)
@@ -201,9 +194,15 @@ namespace MCV_Module.UI.Panels
 
         void SetLabelText(Button btn)
         {
-            var label = btn.transform.GetChild(1).GetComponent<Text>();
+            // WHY: 标签节点上也缓存不到"字段"，只能在创建时同一处把组件取出来用——TMP 形态下 TextComponent 会卸载该节点上的
+            // Legacy Text，label 随后成"假 null"，静态入口 SetTextOn 会静默 no-op（按钮文字空白）。
+            // 组件经节点取（而不是经 label），因为 label 可能已经"假 null"，对它调 GetComponent 会抛。
+            Transform labelNode = btn.transform.GetChild(1);
+            Text label = labelNode.GetComponent<Text>();
+            TextComponent labelComp = label != null ? label.GetComponent<TextComponent>() : labelNode.GetComponent<TextComponent>();
             string text = ButtonLabelText(btn.gameObject.name);
-            if (label != null) label.text = text;
+            if (labelComp != null) labelComp.SetText(text);
+            else if (label != null) TextComponent.SetTextOn(label, text);
         }
 
         void SetBtnIco(Button btn, Sprite icoSprite)
@@ -219,13 +218,13 @@ namespace MCV_Module.UI.Panels
         {
             switch (btnName)
             {
-                case "ExitBtn":          return "退出";
-                case "BackBtn":          return "返回";
-                case "SettingBtn":       return "设置";
-                case "MuteBtn":          return "静音";
-                case "ResourcePanelBtn": return "资源";
-                case "SummitBtn":        return "提交";
-                case "RecordBtn":        return "记录";
+                case "ExitBtn":          return Lang.Get("ui.function.exit");
+                case "BackBtn":          return Lang.Get("ui.function.back");
+                case "SettingBtn":       return Lang.Get("ui.function.setting");
+                case "MuteBtn":          return Lang.Get("ui.function.mute");
+                case "ResourcePanelBtn": return Lang.Get("ui.function.resource");
+                case "SummitBtn":        return Lang.Get("ui.function.submit");
+                case "RecordBtn":        return Lang.Get("ui.function.record");
             }
             return "";
         }
@@ -234,7 +233,7 @@ namespace MCV_Module.UI.Panels
         #region 覆盖Active方法
         public override void SetUIActive(bool isActive)
         {
-            // 已是目标状态（静止或正在动画前往），不重复触发，避免 switch alpha 出现 0-1-0 抖动
+            // WHY: 已是目标状态（静止或正在动画前往）就不重复触发, 否则 switch alpha 会 0-1-0 抖动
             if (isActive == m_TargetActive) return;
 
             m_TargetActive = isActive;
@@ -267,7 +266,7 @@ namespace MCV_Module.UI.Panels
 
             if (m_SwitchCanvasGroup != null)
             {
-                // panel 显示时 switch 隐藏(alpha=0)；panel 隐藏时 switch 显示(alpha=1)
+                // WHY: switch 必须与 panel 反向: panel 显示时 switch 隐藏(alpha=0), panel 隐藏时 switch 显示(alpha=1)
                 m_SwitchCanvasGroup.interactable = !isActive;
                 m_SwitchCanvasGroup.blocksRaycasts = !isActive;
                 m_SwitchCanvasGroup.alpha = isActive ? 0 : 1;
@@ -278,13 +277,6 @@ namespace MCV_Module.UI.Panels
                 m_LayoutGroup.spacing = isActive? layoutSpacting.x : layoutSpacting.y;
             }
 
-            // float layoutTargetPosX = isActive ? moveLimit.x : moveLimit.y;
-            // Vector2 currentLayoutPos = m_PanelRect.anchoredPosition;
-            // m_PanelRect.anchoredPosition = new Vector2(layoutTargetPosX, currentLayoutPos.y);
-
-            // float switchTargetPosX = isActive ? switchMoveLimit.x : switchMoveLimit.y;
-            // Vector2 currentSwitchPos = m_SwitchRect.anchoredPosition;
-            // m_SwitchRect.anchoredPosition = new Vector2(switchTargetPosX, currentSwitchPos.y);
         }
 
         IEnumerator OverrideAnimCoroutine(bool isActive)
@@ -295,12 +287,8 @@ namespace MCV_Module.UI.Panels
             float currentSwitchAlpha = m_SwitchCanvasGroup != null ? m_SwitchCanvasGroup.alpha : (isActive ? 1 : 0);
             Vector2 currentLayoutPos = m_PanelRect.anchoredPosition;
             Vector2 currentSwitchPos = m_SwitchRect.anchoredPosition;
-            // float targetLayoutX = isActive ? moveLimit.x : moveLimit.y;
-            // float targetSwitchX = isActive ? switchMoveLimit.x : switchMoveLimit.y;
             float targetLayoutAlpha = isActive ? 1 : 0;
             float targetSwitchAlpha = isActive ? 0 : 1;
-            // Vector2 targetLayoutPos = new Vector2(targetLayoutX, currentLayoutPos.y);
-            // Vector2 targetSwitchPos = new Vector2(targetSwitchX, currentSwitchPos.y);
             float currentSpacing = m_LayoutGroup.spacing;
             float targetSpacing = isActive ? layoutSpacting.x : layoutSpacting.y;
 
@@ -313,8 +301,6 @@ namespace MCV_Module.UI.Panels
                 if (m_SwitchCanvasGroup != null)
                     m_SwitchCanvasGroup.alpha = Mathf.Lerp(currentSwitchAlpha, targetSwitchAlpha, t);
                 m_LayoutGroup.spacing = Mathf.Lerp(currentSpacing, targetSpacing, t);
-                // m_PanelRect.anchoredPosition = Vector2.Lerp(currentLayoutPos, targetLayoutPos, t);
-                // m_SwitchRect.anchoredPosition = Vector2.Lerp(currentSwitchPos, targetSwitchPos, t);
                 yield return null;
             }
 

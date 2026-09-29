@@ -73,10 +73,7 @@ namespace MCV_Module.Managers
             StartCoroutine(UnloadSceneAsync(sceneName));
         }
 
-        /// <summary>
-        /// 交换 AA 场景：先加载新场景（additive），完成后再卸载上一个 AA 场景。
-        /// 任意时刻只存在一个 AA 切换场景；基础场景 1_Content 常驻不参与交换。
-        /// </summary>
+        /// <summary>交换 AA 场景：先 additive 加载新场景，完成后再卸载上一个（1_Content 常驻不参与交换）。</summary>
         public void SwitchScene(string sceneName)
         {
             if (IsLoading || string.IsNullOrEmpty(sceneName)) return;
@@ -90,12 +87,7 @@ namespace MCV_Module.Managers
             StartCoroutine(SwitchSceneAsync(sceneName));
         }
 
-        /// <summary>
-        /// 卸载当前 AA 切换场景（回到常驻的基础场景外壳）。
-        /// 供「从切换场景返回菜单」这类离开链路调用；没有切换场景时是空操作。
-        /// 注意：不能改用 <see cref="UnloadScene"/> —— 它按 CurrentScene 判重，
-        /// 而 SwitchScene 已把 CurrentScene 设为该场景，会被判为「不能卸自己」。
-        /// </summary>
+        /// <summary>卸载当前 AA 切换场景（回到常驻的 1_Content 外壳）；没有切换场景时是空操作。</summary>
         public void UnloadSwitchedScene()
         {
             if (IsLoading || string.IsNullOrEmpty(m_LoadedAAScene)) return;
@@ -109,10 +101,7 @@ namespace MCV_Module.Managers
             SwitchScene(e.SceneName);
         }
 
-        /// <summary>
-        /// 应用退出统一出口：收到 AppQuitEvent 后先做资源清理（Assets 出口），再执行真正退出。
-        /// 清理经 GlobalAddressableMgr.UnloadAllBundles / ClearAssetCache，避免退出时资源未释放。
-        /// </summary>
+        /// <summary>应用退出统一出口：先经 GlobalAddressableMgr 卸包清缓存，再真正退出（Editor 下停止播放）。</summary>
         void OnAppQuitRequested(AppQuitEvent e)
         {
             // Assets 出口：卸载全部 AB 包并清空资源缓存
@@ -318,11 +307,7 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 工具方法
-        /// <summary>
-        /// 直接通过 SceneManager 加载（Build Settings 中的场景）。
-        /// 场景既不在 Build Settings、又没配 AA 时 LoadSceneAsync 会返回 null，
-        /// 这里显式报错，避免"静默失败 + 调用方误以为加载完成"。
-        /// </summary>
+        /// <summary>经 SceneManager 加载 Build Settings 里的场景；返回 null（两处都没配）时显式报错。</summary>
         private IEnumerator LoadSceneDirectAsync(string sceneName, LoadSceneMode mode)
         {
             var operation = SceneManager.LoadSceneAsync(sceneName, mode);

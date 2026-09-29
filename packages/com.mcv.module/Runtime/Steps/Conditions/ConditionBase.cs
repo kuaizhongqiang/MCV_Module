@@ -10,10 +10,7 @@ using UnityEngine.InputSystem;
 
 namespace MCV_Module.Steps
 {
-    /// <summary>
-    /// 步骤条件基类 —— 三阶段默认实现 + 协作式打断 + 订阅管理（纯类，非 MonoBehaviour）。
-    /// 由 StepManager 协程 yield 驱动；StepHandler 承载显隐/动画执行，条件只做状态与交互逻辑。
-    /// </summary>
+    /// <summary>步骤条件基类：三阶段默认实现 + 协作式打断 + 订阅管理。</summary>
     public abstract class ConditionBase : ICondition
     {
         /// <summary>宿主步骤（提供 SetObjsActive / 动画方法 / 交互字段）</summary>
@@ -55,9 +52,10 @@ namespace MCV_Module.Steps
         /// <summary>阶段①准备：通用显隐 + 隐藏动画物体 + 子类钩子</summary>
         public virtual IEnumerator Prepare()
         {
-            step.SetObjsActive();      // 通用显隐（showObjs/hideObjs）
-            step.HideAnimations();     // 隐藏动画物体（全员归位）
-            OnPrepare();               // 子类钩子（隐藏交互物体/关面板/取消临时线）
+            // Prepare = 通用显隐 + 动画归位 + 子类钩子（组成见 ConditionBase.md）
+            step.SetObjsActive();
+            step.HideAnimations();
+            OnPrepare();
             yield break;
         }
 
@@ -70,10 +68,11 @@ namespace MCV_Module.Steps
         /// <summary>阶段③完成：隐藏交互物体 → 播放动画 → 等播完 → hideOnComplete</summary>
         public virtual IEnumerator Complete()
         {
-            OnCompleteHide();               // 子类先隐藏交互物体/关面板
-            step.PlayAnimations();          // 播放所有动画
-            yield return new WaitUntil(() => !step.AnyAnimationPlaying()); // 等播完（非循环动画）
-            step.HideAnimationsOnComplete();// hideOnComplete 处理
+            // Complete = 子类隐藏 + 播动画 + 等播完 + hideOnComplete（组成见 ConditionBase.md）
+            OnCompleteHide();
+            step.PlayAnimations();
+            yield return new WaitUntil(() => !step.AnyAnimationPlaying());
+            step.HideAnimationsOnComplete();
         }
 
         /// <summary>子类补充完成隐藏逻辑</summary>

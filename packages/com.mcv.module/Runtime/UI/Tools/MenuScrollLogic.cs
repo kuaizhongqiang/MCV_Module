@@ -4,13 +4,8 @@ using UnityEngine;
 
 namespace MCV_Module.UI.Tools
 {
-    /// <summary>
-    /// 菜单封面流滚动逻辑（一般类，非 MonoBehaviour）。
-    /// 负责滚动状态、数值计算与滚动协程：惯性减速、吸附缓动、拖动速度采样。
-    /// 协程由 MenuPanel（MonoBehaviour）用 StartCoroutine 启动本类提供的协程方法；
-    /// 本类通过 OnStep/OnComplete 回调通知 MenuPanel 刷新布局与收尾。
-    /// 本类不触碰 UI 组件，只维护纯滚动数值状态。
-    /// </summary>
+    // WHY: 本类只维护数值、不碰任何 UI 组件；协程由 MenuPanel 启动、布局刷新走 OnStep 回调，自己 StartCoroutine 会抛异常。
+    /// <summary>菜单封面流滚动逻辑（普通类）：惯性减速、吸附缓动与拖动速度采样，纯数值状态机。</summary>
     public class MenuScrollLogic
     {
         /// <summary>每推进一帧后回调（MenuPanel 在此刷新布局）。</summary>
@@ -68,9 +63,7 @@ namespace MCV_Module.UI.Tools
             Velocity = 0f;
         }
 
-        /// <summary>
-        /// 拖动跟手：更新焦点并平滑采样速度（松手时作为惯性初速）。
-        /// </summary>
+        /// <summary>拖动跟手：更新焦点并平滑采样速度（松手时作为惯性初速）。</summary>
         public void DragUpdate(float newFocus, float dt)
         {
             dt = Mathf.Max(dt, 0.0001f);
@@ -89,10 +82,7 @@ namespace MCV_Module.UI.Tools
             Phase = ScrollPhase.Inertia;
         }
 
-        /// <summary>
-        /// 推进惯性一步（线性/指数衰减）。返回 true 表示惯性仍在进行；
-        /// 返回 false 表示速度已降到阈值以下，应转入吸附。
-        /// </summary>
+        /// <summary>推进惯性一步（指数衰减）：true = 惯性继续，false = 速度已低于阈值应转入吸附。</summary>
         public bool InertiaStep(float dt)
         {
             if (Mathf.Abs(Velocity) <= snapThreshold)
@@ -115,9 +105,7 @@ namespace MCV_Module.UI.Tools
             Phase = ScrollPhase.Snap;
         }
 
-        /// <summary>
-        /// 推进吸附一步（平方缓动 t²）。返回 true 表示吸附仍在进行；false 表示已到位。
-        /// </summary>
+        /// <summary>推进吸附一步（平方缓动 t²）：true = 仍在吸附，false = 已对齐到整数格。</summary>
         public bool SnapStep(float dt)
         {
             snapTime += dt / Mathf.Max(snapDuration, 0.01f);
@@ -132,10 +120,7 @@ namespace MCV_Module.UI.Tools
             return true;
         }
 
-        /// <summary>
-        /// 惯性滚动协程：逐帧推进惯性，速度降到阈值后自动衔接吸附。
-        /// 由 MenuPanel 用 StartCoroutine 启动。
-        /// </summary>
+        /// <summary>惯性滚动协程：逐帧推进惯性，速度降到阈值后自动衔接吸附（由 MenuPanel 启动）。</summary>
         public IEnumerator ScrollInertia()
         {
             while (InertiaStep(Time.deltaTime))
@@ -147,9 +132,7 @@ namespace MCV_Module.UI.Tools
             yield return ScrollSnap();
         }
 
-        /// <summary>
-        /// 吸附协程：逐帧推进平方缓动吸附到最近整数格。由 MenuPanel 用 StartCoroutine 启动。
-        /// </summary>
+        /// <summary>吸附协程：逐帧平方缓动到最近整数格，结束时回调 OnComplete（由 MenuPanel 启动）。</summary>
         public IEnumerator ScrollSnap()
         {
             StartSnap();

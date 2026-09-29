@@ -6,12 +6,8 @@ using UnityEngine;
 
 namespace MCV_Module.EditorTools.Common
 {
-    /// <summary>
-    /// Editor 侧「资产 / 编译就绪」基础设施。
-    ///
-    /// 把「脚本丢失的坏资产」处理收敛到一处：类没写在「与类名同名」的 .cs 里、
-    /// 或脚本没编译完就 <c>CreateAsset</c>，资产会加载为 null（表现为「配置在、清单里却没有」）。
-    /// </summary>
+    // WHY: 共享内核，禁止再抄一份 —— EnsureFolder（9 行 ×2）与 IsConfigScriptReady（5 行 ×2）曾在 ContentBundleTools 与 CameraBgBundleTools 逐字重复，「脚本丢失的坏资产」处理也只在此收敛（§4.1 铁律③）。
+    /// <summary>Editor 侧「资产 / 编译就绪」基础设施的共享内核。</summary>
     public static class EditorAssetUtil
     {
         /// <summary>递归确保 Assets 内目录存在（父级不存在会先建父级）。</summary>
@@ -25,23 +21,16 @@ namespace MCV_Module.EditorTools.Common
             AssetDatabase.CreateFolder(parent, leaf);
         }
 
-        /// <summary>
-        /// 编译就绪守卫：MonoScript 资产存在**且**能解析出类。
-        /// 编译中 / 域重载中 <c>GetClass()</c> 返回 null，此时 <c>CreateAsset</c> 会写出坏资产 ——
-        /// 所有「会 CreateAsset 的菜单」入口第一步都要过这道守卫。
-        /// </summary>
+        // WHY: 编译中 / 域重载中 GetClass() 返回 null，此时 CreateAsset 会写出坏资产 —— 所有「会 CreateAsset 的菜单」入口第一步都要过这道守卫。
+        /// <summary>编译就绪守卫：MonoScript 资产存在且能解析出类时返回 true。</summary>
         public static bool IsScriptReady(string scriptPath)
         {
             var script = AssetDatabase.LoadAssetAtPath<MonoScript>(scriptPath);
             return script != null && script.GetClass() != null;
         }
 
-        /// <summary>
-        /// 载入或创建 ScriptableObject 资产。同名资产存在但**加载为 null**（<c>m_Script</c> 丢失）时先删再建。
-        /// </summary>
-        /// <param name="assetPath">资产路径（<c>Assets/...</c>）</param>
-        /// <param name="logTag">日志前缀（如 <c>[ContentBundle]</c>）；null 则不打日志</param>
-        /// <param name="createdLog">新建时的日志正文（null 表示新建不打日志）</param>
+        // WHY: 历史坑 —— 类没写在「与类名同名」的 .cs 里、或脚本没编译完就 CreateAsset，资产会加载为 null（表现为「配置在、PackageDB 里却是 None」），故同名但加载为 null 时先删再建。
+        /// <summary>载入或创建 <c>T</c> 资产；同名资产存在但加载为 null 时先删再建。logTag/createdLog 为 null 则不打对应日志。</summary>
         public static T LoadOrCreateAsset<T>(string assetPath, string logTag, string createdLog = null)
             where T : ScriptableObject
         {
@@ -63,14 +52,8 @@ namespace MCV_Module.EditorTools.Common
             return asset;
         }
 
-        /// <summary>
-        /// 删除 <paramref name="dir"/> 下 id 不在 <paramref name="keepIds"/> 内的资产（残留配置清理）。
-        ///
-        /// 为什么必须删：<c>PackageDatabaseSO.AutoCollect</c> 是**全工程按类型全量重收**，
-        /// 残留 id 会被收回清单，运行时就出现两套可解析的 id（漏改的 JSON 键变成「配置在、包不在」）。
-        /// 加载为 null 的坏资产同样在此被清掉。
-        /// </summary>
-        /// <returns>被删掉的资产路径</returns>
+        // WHY: 必须删残留 —— PackageDatabaseSO.AutoCollect 是全工程按类型全量重收，残留 id 会被收回清单，运行时出现两套可解析 id（漏改的 JSON 键变成「配置在、包不在」）；加载为 null 的坏资产也在此清掉。
+        /// <summary>删除 <c>dir</c> 下 id 不在 <c>keepIds</c> 内的资产（残留配置清理），返回被删资产路径。</summary>
         public static List<string> DeleteAssetsNotIn<T>(string dir, ISet<string> keepIds,
                                                        Func<T, string> idOf, string logTag)
             where T : UnityEngine.Object
@@ -91,10 +74,7 @@ namespace MCV_Module.EditorTools.Common
             return removed;
         }
 
-        /// <summary>
-        /// 回读自检：返回 <paramref name="dir"/> 下 <c>AB_{id}.asset</c> 加载为 null（<c>m_Script</c> 丢失）的资产路径。
-        /// 调用方负责删除并提示重跑本菜单。
-        /// </summary>
+        /// <summary>回读自检：返回 <c>dir</c> 下 <c>AB_{id}.asset</c> 加载为 null（m_Script 丢失）的资产路径；调用方负责删除并提示重跑本菜单。</summary>
         public static List<string> FindBrokenAssets<T>(string dir, IEnumerable<string> expectedIds)
             where T : UnityEngine.Object
         {

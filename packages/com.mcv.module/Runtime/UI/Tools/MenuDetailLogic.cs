@@ -5,21 +5,21 @@ using System.Linq;
 using MCV_Module.Managers;
 using MCV_Module.Models.Project;
 using UnityEngine;
+using MCV_Module.UI.Components;
+using MCV_Module.Utils;
 using UnityEngine.UI;
+using MCV_Module.Utils;
+
 
 namespace MCV_Module.UI.Tools
 {
-    /// <summary>
-    /// 菜单子目录（Detail）逻辑（一般类，非 MonoBehaviour）。
-    /// 负责子目录按钮的构建、显隐动画与"静止显示 / 滚动消失"的状态编排。
-    /// 不持有 MonoBehaviour 协程，由 MenuPanel 用 StartCoroutine 启动本类提供的协程方法，
-    /// 本类通过 IsVisible / IsAnimating 状态告知调用方是否需要继续动画。
-    /// </summary>
+    // WHY: 本类不是 MonoBehaviour，协程只能由 MenuPanel 用 StartCoroutine 启动；IsVisible / IsAnimating 必须暴露出去，调用方靠它决定还要不要继续驱动动画。
+    /// <summary>菜单子目录逻辑（普通类）：构建子目录按钮、播放交错显隐动画，并编排静止显示 / 滚动消失状态。</summary>
     public class MenuDetailLogic
     {
         #region 依赖（由 MenuPanel 注入）
         public Transform detailParent;     // 子目录按钮的挂载父节点
-        public string btnPrefabPath;       // 子目录按钮预制体 Resources 路径
+        public string btnPrefabName;       // 子目录按钮的裸 prefab 名（UI 包取件见 UIPrefabUtil）；留空即未配置，不建按钮
         public float animDuration = 1f;    // 单个按钮显隐动画时长
         #endregion
 
@@ -36,10 +36,8 @@ namespace MCV_Module.UI.Tools
         public event Action<MenuClip> OnDetailSelected;
         #endregion
 
-        /// <summary>
-        /// 静止（吸附完成）时调用：以中心选中的父菜单为准刷新并显示子目录。
-        /// 内容变化才重建按钮；统一播放显示动画。返回协程由 MenuPanel 启动。
-        /// </summary>
+        // WHY: 只有父菜单变化才重建按钮，每次重建会 Destroy 旧按钮再重新实例化，频繁重建会打断正在跑的交错动画。
+        /// <summary>静止（吸附完成）时调用：按中心父菜单刷新并显示子目录，返回协程由 MenuPanel 启动。</summary>
         public IEnumerator ShowRoutine(MenuClip centerClip)
         {
             if (centerClip == null)
@@ -59,9 +57,7 @@ namespace MCV_Module.UI.Tools
             yield return AnimRoutine(hasChildren);
         }
 
-        /// <summary>
-        /// 滚动中（脱离静止）调用：播放子目录消失动画。返回协程由 MenuPanel 启动。
-        /// </summary>
+        /// <summary>滚动中（脱离静止）调用：播放子目录消失动画，返回协程由 MenuPanel 启动。</summary>
         public IEnumerator HideRoutine()
         {
             IsVisible = false;
@@ -106,7 +102,12 @@ namespace MCV_Module.UI.Tools
             {
                 return null;
             }
-            GameObject prefab = Resources.Load<GameObject>(btnPrefabPath);
+            // WHY: 该入口可能始终未赋值（未配置时维持旧的"取不到就不建按钮"降级）；先短路，免得拿空名去问 UIPrefabUtil 换来 Error 刷屏
+            if (string.IsNullOrEmpty(btnPrefabName))
+            {
+                return null;
+            }
+            GameObject prefab = UIPrefabUtil.Get(btnPrefabName);
             if (prefab == null)
             {
                 return null;
@@ -114,20 +115,35 @@ namespace MCV_Module.UI.Tools
             GameObject go = UnityEngine.Object.Instantiate(prefab, detailParent);
             if (go.transform.childCount >= 3)
             {
-                var indexText = go.transform.GetChild(1).GetComponent<Text>();
-                if (indexText != null)
-                {
-                    indexText.text = (dataIndex + 1).ToString();
-                }
-                var labelText = go.transform.GetChild(2).GetComponent<Text>();
-                if (labelText != null)
-                {
-                    labelText.text = clip.displayName;
-                }
+                SetNodeText(go.transform.GetChild(1), (dataIndex + 1).ToString());
+                SetNodeText(go.transform.GetChild(2), Localized.Name(clip));
             }
             Button btn = go.GetComponent<Button>();
             BindClick(btn, clip, (c) => OnDetailSelected?.Invoke(c));
             return btn;
+        }
+
+        // WHY: 序号的 Text 与名字的 Text 都是刚 Instantiate 出来的**局部**引用，取到它的那一刻就是唯一的缓存时机 ——
+        // TMP 形态下节点上的 Legacy Text 会被组件卸载、局部引用随即成"假 null"，静态入口静默 no-op（按钮没有序号与名字）。
+        // 所以直接从节点取组件：只要组件在就照写；节点上本来就没有组件，才退回静态入口。
+        /// <summary>把文案写到刚建好的按钮子节点上（优先走节点上的 TextComponent）。</summary>
+        static void SetNodeText(Transform node, string value)
+        {
+            if (node == null)
+            {
+                return;
+            }
+            TextComponent comp = node.GetComponent<TextComponent>();
+            if (comp != null)
+            {
+                comp.SetText(value);
+                return;
+            }
+            Text legacy = node.GetComponent<Text>();
+            if (legacy != null)
+            {
+                TextComponent.SetTextOn(legacy, value);
+            }
         }
 
         /// <summary>子目录按钮挂载点击监听：点击上报选中的菜单（MenuPanel 转发给 Controller 处理进入任务等）。</summary>

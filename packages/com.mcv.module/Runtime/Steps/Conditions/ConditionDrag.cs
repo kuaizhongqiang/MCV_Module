@@ -7,11 +7,7 @@ using UnityEngine;
 
 namespace MCV_Module.Steps
 {
-    /// <summary>
-    /// 拖拽条件 —— 将 dragObj 拖到 targetObj 上松开命中即完成，未命中恢复可重试。
-    /// 按下检测走全局交互 Down 事件（命中 dragObj）；松开检测直接查左键状态
-    /// （GlobalInteractiveMgr 在空白处松开只发 Target=null 的 Click，无 Up 事件）。
-    /// </summary>
+    /// <summary>拖拽条件：把 dragObj 拖到 targetObj 上松开命中即完成，未命中可重试。</summary>
     public class ConditionDrag : ConditionBase
     {
         public override ConditionType Type => ConditionType.Drag;
@@ -43,17 +39,15 @@ namespace MCV_Module.Steps
             SubscribeInteraction(handler);
 
             bool success = false;
+            // 拿起 → 等松开 → 射线命中 targetObj 才算成功，未命中恢复重来（详见 ConditionDrag.md）
             while (!IsForceCompleted && !success)
             {
-                // 等待按下 dragObj 起拖
                 while (!IsForceCompleted && !dragDown) yield return null;
                 if (IsForceCompleted) break;
                 dragDown = false;
-                drag.gameObject.SetActive(false); // 拿起（隐藏源物体）
-                // 等待松开
+                drag.gameObject.SetActive(false);
                 while (!IsForceCompleted && !IsMouseUp()) yield return null;
                 if (IsForceCompleted) break;
-                // 松开时手动射线命中 targetObj → 成功；否则恢复重来
                 if (RaycastHitTarget(target)) success = true;
                 else drag.gameObject.SetActive(true);
             }

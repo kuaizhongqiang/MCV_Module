@@ -6,17 +6,8 @@ using UnityEngine.SceneManagement;
 
 namespace MCV_Module.Utils
 {
-    /// <summary>
-    /// 屏幕调试浮层（OnGUI 实现，零依赖）。
-    ///
-    /// 由 Log 静态类在首次启用屏幕调试时自动创建并挂到 DontDestroyOnLoad 对象上，
-    /// 无需修改任何场景/预制体。提供两块可折叠面板：
-    ///   - 系统上下文：当前 SceneState / TaskType / 场景名 / FPS / 屏幕 / 时间
-    ///   - 日志流：最近 N 条日志（带级别着色），可开关跟随窗口拖动
-    ///
-    /// 运行时快捷键：
-    ///   F1 开关上下文面板；F2 开关日志流；F3 清空日志；F4/F5 增大/减小字号。
-    /// </summary>
+    // WHY: 由 Log 在运行时自动挂到 DontDestroyOnLoad 对象上，且 GUI 样式只能在 OnGUI 内懒构建，勿改成随场景销毁或提前到 Awake。
+    /// <summary>屏幕调试浮层（OnGUI 实现，零依赖）：上下文面板 + 日志流，快捷键 F1/F2 开关、F3 清空、F4/F5 调字号。</summary>
     [DisallowMultipleComponent]
     public class LogOverlay : MonoBehaviour
     {

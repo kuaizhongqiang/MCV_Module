@@ -7,35 +7,32 @@ namespace MCV_Module.Controllers
 {
     public class TaskListController : ControllerBase<TaskListPanel>
     {
-        protected override void Awake()
+        public override void OnInit()
         {
-            base.Awake();
+            base.OnInit();
             // EventBus 订阅去重（Contains 判断），Controller 常驻，一次订阅即可
             EventBus<TaskTypeChangeEventData>.Subscribe(OnTaskChanged);
         }
 
-        protected override void OnDestroy()
+        public override void OnDispose()
         {
             EventBus<TaskTypeChangeEventData>.Unsubscribe(OnTaskChanged);
-            base.OnDestroy();
+            base.OnDispose();
         }
 
-        /// <summary>每次面板重建绑定后：按当前项目与任务类型装配任务列表。</summary>
-        protected override void OnViewBound()
+        /// <summary>每次面板重建绑定后：按当前项目与任务类型装配任务列表（任务类型读唯一源）。</summary>
+        public override void OnViewBound()
         {
             var project = GlobalDataMgr.GetProjectClip();
             if (project == null) return;
-            View.Init(project, GlobalDataMgr.Instance.ProjectData.currentTaskType);
+            View.Init(project, GlobalDataMgr.GetCurrentTaskType());
         }
 
-        /// <summary>
-        /// 任务切换：先同步当前任务状态（逻辑），再刷新列表显示（显示）。
-        /// GlobalUIMgr 已监听同一事件负责 UI 重建；此处兜底同步面板显示（面板可能已重建，用 Unity 假空判断）。
-        /// </summary>
+        // WHY: "当前任务类型"的唯一写入点是 GlobalUIMgr（处理 TaskTypeChangeEventData 时写 ProjectData），这里不再重复写，避免两处状态源
+        /// <summary>任务切换：刷新列表显示（只读，不写状态）。</summary>
         void OnTaskChanged(TaskTypeChangeEventData e)
         {
             if (e == null) return;
-            GlobalDataMgr.Instance.ProjectData.currentTaskType = e.TaskType;
             if (View != null) View.SetTaskType(e.TaskType);
         }
     }

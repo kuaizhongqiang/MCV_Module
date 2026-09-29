@@ -14,11 +14,8 @@ namespace MCV_Module.Models
     static string EXT = ".json";
 
 #if UNITY_EDITOR
-    /// <summary>
-    /// 同步写入 JSON（仅限 Editor，如数据导出/调试）。
-    /// WebGL 运行时不支持同步文件 IO；运行时一律走 ReadAsync / Read。
-    /// 目录按完整路径创建（原实现用相对路径 "Data/" 建到了 CWD，导致写入位置错误）。
-    /// </summary>
+    // WHY: WebGL 运行时不支持同步文件 IO，运行时一律走 ReadAsync / Read；目录须按完整路径创建（相对路径 "Data/" 会建到 CWD 导致写错位置）。
+    /// <summary>同步写入 JSON（仅限 Editor，如数据导出/调试）。</summary>
     public static void Write<T>(string name, T data, Action callback)
     {
         try
@@ -38,13 +35,8 @@ namespace MCV_Module.Models
     }
 #endif
 
-    /// <summary>
-    /// **运行时**写入 JSON（同步写盘）。PC / Editor 下 <c>StreamingAssets/Data</c> 是普通可写目录；
-    /// WebGL 没有本地文件系统，只告警并返回 false（数据仅留内存）。
-    /// <para>用途：**设置类数据**需要跨启动记住（如 <c>SystemData.renderQuality</c>）。
-    /// 游戏内容数据（ProjectData / QuestionData…）仍按只读约定，不要在运行时改。</para>
-    /// </summary>
-    /// <returns>是否真的写成功（WebGL / 异常时为 false）。</returns>
+    // WHY: WebGL 无本地文件系统，只告警并返回 false（数据仅留内存）；运行时只写设置类数据（如 SystemData.renderQuality），游戏内容数据（ProjectData / QuestionData…）按只读约定不许改。
+    /// <summary>运行时写入 JSON（同步写盘），返回是否真的写成功。</summary>
     public static bool WriteRuntime<T>(string name, T data)
     {
 #if UNITY_WEBGL
@@ -86,10 +78,8 @@ namespace MCV_Module.Models
         }
     }
 
-    /// <summary>
-    /// 异步读取 JSON（WebGL 兼容）—— 使用 UnityWebRequest 而非 File.ReadAllText，
-    /// 因为 WebGL 下 StreamingAssets 路径是 HTTP URL，不能直接文件读取。
-    /// </summary>
+    // WHY: WebGL 下 StreamingAssets 路径是 HTTP URL，不能直接文件读取，故用 UnityWebRequest 而非 File.ReadAllText。
+    /// <summary>异步读取 JSON（WebGL 兼容）。</summary>
     public static IEnumerator ReadAsync<T>(string name, Action<T, bool> callback)
     {
         string path = FULL_PATH(name);
@@ -117,34 +107,6 @@ namespace MCV_Module.Models
                 Log.Error($"[JsonReaderWriter] 读取失败: {path}, {uwr.error}");
                 callback?.Invoke(default, false);
             }
-        }
-    }
-
-    /// <summary>介质路径（日志/对账报告用；WebGL 下 StreamingAssets 本身就是 HTTP 路径）。</summary>
-    public static string PathOf(string name) => FULL_PATH(name);
-
-    /// <summary>
-    /// 只读：序列化为与写盘完全一致的文本（<c>Formatting.Indented</c>）。对账（dry-run）用。
-    /// </summary>
-    public static string Serialize<T>(T data) where T : class
-    {
-        if (data == null) return null;
-        try { return JsonConvert.SerializeObject(data, Formatting.Indented); }
-        catch (Exception e) { Log.Error($"[JsonReaderWriter] 序列化失败：{e.Message}"); return null; }
-    }
-
-    /// <summary>只读：取介质上的原始文本；文件不存在或读取失败返回 null（**绝不抛异常、绝不写盘**）。</summary>
-    public static string TryReadRaw(string name)
-    {
-        try
-        {
-            string path = FULL_PATH(name);
-            return File.Exists(path) ? File.ReadAllText(path) : null;
-        }
-        catch (Exception e)
-        {
-            Log.Error($"[JsonReaderWriter] 读取失败 [{name}]：{e.Message}");
-            return null;
         }
     }
 

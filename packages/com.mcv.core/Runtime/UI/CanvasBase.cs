@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using MCV_Module.Utils;
+using MCV_Module.UI.Tools;
 using MCV_Module.Managers;
 using MCV_Module.Models;
 using UnityEngine;
@@ -8,6 +9,7 @@ using UnityEngine.UI;
 namespace MCV_Module.UI
 {
     [RequireComponent(typeof(Canvas))]
+    /// <summary>画布基类：向 GlobalUIMgr 注册自身、持有面板注册表，状态/任务变化时清空并重建子物体。</summary>
     public abstract class CanvasBase : UIBase
     {
         [Header("所属状态"), Tooltip("该 Canvas 服务的 SceneState，用于状态切换时定位")]
@@ -19,11 +21,8 @@ namespace MCV_Module.UI
         public SceneState CanvasState => m_SceneState;
         public bool MatchesState(SceneState state) => m_SceneState == state;
 
-        /// <summary>
-        /// 是否常驻画布：常驻画布**不参与状态切换**（不被淡出/隐藏，也不参与 ClearPanels + Rebuild），
-        /// 也不会被选成切换目标。用于加载遮挡层这类「跨状态覆盖物」——它必须活过状态切换，
-        /// 否则切换时遮罩被连根拔掉/跟着父画布淡出，加载一快就看到闪一下。
-        /// </summary>
+        // WHY: 加载遮挡层必须活过状态切换，否则切换时遮罩被拔掉，加载一快就会闪一下
+        /// <summary>是否常驻画布：不参与状态切换（不淡出/不 ClearPanels/不被选成目标）。</summary>
         public virtual bool IsPersistent => false;
 
         protected override void Awake()
@@ -44,27 +43,23 @@ namespace MCV_Module.UI
             }
         }
 
-        /// <summary>
-        /// 清空面板：销毁所有子物体 + 清空面板注册表（防已销毁面板的过期引用）。
-        /// Canvas 本体不销毁，只重建子物体。
-        /// </summary>
+        // WHY: Canvas 本体不销毁、只重建子物体；面板注册表必须一起清空，否则留下已销毁面板的过期引用。
+        /// <summary>清空面板：销毁所有子物体并清空面板注册表。</summary>
         public void ClearPanels()
         {
             ClearChildren(transform);
             panels.Clear();
         }
 
-        /// <summary>
-        /// 按状态初始化：清空后重建面板。由 GlobalUIMgr 响应状态事件时调用。
-        /// </summary>
-        public void Init(SceneState state, TaskType taskType)
+        /// <summary>清空子物体后重新装配面板（由 GlobalUIMgr 在状态 / 任务类型事件到达时调用）。</summary>
+        public void Rebuild()
         {
             ClearPanels();
-            OnRebuild(state, taskType);
+            OnRebuild();
         }
 
-        /// <summary>子类实现：按当前状态重建本 Canvas 的面板。</summary>
-        protected virtual void OnRebuild(SceneState state, TaskType taskType) { }
+        /// <summary>子类实现：重建本 Canvas 的面板（无需再判 SceneState，切换时由 GlobalUIMgr 定位）。</summary>
+        protected virtual void OnRebuild() { }
 
         public void RegisterPanel(PanelBase panel)
         {
@@ -95,11 +90,8 @@ namespace MCV_Module.UI
             return CreatePanel(panelName) as T;
         }
 
-        /// <summary>
-        /// 取已注册的面板，不存在时返回 null（**不创建**）。
-        /// 收起 / 收尾路径要用这个：用 <see cref="GetPanel{T}"/> 会在面板不存在时先建一个再立刻关掉，
-        /// 新建实例的 Awake（isActiveOnInstance）会先亮一帧 —— 又是一次闪。
-        /// </summary>
+        // WHY: 收起/收尾路径必须用它 —— GetPanel 会先建一个再立刻关掉，新建实例的 Awake 会先亮一帧（又一次闪）
+        /// <summary>取已注册的面板，不存在时返回 null（不创建）。</summary>
         public T FindPanel<T>() where T : PanelBase
         {
             string panelName = typeof(T).Name;
@@ -110,13 +102,13 @@ namespace MCV_Module.UI
             return null;
         }
 
+        // WHY: 面板 prefab 自 B1.5 起住在 UI 全局包（bundle UI/ui，id = ui_{类名}），不再走 Resources；
+        // 取件是同步的，依赖 Setup 阶段已预加载整个 UI 包（失败日志在 UIPrefabUtil 里统一打）。
         PanelBase CreatePanel(string panelName)
         {
-            string panelPath = "UI/" + panelName;
-            GameObject prefab = Resources.Load<GameObject>(panelPath);
+            GameObject prefab = UIPrefabUtil.Get(panelName);
             if (prefab == null)
             {
-                Log.Error($"[CanvasBase] 面板 Prefab 不存在：Resources/{panelPath}（请用 MCV/创建/UI Panel 生成器生成）");
                 return null;
             }
             GameObject go = Instantiate(prefab, transform);
@@ -132,6 +124,9 @@ namespace MCV_Module.UI
         {
             return CreatePanel(typeof(T).Name) as T;
         }
+        // WHY: 这是**不带等一帧**的同步版，只在清楚不涉及 TextComponent 装配时用；面板侧一律走
+        //      PanelBase.RequestLayoutRebuild（等一帧 + 按深度自下而上，见 UI/Tools/UILayoutRebuilder）——
+        //      同帧刷会量到 TMP 形态下还没装配完的空文本，表现为"第一次打开排版不对、第二次才对"。
         public void LayoutRebuild()
         {
             Canvas.ForceUpdateCanvases();

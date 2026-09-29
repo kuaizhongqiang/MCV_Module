@@ -14,7 +14,7 @@ namespace MCV_Module.Managers
         #region 参数
         Dictionary<AudioSouceType, AudioStruct> audioDic = new Dictionary<AudioSouceType, AudioStruct>();
         Dictionary<AudioEffectType, AudioClip> audioEffectDic = new Dictionary<AudioEffectType, AudioClip>();
-        // 按名称缓存按需加载的音频（BGM/语音），避免每次播放都 Resources.Load
+        // WHY: 缓存按需加载的音频（BGM/语音），避免每次播放都 Resources.Load
         readonly Dictionary<string, AudioClip> audioNameCache = new Dictionary<string, AudioClip>();
 
         float volumeDuration = 1.5f;
@@ -32,7 +32,7 @@ namespace MCV_Module.Managers
 
             foreach (AudioEffectType audioEffectType in Enum.GetValues(typeof(AudioEffectType)))
             {
-                if (audioEffectType == AudioEffectType.None) continue; // None = 不播放，跳过加载
+                if (audioEffectType == AudioEffectType.None) continue; // WHY: None = 不播放，跳过加载
                 AudioClip audioClip = Resources.Load<AudioClip>("Audio/" + audioEffectType.ToString());
                 if (audioClip != null)
                 {

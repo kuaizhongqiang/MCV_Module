@@ -1,239 +1,255 @@
 using System.Collections.Generic;
-using MCV_Module.Utils;
 using MCV_Module.Event;
 using MCV_Module.Managers;
 using MCV_Module.Models;
 using MCV_Module.Models.Project;
+using MCV_Module.Models.User;
 using MCV_Module.UI.Panels;
-using UnityEngine;
+using MCV_Module.UI.Tools;
+using MCV_Module.Utils;
 
 namespace MCV_Module.Controllers
 {
-    /// <summary>
-    /// 菜单面板控制器。
-    ///
-    /// 职责边界（MCV 单向数据流：Controller → View）：
-    /// - 业务状态：当前所在层级（currentParent）、当前选中的菜单（selectedClip）、当前层级兄弟列表。
-    /// - 数据来源：从 GlobalDataMgr 读取 MenuData，用工厂方法（GetRootClips/GetChildClips）取层级列表。
-    /// - 层级切换决策：收到 View 上报的选中事件后，判断是否有子菜单——有则下钻，无则记为最终选中。
-    ///
-    /// 纯表现逻辑（滚动动画、按钮布局、输入采集）留在 MenuPanel，不在本类。
-    /// Controller 常驻（跨 Canvas 重建不销毁），层级状态在此可跨面板存活。
-    /// </summary>
+    // WHY: 进入必须两步「先加载场景、就绪后再切状态」——切状态会清空所有 Canvas 面板，合成一步会先看到空房间再长出内容；退出走事件驱动二次确认，结果按 DialogId 认领，Id 必须全局唯一否则被别的常驻控制器同时认领
+    /// <summary>菜单控制器：把菜单面板的入口按钮变成真实动作（进入漫游 / 进入器件内容页 / 退出 / 成绩预览）。</summary>
     public class MenuController : ControllerBase<MenuPanel>
     {
+        // WHY: 场景名必须与 Resources/Config/SceneAAConfig 的 sceneName 一致，改名会加载不到房间
+        /// <summary>漫游房间场景名。</summary>
+        const string RoamingSceneName = "11_Room1";
+
+        // WHY: 结果按 DialogId 认领，Controller 常驻、订阅跨页残留，Id 须与其它发布方（DialogId.Exit / Back / BackToMenu / SubmitScore）互不相同，否则被别的控制器同时认领
+        /// <summary>「退出」确认框身份（DialogResultEvent 按它认领结果）。</summary>
+        const DialogId QuitDialogId = DialogId.QuitApp;
+
+        // WHY: 结果按 DialogId 认领，Id 须与其它发布方（DialogId.Exit / Back / BackToMenu / QuitApp / SubmitScore）互不相同
+        /// <summary>「进入项目」确认框身份（房间项目 HUD 点击后弹出）。</summary>
+        const DialogId EnterDialogId = DialogId.EnterProject;
+
         /// <summary>当前层级的兄弟列表（根层级时为根菜单）。</summary>
         readonly List<MenuClip> currentClips = new List<MenuClip>();
 
         /// <summary>当前层级的父菜单；null 表示当前处于根层级。</summary>
-        MenuClip currentParent;
+        MenuClip current;
 
-        /// <summary>当前焦点/选中的菜单（业务层选中，随滚动与下钻更新）。</summary>
-        MenuClip selectedClip;
+        /// <summary>已请求加载、等待就绪的目标场景名；空串表示当前没有待进入的场景。</summary>
+        string m_PendingSceneName = "";
 
-        protected override void OnViewBound()
+        /// <summary>房间 HUD 已请求进入、等着用户在确认框上点「确认」的项目；null 表示没有待确认的进入请求。</summary>
+        ProjectClip m_PendingEnterClip;
+
+        public override void OnInit()
         {
-            // 先清后加，避免面板重建后重复订阅
-            View.OnMenuSelected -= OnMenuSelected;
-            View.OnMenuSelected += OnMenuSelected;
-
-            // 测试期：GlobalDataMgr 无菜单数据时注入测试数据，保证可滚动/下钻验证。
-            EnsureMenuData();
-
-            // 首次进入：从根菜单开始；否则按已存的层级状态续接。
-            if (currentClips.Count == 0)
-            {
-                EnterRoot();
-            }
-            else
-            {
-                View.Init(currentClips, GetSelectedIndex());
-            }
+            base.OnInit();
+            // 场景加载完成 → 切界面（Controller 常驻，订阅一次即可，OnDestroy 退订）
+            EventBus<SceneLoadedEvent>.Subscribe(OnSceneLoaded);
+            // 退出确认的结果 → 真正退出（同上常驻订阅；先清后加防重复）
+            EventBus<DialogResultEvent>.Unsubscribe(OnDialogResult);
+            EventBus<DialogResultEvent>.Subscribe(OnDialogResult);
+            // 房间项目 HUD 的「进入项目」请求 → 弹二次确认（同上常驻订阅：HUD 在房间场景里，随房间卸载而销毁）
+            EventBus<RoomMenuEnterRequestEvent>.Unsubscribe(OnRoomMenuEnterRequested);
+            EventBus<RoomMenuEnterRequestEvent>.Subscribe(OnRoomMenuEnterRequested);
         }
 
-        /// <summary>确保 GlobalDataMgr 中有菜单数据；为空时注入修正后的测试数据。</summary>
-        void EnsureMenuData()
+        public override void OnViewBound()
         {
-            MenuData menuData = GlobalDataMgr.GetMenuData();
-            if (menuData != null && menuData.clips.Count > 0)
-            {
-                return;
-            }
-            GlobalDataMgr.Instance.MenuData = BuildTestData();
+            if (View == null) return;
+
+            // 先退后订：面板每次重建都是新实例
+            View.OnRoamingBtnClick -= OnRoamingClick;
+            View.OnQuitBtnClick    -= OnQuitClick;
+            View.OnResultBtnClick  -= OnResultClick;
+            View.OnMenuBtnClick    -= OnMenuBtnClick;
+
+            View.OnRoamingBtnClick += OnRoamingClick;
+            View.OnQuitBtnClick    += OnQuitClick;
+            View.OnResultBtnClick  += OnResultClick;
+            View.OnMenuBtnClick    += OnMenuBtnClick;
+
+            View.SetCopyright(GlobalUIMgr.IfCopyright, GlobalUIMgr.IfCompany);
         }
 
-        /// <summary>构造测试菜单数据（父 id 已修正，子项 parentId 与根菜单 id 严格匹配）。</summary>
-        static MenuData BuildTestData()
+        public override void OnDispose()
         {
-            MenuData menuData = new MenuData();
-
-            // 根菜单
-            menuData.clips.Add(new MenuClip("rootOne", "一级菜单1"));
-            menuData.clips.Add(new MenuClip("rootTwo", "一级菜单2"));
-            menuData.clips.Add(new MenuClip("rootThree", "一级菜单3"));
-
-            // 一级菜单1 的子菜单（parentId = "rootOne"）
-            menuData.clips.Add(new MenuClip("rootOneChildMenu1", "二级菜单1-1") { parentId = "rootOne" });
-            menuData.clips.Add(new MenuClip("rootOneChildMenu2", "二级菜单1-2") { parentId = "rootOne" });
-            menuData.clips.Add(new MenuClip("rootOneChildMenu3", "二级菜单1-3") { parentId = "rootOne" });
-
-            // 一级菜单2 的子菜单（parentId = "rootTwo"）
-            menuData.clips.Add(new MenuClip("rootTwoChildMenu4", "二级菜单2-1") { parentId = "rootTwo" });
-            menuData.clips.Add(new MenuClip("rootTwoChildMenu5", "二级菜单2-2") { parentId = "rootTwo" });
-
-            // 一级菜单3 的子菜单（parentId = "rootThree"）
-            menuData.clips.Add(new MenuClip("rootThreeChildMenu6", "二级菜单3-1") { parentId = "rootThree" });
-            menuData.clips.Add(new MenuClip("rootThreeChildMenu7", "二级菜单3-2") { parentId = "rootThree" });
-            menuData.clips.Add(new MenuClip("rootThreeChildMenu8", "二级菜单3-3") { parentId = "rootThree" });
-            menuData.clips.Add(new MenuClip("rootThreeChildMenu9", "二级菜单3-4") { parentId = "rootThree" });
-
-            return menuData;
-        }
-
-        /// <summary>进入根层级并装配。</summary>
-        void EnterRoot()
-        {
-            currentParent = null;
-            currentClips.Clear();
-            currentClips.AddRange(GlobalDataMgr.GetRootMenus());
-            selectedClip = currentClips.Count > 0 ? currentClips[0] : null;
             if (View != null)
             {
-                View.Init(currentClips, 0);
+                View.OnRoamingBtnClick -= OnRoamingClick;
+                View.OnQuitBtnClick    -= OnQuitClick;
+                View.OnResultBtnClick  -= OnResultClick;
+                View.OnMenuBtnClick    -= OnMenuBtnClick;
             }
+            EventBus<SceneLoadedEvent>.Unsubscribe(OnSceneLoaded);
+            EventBus<DialogResultEvent>.Unsubscribe(OnDialogResult);
+            EventBus<RoomMenuEnterRequestEvent>.Unsubscribe(OnRoomMenuEnterRequested);
+            base.OnDispose();
         }
 
-        /// <summary>进入指定菜单的子层级并装配。</summary>
-        void EnterChildren(MenuClip parent)
+        #region 入口动作
+        // WHY: 已在漫游时必须只收起弹层、不切状态——切状态会让 RoamingCanvas 整体重建，而重发场景请求会被 GlobalSceneMgr「已是当前切换场景」挡掉、OnSceneLoaded 不回调，导致 m_PendingSceneName 永久卡住
+        /// <summary>漫游入口：请求加载房间场景；就绪后由 OnSceneLoaded 切到漫游界面，重复点击会被待进入状态挡掉。</summary>
+        void OnRoamingClick()
         {
-            currentParent = parent;
-            currentClips.Clear();
-            currentClips.AddRange(GlobalDataMgr.GetChildMenus(parent));
-            selectedClip = currentClips.Count > 0 ? currentClips[0] : null;
-            if (View != null)
+            // 已在漫游 → 「进入漫游」的等价结果就是回到漫游画面：收起菜单弹层即可
+            if (GlobalDataMgr.GetProjectState() == ProjectState.Roaming)
             {
-                View.Init(currentClips, 0);
-            }
-        }
-
-        /// <summary>返回上一层级（父层级），已处于根层级时忽略。</summary>
-        public void GoBack()
-        {
-            if (currentParent == null)
-            {
-                return;
-            }
-            MenuClip goToParent = currentParent;
-            MenuClip goToParentParent = null;
-            var menuData = GlobalDataMgr.GetMenuData();
-            if (menuData != null)
-            {
-                goToParentParent = menuData.GetParentClip(goToParent);
-            }
-            // 回到父层级，焦点定位在刚下钻的那个父菜单上
-            EnterLevel(goToParentParent);
-            selectedClip = goToParent;
-            if (View != null)
-            {
-                View.Init(currentClips, currentClips.IndexOf(goToParent));
-            }
-        }
-
-        /// <summary>
-        /// 按父菜单装配指定层级（不强制重设焦点）。
-        /// </summary>
-        void EnterLevel(MenuClip parent)
-        {
-            currentParent = parent;
-            currentClips.Clear();
-            if (parent == null)
-            {
-                currentClips.AddRange(GlobalDataMgr.GetRootMenus());
-            }
-            else
-            {
-                currentClips.AddRange(GlobalDataMgr.GetChildMenus(parent));
-            }
-        }
-
-        /// <summary>
-        /// View 上报：用户选中了某个菜单。
-        /// 有子菜单则下钻；否则视为最终选中（当前仅记录，可在此扩展打开内容等）。
-        /// </summary>
-        void OnMenuSelected(MenuClip clip)
-        {
-            if (clip == null)
-            {
-                return;
-            }
-            selectedClip = clip;
-            var menuData = GlobalDataMgr.GetMenuData();
-            bool hasChildren = menuData != null && menuData.HasChildren(clip);
-            if (hasChildren)
-            {
-                EnterChildren(clip);
-            }
-            else
-            {
-                // 最终选中（叶子菜单）→ 进入对应项目任务（默认进入 UI 状态）
-                EnterTask(clip);
-            }
-        }
-
-        /// <summary>
-        /// 叶子菜单 → 进入任务：解析绑定的项目，写入当前项目，选第一个激活的任务，
-        /// 先切状态（SceneState.UI）再发任务类型事件（GlobalUIMgr 据此重建任务面板，TaskListController 同步状态）。
-        /// 事件驱动：发布方只管发，监听方 GlobalUIMgr / TaskListController 均为常驻对象。
-        /// </summary>
-        void EnterTask(MenuClip menuClip)
-        {
-            if (menuClip == null)
-            {
+                if (View != null) View.SetUIActive(false);
+                Log.Info("[MenuController] 已在漫游中，收起菜单弹层");
                 return;
             }
 
-            // 解析项目：优先 clip 直接引用；否则按 projectId 从 ProjectData 查询
-            ProjectClip project = menuClip.clip;
-            if (project == null && !string.IsNullOrEmpty(menuClip.projectId))
+            if (!string.IsNullOrEmpty(m_PendingSceneName))
             {
-                project = GlobalDataMgr.GetProjectClip(menuClip.projectId);
+                Log.Warning($"[MenuController] 场景 {m_PendingSceneName} 正在加载中，忽略重复点击");
+                return;
             }
+            if (!GlobalSceneMgr.Exists || GlobalSceneMgr.Instance == null) return;
+
+            m_PendingSceneName = RoamingSceneName;
+            Log.Info($"[MenuController] 请求加载漫游场景：{RoamingSceneName}");
+            EventBus<SceneSwitchRequestEvent>.Publish(new SceneSwitchRequestEvent(RoamingSceneName));
+        }
+
+        /// <summary>场景就绪：只有正好是本次待进入的场景才切界面，顺带清空待进入状态。</summary>
+        void OnSceneLoaded(SceneLoadedEvent e)
+        {
+            if (string.IsNullOrEmpty(m_PendingSceneName)) return;
+            if (e == null || e.SceneName != m_PendingSceneName) return;
+
+            string sceneName = m_PendingSceneName;
+            m_PendingSceneName = "";
+
+            Log.Info($"[MenuController] 场景 {sceneName} 已就绪，切换到漫游界面");
+            EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(SceneState.Roaming));
+        }
+
+        /// <summary>器件入口（菜单平铺化）：按 MenuClip.projectId 路由到 ProjectClip，再走共用的进入链路。</summary>
+        void OnMenuBtnClick(MenuClip clip)
+        {
+            if (clip == null) return;
+
+            ProjectClip project = GlobalDataMgr.GetProjectClip(clip.projectId);
             if (project == null)
             {
-                Log.Warning($"[MenuController] 菜单「{menuClip.displayName}」未绑定项目（clip / projectId 均为空），无法进入任务");
+                Log.Warning($"[MenuController] 菜单 {clip.id} 的 projectId（{clip.projectId}）在 ProjectData.clips 中不存在，无法进入内容页");
                 return;
             }
 
-            // 写入当前项目（任务面板 / 任务列表从此读取）
-            GlobalDataMgr.Instance.ProjectData.currentClip = project;
-
-            // 过滤未激活任务，取第一个启用项作为默认进入的任务
-            TaskType firstActive = TaskType.None;
-            foreach (var task in project.Tasks)
-            {
-                if (task.TaskActive)
-                {
-                    firstActive = task.TaskType;
-                    break;
-                }
-            }
-
-            // 先切状态（当前默认全部进入 UI 状态），再发任务类型（GlobalUIMgr.OnTaskTypeChanged 重建任务面板）
-            EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(SceneState.UI));
-            EventBus<TaskTypeChangeEventData>.Publish(new TaskTypeChangeEventData(project, firstActive));
-
-            Log.Info($"[MenuController] 进入项目「{project.displayName}」，默认任务 {firstActive}");
+            EnterProject(project);
         }
 
-        /// <summary>当前选中菜单在当前层级列表中的索引；取不到返回 0。</summary>
-        int GetSelectedIndex()
+        // WHY: 两步发布不可颠倒——TaskTypeChangeEventData 必须先写唯一源 currentTaskType，内容页重建时 TaskListController / ContentCanvas 才能取到正确的项目与任务
+        /// <summary>进入某项目的内容页（菜单器件入口与房间项目 HUD 入口共用，只此一处实现）：写唯一源 currentClip，预设默认任务后切内容页 Canvas。</summary>
+        void EnterProject(ProjectClip project)
         {
-            if (selectedClip == null)
+            if (project == null) return;
+
+            GlobalDataMgr.SetCurrentClip(project);
+
+            // 默认任务 = ProjectClip.Tasks 里第一个启用的任务（顺序即 TaskListPanel 的装配顺序）
+            TaskType defaultType = ResolveDefaultTaskType(project);
+            if (defaultType != TaskType.None)
             {
-                return 0;
+                // WHY: 走事件而非直写 ProjectData——currentTaskType 的唯一写入口在 GlobalUIMgr；当前是 Menu 态，它只写值、不会顺手重建菜单 Canvas
+                EventBus<TaskTypeChangeEventData>.Publish(new TaskTypeChangeEventData(project, defaultType));
             }
-            int index = currentClips.IndexOf(selectedClip);
-            return index < 0 ? 0 : index;
+            else
+            {
+                Log.Warning($"[MenuController] 器件 {project.id} 没有启用的任务，内容页将装配不出任务面板");
+            }
+
+            // 从漫游弹层 / 房间 HUD 进来：先卸掉房间场景（与 FunctionController 返回链路同一口径），避免再次进入时叠加实例
+            if (GlobalDataMgr.GetProjectState() == ProjectState.Roaming &&
+                GlobalSceneMgr.Exists && GlobalSceneMgr.Instance != null)
+            {
+                GlobalSceneMgr.Instance.UnloadSwitchedScene();
+            }
+
+            Log.Info($"[MenuController] 进入器件内容页：{project.id}（{project.displayName}）");
+            EventBus<SceneStateChangeEventData>.Publish(new SceneStateChangeEventData(SceneState.UI));
         }
+
+        /// <summary>默认任务类型：Tasks 里第一个 TaskActive 的任务；一个都没有时返回 None。</summary>
+        static TaskType ResolveDefaultTaskType(ProjectClip project)
+        {
+            var tasks = project.Tasks;
+            for (int i = 0; i < tasks.Count; i++)
+            {
+                if (tasks[i] != null && tasks[i].TaskActive) return tasks[i].TaskType;
+            }
+            return TaskType.None;
+        }
+
+        // WHY: 预览面板走「激活 Canvas 懒加载」创建，不在此处销毁，关闭由面板自己 Hide()
+        /// <summary>成绩预览入口：GlobalDataMgr.PreviewScore() 结算并落盘 → ScoreRecordFormatter.Build 装配数据 → 打开预览面板。</summary>
+        void OnResultClick()
+        {
+            ResultSummitPanel panel = GlobalUIMgr.GetPanelOnActiveCanvas<ResultSummitPanel>();
+            if (panel == null)
+            {
+                Log.Error("[MenuController] 无法取得 ResultSummitPanel（确认 Resources/UI/ResultSummitPanel.prefab 存在、且当前有激活 Canvas）");
+                return;
+            }
+
+            ScoreData data = GlobalDataMgr.PreviewScore();
+            if (data == null)
+            {
+                Log.Warning("[MenuController] 成绩结算失败，预览面板未打开");
+                return;
+            }
+
+            panel.Show(ScoreRecordFormatter.Build(data, GlobalDataMgr.GetProjectName()));
+            Log.Info($"[MenuController] 打开成绩预览：{data.FileName}，总分 {ScoreRecordFormatter.FormatScore(data.totalScore)}");
+        }
+
+        // WHY: 只发 DialogRequestEvent，由 DialogEventDispatcher 统一定位显示——菜单面板在 MenuCanvas 与漫游弹层两处复用，两处退出都走这条确认链路
+        /// <summary>退出入口：先弹确认框，不直接退出。</summary>
+        void OnQuitClick()
+        {
+            Log.Info("[MenuController] 退出入口：请求退出确认");
+            EventBus<DialogRequestEvent>.Publish(
+                new DialogRequestEvent(QuitDialogId, "确定要退出应用吗？",
+                    showConfirm: true, showCancel: true));
+        }
+
+        /// <summary>对话框结果：只认领本控制器的退出确认（按 DialogId 区分），且只在「确认」时才退出，取消 / 其它来源一律忽略。</summary>
+        void OnDialogResult(DialogResultEvent result)
+        {
+            if (result == null || !result.Confirmed) return;
+
+            if (result.Id == QuitDialogId)
+            {
+                QuitApplication();
+            }
+            else if (result.Id == EnterDialogId)
+            {
+                // 取走即清：一次确认只进一个项目，避免下一次误用上次的目标
+                ProjectClip target = m_PendingEnterClip;
+                m_PendingEnterClip = null;
+                EnterProject(target);
+            }
+        }
+
+        // WHY: 退出统一走 AppQuitEvent，由 GlobalSceneMgr 先清理资源再退出——界面层不要直接 Application.Quit()（Editor 停播放的分支也在那个出口里）
+        /// <summary>真正的退出：发布 AppQuitEvent。</summary>
+        void QuitApplication()
+        {
+            Log.Info("[MenuController] 已确认，退出应用");
+            EventBus<AppQuitEvent>.Publish(new AppQuitEvent());
+        }
+
+        // WHY: 必须由本常驻控制器统一处理——房间场景进内容页时被卸载、HUD 随之销毁，而确认结果要等用户点完才回来；Id 固定（不把项目名拼进去）才能与其它对话框的认领口径一致
+        /// <summary>房间项目 HUD 的「进入项目」请求：先弹二次确认，确认后走与菜单器件按钮同一个 EnterProject。</summary>
+        void OnRoomMenuEnterRequested(RoomMenuEnterRequestEvent e)
+        {
+            if (e == null || e.Clip == null) return;
+
+            m_PendingEnterClip = e.Clip;
+
+            Log.Info($"[MenuController] 房间 HUD 请求进入：{e.Clip.id}（{e.Clip.displayName}），待确认");
+            EventBus<DialogRequestEvent>.Publish(
+                new DialogRequestEvent(EnterDialogId, $"即将离开漫游，确定进入《{e.Clip.displayName}》吗？",
+                    showConfirm: true, showCancel: true));
+        }
+        #endregion
     }
 }

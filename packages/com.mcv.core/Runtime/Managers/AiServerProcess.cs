@@ -5,19 +5,8 @@ using UnityEngine;
 
 namespace MCV_Module.Managers
 {
-    /// <summary>
-    /// AiServer EXE 的宿主进程管理（留源码，不进 DLL）。
-    ///
-    /// ⚠️ 本文件包含 #if !UNITY_WEBGL 平台宏，预编译 DLL 中宏不生效，
-    ///    因此必须由 Unity 源码侧编译（留在 MCV.Runtime），不能编入 MCV.AiClient.dll。
-    ///
-    /// 职责:
-    ///   - 拉起 StreamingAssets/AiServer/AiServer.exe（--host --port --parent-pid）
-    ///   - 退出时优雅关闭 POST /v1/shutdown + 兜底 Kill
-    ///   - WebGL 下全部为 no-op（无法拉起本地进程, 仅探测远程服务）
-    ///
-    /// 纯协议（鉴权/对话/日志）在 AiServerClient（MCV.AiClient.dll）。
-    /// </summary>
+    // WHY: 本文件含 #if !UNITY_WEBGL，预编译 DLL 中宏不生效，必须由 Unity 源码侧编译（MCV.Runtime），不能编入 MCV.AiClient.dll
+    /// <summary>AiServer EXE 的宿主进程管理：拉起、优雅关闭、兜底 Kill；WebGL 下全部 no-op（仅探测远程服务）。</summary>
     public class AiServerProcess
     {
         readonly AiServerClient _client;
@@ -36,10 +25,7 @@ namespace MCV_Module.Managers
             get { return Application.streamingAssetsPath + "/AiServer/AiServer.exe"; }
         }
 
-        /// <summary>
-        /// 拉起 EXE（由 AiServerClient.EnsureReadyAsync 在健康检查未通过时回调；内部保证只拉一次）。
-        /// WebGL 下为空操作。
-        /// </summary>
+        /// <summary>拉起 EXE（由 EnsureReadyAsync 在健康检查未通过时回调；只拉一次；WebGL 下为空操作）。</summary>
         public void TryLaunch()
         {
 #if !UNITY_WEBGL
@@ -94,11 +80,7 @@ namespace MCV_Module.Managers
 #endif
         }
 
-        /// <summary>
-        /// 同步关闭(OnApplicationQuit 时调用, 协程在退出时不会继续跑):
-        /// 优雅 POST /v1/shutdown（带鉴权头）+ 兜底 Kill，并把客户端标记为未就绪。
-        /// WebGL 下仅标记未就绪。
-        /// </summary>
+        /// <summary>同步关闭（OnApplicationQuit 用，协程在退出时不会继续跑）：POST /v1/shutdown + Kill + 标记未就绪。</summary>
         public void ShutdownNow()
         {
 #if !UNITY_WEBGL
@@ -113,7 +95,7 @@ namespace MCV_Module.Managers
             }
             catch (Exception)
             {
-                // 服务可能已不在, 忽略
+                // WHY: 服务可能已不在，忽略
             }
             Kill();
 #endif

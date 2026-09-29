@@ -4,10 +4,8 @@ using UnityEngine;
 
 namespace MCV_Module.Models.Addressable
 {
-    /// <summary>
-    /// 场景 AA 包配置表 —— 放在 Resources/ 中，运行时与 Editor 共用。
-    /// 用户在此编辑哪些场景走 Addressables，以及对应的 address。
-    /// </summary>
+    // WHY: 场景是否走 AA 的唯一判定源 —— GlobalAddressableMgr.IsSceneAA / GetSceneAddress 读它；资产放 Resources/ 下运行时与 Editor 共用。
+    /// <summary>场景 AA 配置表：列出哪些场景走 Addressables 及各自的 address。</summary>
     [CreateAssetMenu(fileName = "SceneAAConfig", menuName = "MCV/Scene AA Config")]
     public class SceneAddressableConfig : ScriptableObject
     {
