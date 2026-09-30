@@ -29,10 +29,8 @@ OnTaskTypeChanged(e)  SetCurrentTaskType, then rebuild only while the state is U
 SwitchToState(state)  pick the non-persistent canvas whose MatchesState is true -> SetProjectState(ToProjectState(state)) -> cancel the previous coroutine -> start SwitchToStateCoroutine
 ToProjectState(state)  static; SceneState -> ProjectState (Setup/Start/Login -> Start)
 SwitchToStateCoroutine(target, state, all)  fade out prev -> hide and ClearPanels on every non-target canvas -> activate, Rebuild, CanvasRebuildVersion++, fade in
-CurrentStateDescription()  AI context text: current scene, plus task type and panel content for UI/Roaming
+CurrentStateDescription()  AI context text: current scene, plus task type for UI/Roaming
 SceneStateDescription(state)  static; Chinese description per state
-TaskPanelDescription()  static; panel content per task type (Purpose / Equipment / Principle / Info / Structure / Inspection / LineConnection / Training / Test), fixed text for Exam (not a TaskPanelBase), empty fallback for everything else
-SafePanelContent(panel) / SafeTipsText(canvas)  static; return an empty string instead of throwing; both resolve their panel through CanvasBase.FindPanel (query only, never create)
 TryPublishInitialState() / PublishInitialState()  publish m_InitialState once the target canvas is registered (see notes)
 HasCanvasForState(state)  true when a non-persistent registered canvas matches the state
 
@@ -41,10 +39,10 @@ Notes:
 - Persistent canvases (LoadingCanvas) are excluded from the switch table: they are never a switch target and never faded out or ClearPanels-ed, because the loading mask must outlive the whole switch.
 - SwitchToState logs a warning when no canvas matches the requested state: that silent return previously hid the startup-ordering bug above.
 
-- The project state must be written before the canvas rebuild: panels read it in Awake to decide which entries to show (MenuPanel.SetBtnsActive).
-- CanvasRebuildVersion exists for consumers whose content assembly can finish before the rebuild, typically the inspection step chain: InspectionManager instantiates the inspection prefab immediately on the task-change event, about 0.3s before the rebuild, and starting the chain earlier means the Start step's StepUIPanel is destroyed by ClearPanels(). StepManager waits on this version through its canvasRebuildWaitTimeout. It is exposed in this manager layer to keep managers from depending on UI's CanvasBase.
+- The project state must be written before the canvas rebuild: panels may read it in Awake to decide which entries to show.
+- CanvasRebuildVersion exists for consumers whose content assembly can finish before the rebuild: a prefab may be instantiated immediately on the task-change event, about 0.3s before the rebuild, and starting a chain earlier means the Start step's UI panel is destroyed by ClearPanels(). StepManager waits on this version through its canvasRebuildWaitTimeout. It is exposed in this manager layer to keep managers from depending on UI's CanvasBase.
 - IsSwitching means "do not build panels now": panels created during a switch are removed by ClearPanels.
 - Only one switch coroutine runs at a time; a new switch cancels the previous one so animations cannot stack.
 - OnTaskTypeChanged rebuilds only in UI/Roaming, so a task change arriving on the start/login/menu pages does not rebuild the current screen.
 - GetPanel<T> skips inactive and persistent canvases, so panels are never created under a hidden canvas.
-- ⚠️ GetPanel CREATES the panel when it is not registered (CanvasBase.CreatePanel), so any "read / describe" path must use CanvasBase.FindPanel instead: TaskPanelDescription used to call GetPanel, and every AI context build (warm-up + each send) instantiated a phantom TaskDefaultPanel on the active canvas for the task types that fell into the default branch (Info / Structure / Inspection), and even on the roaming canvas. TaskDefaultPanel currently has no creation site at all — nothing instantiates it any more.
+- ⚠️ GetPanel CREATES the panel when it is not registered (CanvasBase.CreatePanel), so any "read only" path must use CanvasBase.FindPanel instead. (The former TaskPanelDescription violated this and spawned phantom panels on every AI context build; it was removed in the 2026-09-30 cleanup.)

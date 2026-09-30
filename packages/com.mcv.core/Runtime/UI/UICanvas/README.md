@@ -11,13 +11,13 @@
 ## 选文件
 - `StartCanvas.cs` — 开始页：StartPanel；本期未设置过画质时弹画质面板
 - `LoginCanvas.cs` — 登录页：LoginPanel
-- `MenuCanvas.cs` — 菜单页：MenuPanel；AI 开启时加 AiDialogPanel
-- `ContentCanvas.cs` — 内容页：外壳 + 任务列表 + 按 TaskType 的任务面板
-- `RoamingCanvas.cs` — 漫游页：RoamingFunctionPanel（任务面板未装配）
+- `MenuCanvas.cs` — 菜单页：骨架（旧 MenuPanel 已移除，新菜单待重写）
+- `ContentCanvas.cs` — 内容页：骨架（业务面板已移除，AI 开启时挂 AiDialogPanel）
+- `RoamingCanvas.cs` — 漫游页：骨架（AI 开启时挂 AiDialogPanel）
 - `LoadingCanvas.cs` — 常驻加载遮罩画布，不参与状态切换
 
 ## 跨文件约定
 - **状态事件驱动**：`GlobalUIMgr` 监听 `SceneStateChangeEventData` / `TaskTypeChangeEventData` 后调**无参** `Rebuild()`；Canvas 不接收 state/taskType，任务类型自己读 `GlobalDataMgr.GetCurrentTaskType()`。
 - **加载遮挡层必须住在 `LoadingCanvas` 上**（`IsPersistent` 画布被切换逻辑剔除），挂状态画布下会被连根拔掉并闪一下。
-- **功能按钮差异集中在此**：唯一入口 `FunctionPanel.SetFunctionBtnActive(name, bool)`，按钮名形如 `BackBtn` / `MuteBtn` / `ResourcePanelBtn` / `SummitBtn` / `RecordBtn`。
+- **功能按钮差异集中在此**（`FunctionPanel` 及其 `SetFunctionBtnActive` 已随业务移除，新菜单 / 功能条重写时再定入口）。
 - **新增状态**：`EnumAll.cs` 加 `SceneState` 值 → 新建 Canvas 子类 → `GlobalUIMgr` 状态映射同步。

@@ -5,18 +5,18 @@ Role: single step node; holds one step's data and its runtime condition; collect
 Fields (serialized):
 id:string  stable step id; empty -> generated as Step_{processingIndex}_{index}
 displayName:string  overwritten in Awake to {id}_{Type}
-description:string  step copy; TipsController fallback when tipsId is empty
+description:string  step copy (was the TipsController fallback; TipsController removed 2026-09-30)
 conditionType:ConditionType  selects the ConditionBase subclass
 showObjs/hideObjs:List<GameObject>  applied once in Prepare
 animations:List<StepAnimation>  each = {animation, clip, hideOnComplete}
 tipsId:string  -> StepContentData 的 StepTipsData.id
 audioId:string  reserved, no consumer
-targetObj:InteractiveBase  Click / Drag / Tool / GearAdjust
+targetObj:InteractiveBase  Click / Drag / Tool
 dragObj:InteractiveBase  Drag
 usingId:string  Tool / UI / Start / Finish / Question
-lines:List<InteractiveBase>  LineConnect templates
-points:List<InteractiveBase>  MeasurePair; exactly 2 InspectionElementPointObj; red/black swap counts as the same pair
-gearType:MultimeterGearType  GearAdjust; function gear only, range not checked
+lines:List<InteractiveBase>  reserved (LineConnect condition removed 2026-09-30)
+points:List<InteractiveBase>  reserved (MeasurePair condition removed 2026-09-30)
+gearType:MultimeterGearType  reserved (GearAdjust condition removed 2026-09-30)
 
 Fields (runtime, [NonSerialized]):
 condition:ConditionBase  instance created from conditionType in Awake

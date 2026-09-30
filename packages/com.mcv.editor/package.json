@@ -1,12 +1,12 @@
 {
-    "version": "0.1.2",
+    "version": "0.1.3",
     "name":  "com.mcv.editor",
     "description":  "MCV framework editor tooling: bundle pipelines (MCV Build/*) and editing-time tools (MCV Editor/*).",
     "dependencies":  {
                          "com.unity.addressables":  "1.22.3",
                          "com.unity.nuget.newtonsoft-json":  "3.2.1",
                          "com.unity.ugui":  "1.0.0",
-                         "com.mcv.core": "0.1.22",
+                         "com.mcv.core": "0.1.23",
                          "com.unity.textmeshpro":  "3.0.7"
                      },
     "unity":  "2022.3",

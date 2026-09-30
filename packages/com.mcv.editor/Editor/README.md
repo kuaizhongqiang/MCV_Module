@@ -13,7 +13,7 @@
 ## 选文件
 
 - `Common/` —— 共享内核（`EditorPaths` / `EditorAssetUtil` / `PackageConfigWriter` / `PackageDatabaseSync` / `BundleBuilder` / `GlobalBundleRunner`）；`Tools/` 与 `BuildTools/` 都依赖它，**禁止再抄一份**
-- `Tools/` —— 编辑期生产工具与 Inspector 扩展（菜单根 `MCV Editor/`，共 12 个 `.cs`）：生产工具 `PanelGeneratorWindow` / `LineEditTools` / `ControllerPlaceholderTools` / `DataSOExporter` / `TextI18nDataTools` / `TextMigrationTools` / `TextOverrideTools`；Inspector 扩展 `ElementLineObjEditor` / `InspectionElementObjEditor` / `InspectionMultimeterKnobObjEditor` / `StepHandlerEditor` / `TextComponentEditor`
+- `Tools/` —— 编辑期生产工具与 Inspector 扩展（菜单根 `MCV Editor/`，共 8 个 `.cs`）：生产工具 `PanelGeneratorWindow` / `ControllerPlaceholderTools` / `DataSOExporter` / `TextI18nDataTools` / `TextMigrationTools` / `TextOverrideTools`；Inspector 扩展 `StepHandlerEditor` / `TextComponentEditor`。2026-09-30 元件业务清理已删 `LineEditTools` / `ElementLineObjEditor` / `InspectionElementObjEditor` / `InspectionMultimeterKnobObjEditor`
 - `BuildTools/` —— 出包流水线（菜单根 `MCV Build/`）：`ContentBundleTools` / `CameraBgBundleTools` / `RoomOneBundleTools` / `SceneAddressableTools` + `ContentProviders/`（`InfoSpriteProvider` / `ModelPrefabProvider`）+ `GlobalProviders/`（`CameraBgGlobalProvider` / `RoomOneGlobalProvider` / `UIPrefabGlobalProvider` / `FontGlobalProvider`）
 
 ## 跨文件约定

@@ -158,11 +158,8 @@ namespace MCV_Module.Steps
                 case ConditionType.Tool: return new ConditionTool();
                 case ConditionType.UI: return new ConditionUI();
                 case ConditionType.Question: return new ConditionQuestion();
-                case ConditionType.LineConnect: return new ConditionLineConnect();
                 case ConditionType.Finish: return new ConditionFinish();
                 case ConditionType.Start: return new ConditionStart();
-                case ConditionType.MeasurePair: return new ConditionMeasurePair();
-                case ConditionType.GearAdjust: return new ConditionGearAdjust();
                 default: return new ConditionDefault();
             }
         }

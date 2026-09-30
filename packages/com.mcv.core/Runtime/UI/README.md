@@ -18,7 +18,7 @@
 - `UICanvas/` — 按 `SceneState` 划分的 Canvas
 - `Panels/` — 全部面板
 - `Components/` — 原子组件：文本 / 输入框 / 视频
-- `Tools/` — 解耦 UI 逻辑：视频 / 菜单 / 气泡 / 音效
+- `Tools/` — 解耦 UI 逻辑：视频 / 气泡 / 音效 / 布局重建
 
 ## 跨文件约定
 - 面板按类名从 UI 全局包（`UI/ui`，条目 id `ui_{类名}`）取件，走 `Tools/UIPrefabUtil.Get(类名)`；Prefab 文件名必须等于类名，落在 `Assets/Prefabs/UI/Panels/`（碎片在 `Fragments/`）；新增面板走菜单 `MCV Editor/创建/UI Panel`（自动写 `[RequireController]`），改完须重跑 `MCV Build/UI prefab AB`。

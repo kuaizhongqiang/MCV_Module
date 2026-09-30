@@ -14,5 +14,5 @@ OnInspectorGUI()  draw the always-shown fields plus the type-specific extras
 Notes:
 - Marked CustomEditor(typeof(StepHandler)).
 - Always shown: id, displayName, description, conditionType, showObjs, hideObjs, animations, tipsId, audioId.
-- Type specific: Click shows targetObj, Drag shows targetObj and dragObj, Tool shows usingId and targetObj, UI and Question show usingId, LineConnect shows lines, MeasurePair shows points, GearAdjust shows targetObj and gearType.
+- Type specific: Click shows targetObj, Drag shows targetObj and dragObj, Tool shows usingId and targetObj, UI / Start / Finish / Question show usingId. (LineConnect / MeasurePair / GearAdjust mappings were removed in the 2026-09-30 cleanup.)
 - The Chinese label arrays and menu strings are inspector-facing contract and must stay unchanged.

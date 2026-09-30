@@ -5,7 +5,6 @@ using MCV_Module.Event;
 using MCV_Module.Models;
 using MCV_Module.Singleton;
 using MCV_Module.UI;
-using MCV_Module.UI.Panels;
 using UnityEngine;
 
 namespace MCV_Module.Managers
@@ -307,11 +306,6 @@ namespace MCV_Module.Managers
             if (mgr.m_CurrentState == SceneState.UI || mgr.m_CurrentState == SceneState.Roaming)
             {
                 result += "当前任务：" + GlobalDataMgr.GetCurrentTaskType().ToString() + "\n";
-                string panelDesc = TaskPanelDescription();
-                if (!string.IsNullOrEmpty(panelDesc))
-                {
-                    result += "当前任务面板：" + panelDesc + "\n";
-                }
             }
             return result;
         }
@@ -334,107 +328,6 @@ namespace MCV_Module.Managers
                     return "漫游界面，主要进行三维交互";
                 default:
                     return "未知";
-            }
-        }
-
-        // WHY: 一律用 FindPanel（只查不建）而不是 GetPanel —— GetPanel 查不到时会**实例化**一个面板挂到画布上
-        //      （CanvasBase.CreatePanel），而本方法只是"把当前界面描述给 AI 看"，不该有任何副作用。
-        //      实测症状：TaskType.Info / Structure / Inspection 落在 default 分支 → 每次组装 AI 上下文都凭空冒出一个
-        //      TaskDefaultPanel；漫游页（激活画布是 RoamingCanvas）上同样会往漫游画布挂面板。
-        static string TaskPanelDescription()
-        {
-            var canvas = Instance.m_ActiveCanvas;
-            if (canvas == null) return "任务面板未激活";
-
-            string content = "";
-            switch (GlobalDataMgr.GetCurrentTaskType())
-            {
-                case TaskType.Purpose:
-                    content = SafePanelContent(canvas.FindPanel<TaskPurposePanel>());
-                    break;
-                case TaskType.Equipment:
-                    content = SafePanelContent(canvas.FindPanel<TaskEquipmentPanel>());
-                    break;
-                case TaskType.Principle:
-                    content = SafePanelContent(canvas.FindPanel<TaskPrinciplePanel>());
-                    break;
-                case TaskType.Info:
-                    content = SafePanelContent(canvas.FindPanel<TaskInfoPanel>());
-                    break;
-                case TaskType.Structure:
-                    content = SafePanelContent(canvas.FindPanel<TaskStructurePanel>());
-                    break;
-                case TaskType.Inspection:
-                    content = SafePanelContent(canvas.FindPanel<TaskInspectionPanel>());
-                    break;
-                case TaskType.LineConnection:
-                    content = SafePanelContent(canvas.FindPanel<TaskLineConnectionPanel>());
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        string tips = SafeTipsText(canvas);
-                        if (!string.IsNullOrEmpty(tips)) content += "当前操作提示" + tips;
-                    }
-                    break;
-                case TaskType.Training:
-                    content = SafePanelContent(canvas.FindPanel<TaskTrainingPanel>());
-                    if (!string.IsNullOrEmpty(content))
-                    {
-                        string tips = SafeTipsText(canvas);
-                        if (!string.IsNullOrEmpty(tips)) content += "当前操作提示" + tips;
-                    }
-                    break;
-                case TaskType.Test:
-                    content = SafePanelContent(canvas.FindPanel<TaskTestPanel>());
-                    break;
-                case TaskType.Exam:
-                    // WHY: 考核面板不是 TaskPanelBase（没有 GetPanelContent 契约），故用固定文案
-                    content = "考核：逐题作答单选题，作答即时反馈对错，答对后自动进入下一题";
-                    break;
-                default:
-                    // WHY: 无匹配（如 TaskType.None）不再取 TaskDefaultPanel —— 那是"先建再描述"的副作用来源；
-                    //      内容留空，由方法末尾统一降级成"任务面板暂无内容"
-                    break;
-            }
-            return string.IsNullOrEmpty(content) ? "任务面板暂无内容" : content;
-        }
-
-        /// <summary>安全取任务面板内容：面板不存在或返回 null/空/异常时降级为空串，不抛异常。</summary>
-        static string SafePanelContent(TaskPanelBase panel)
-        {
-            if (panel == null) return "";
-            string text = null;
-            try
-            {
-                text = panel.GetPanelContent();
-            }
-            catch (System.Exception)
-            {
-                return "";
-            }
-            return text ?? "";
-        }
-
-        /// <summary>安全取 Tips 面板文本：面板不存在或异常时降级为空串（只查不建，见 TaskPanelDescription 的 WHY）。</summary>
-        static string SafeTipsText(CanvasBase canvas)
-        {
-            if (canvas == null) return "";
-            TipsPanel tips = null;
-            try
-            {
-                tips = canvas.FindPanel<TipsPanel>();
-            }
-            catch (System.Exception)
-            {
-                return "";
-            }
-            if (tips == null) return "";
-            try
-            {
-                return tips.GetTipsText() ?? "";
-            }
-            catch (System.Exception)
-            {
-                return "";
             }
         }
         #endregion

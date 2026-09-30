@@ -12,10 +12,11 @@
 - `ICondition.cs` — 步骤条件契约：三阶段协程状态机
 - `IController.cs` — UI 控制器契约：按名 1:1 绑定 View
 - `IObj.cs` — 可交互物体契约：8 个鼠标事件与取组件
-- `IElement.cs` — 元件 / 端子 / 导线交互契约
 - `IStepPanels.cs` — 三类步骤面板最小契约（工具 / 信息 / 答题）
 - `IUiEffect.cs` — UI 悬停 / 点击特效契约
 - `IContentProvider.cs` — 内容 AB 流水线契约（Editor-only）
+
+> 2026-09-30 清理：`IElement.cs`（元件 / 端子 / 导线交互契约）随元件业务移除。
 
 ## 跨文件约定
 - **接口保持「最小且稳定」**：新增接口前先确认不能用事件总线或现有契约表达。

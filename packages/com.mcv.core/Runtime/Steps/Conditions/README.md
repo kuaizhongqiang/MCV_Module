@@ -4,7 +4,7 @@
 类型：功能文档
 权威：说明
 状态：2026-09-24 压缩为定位层（细节指向同级 `A.md`）
-依赖：`Steps/StepHandler.cs`（宿主数据）、`Managers/Steps/StepManager.cs`（驱动）、`Interfaces/ICondition.cs` 与 `Interfaces/IStepPanels.cs`（契约）、`Managers/GlobalInteractiveMgr` / `GlobalControllerMgr` / `GlobalCameraMgr`、`Managers/ElementManagerBase`（依赖服务）
+依赖：`Steps/StepHandler.cs`（宿主数据）、`Managers/Steps/StepManager.cs`（驱动）、`Interfaces/ICondition.cs` 与 `Interfaces/IStepPanels.cs`（契约）、`Managers/GlobalInteractiveMgr` / `GlobalControllerMgr` / `GlobalCameraMgr`（`ElementManagerBase` 已随业务移除）
 
 > 路径：`Assets/Scripts/Steps/Conditions/` ｜ 程序集：`MCV.Runtime` ｜ 命名空间：`MCV_Module.Steps`（与 `Steps/` 根目录同一命名空间）
 
@@ -16,12 +16,11 @@
 - `ConditionTool.cs` — 从工具面板选 `usingId` 工具拖到目标
 - `ConditionUI.cs` — 弹说明面板，点确认即完成
 - `ConditionQuestion.cs` — 弹出 `usingId` 题目，答对即完成
-- `ConditionLineConnect.cs` — `lines` 中的连线模板全部完成（顺序无关）
 - `ConditionFinish.cs` — 终结步骤：确认后整条链结束
 - `ConditionDefault.cs` — 默认条件：无交互，立即完成
 - `ConditionStart.cs` — 起始标记：确认后进下一步
-- `ConditionMeasurePair.cs` — 红黑表笔分别吸附到 `points` 两点对
-- `ConditionGearAdjust.cs` — 把旋钮转到 `gearType` 指定功能档位
+
+> 2026-09-30 清理：`ConditionLineConnect`（连线模板）/ `ConditionMeasurePair`（红黑表笔点对）/ `ConditionGearAdjust`（旋钮档位）随元件业务移除；对应 `ConditionType` 枚举值保留作契约（只增不改）。
 
 ## 跨文件约定
 - **等待必须可被打断**：`Waiting()` 中任何轮询都要写 `while (!IsForceCompleted && !条件)` 或用 `WaitUntilOrForceComplete(...)`；直接用 `WaitUntil` / 长 `WaitForSeconds` 会让 `NextStep` / 跳转卡死或变卡顿。

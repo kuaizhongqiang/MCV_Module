@@ -23,7 +23,6 @@
 - `GlobalAudioMgr.cs` — 音频中枢（BGM/语音/音效）+ 音量渐变
 - `GlobalCameraMgr.cs` — 主相机与 CinemachineBrain/CameraBg 同步
 - `GlobalInputMgr.cs` — 输入控制器注册表 + 鼠标静止/移动判定
-- `ElementManagerBase.cs` — 元件/连线注册表 + 手绘连线状态机
 - `AiServerProcess.cs` — AiServer EXE 进程宿主（拉起与优雅关闭）
 
 ## 跨文件约定
@@ -37,5 +36,5 @@
 ## 与其他目录的关系
 
 - 上游：`Setup.cs`（启动编排）、`Singleton/`（基类）、`Event/`（订阅）、`Models/`（数据）、`Interfaces/`（契约）。
-- 下游：`Controllers/`（调度层读数据、切场景、查面板）、`UI/`（Canvas 注册与重建）、`Objects/`（元件注册与交互）、`Steps/`（步骤导演）。
-- 子目录：`Steps/`（步骤导演）、`InstManagers/`（场景实例对象管理器）、`RoomDynamic/`（漫游房间动态表现，含 HUD 视频与项目图标）。
+- 下游：`Controllers/`（调度层读数据、切场景、查面板）、`UI/`（Canvas 注册与重建）、`Objects/`（交互注册）、`Steps/`（步骤导演）。
+- 子目录：`Steps/`（步骤导演）、`InstManagers/`（场景实例对象管理器）、`RoomDynamic/`（房间动态管理器基类；业务实现 `RoomOneDynamicMgr` 已随业务移除）。

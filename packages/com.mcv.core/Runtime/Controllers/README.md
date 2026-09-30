@@ -10,33 +10,14 @@
 
 ## 选文件
 - `ControllerBase.cs` — 控制器基类：注册 / 按名绑定 View / 退注
-- `AiDialogController.cs` — AI 对话调度：预热门控 + 流式回调重试
-- `DialogController.cs` — 通用对话框：等收起动画播完再发结果
-- `ContentFunctionController.cs` — 内容页外壳：AI 开关 + 返回二次确认
-- `FunctionController.cs` — 底部功能条：七按钮事件与退出 / 返回决策
-- `LoadingController.cs` — 加载遮罩编排：进度与最短显示时长
-- `LoginController.cs` — 登录流程：校验输入并写用户数据
-- `MenuController.cs` — 菜单入口：进项目 / 漫游 / 退出 / 成绩预览
-- `RoamingFunctionController.cs` — 漫游页外壳：唤出 / 收起菜单弹层
-- `ResultSummitController.cs` — 成绩预览：关闭与提交按钮回调
 - `StartController.cs` — 开始界面：进入登录态（单向）
+- `LoginController.cs` — 登录流程：校验输入并写用户数据
+- `DialogController.cs` — 通用对话框：等收起动画播完再发结果
+- `AiDialogController.cs` — AI 对话调度：预热门控 + 流式回调重试
+- `LoadingController.cs` — 加载遮罩编排：进度与最短显示时长
 - `RenderQualityController.cs` — 画面质量：点选即确认并落盘 `renderQuality`
-- `TaskListController.cs` — 任务列表：装配列表并随任务切换刷新
-- `TaskPurposeController.cs` — 任务目的面板占位（TODO：装配目的内容）
-- `TaskEquipmentController.cs` — 实验仪器面板占位（TODO：装配仪器内容）
-- `TaskPrincipleController.cs` — 实验原理：解析 videoName 交面板播放
-- `TaskLineConnectionController.cs` — 电路连接面板占位（TODO：装配连线 UI）
-- `TaskTrainingController.cs` — 仿真实验面板占位（TODO：装配仿真内容）
-- `TaskTestController.cs` — 小测验面板占位（TODO：装配题目）
-- `TaskInspectionController.cs` — 检测页提示：悬停浮动框 + 吸附操作记录
-- `TaskStructureController.cs` — 结构调度：三维分解动画装配与播放
-- `TaskInfoController.cs` — 简介调度：图集 + 文案 + 器件模型
-- `TaskExamController.cs` — 考核：抽题 / 乱序 / 判题 / 推进都在本层
-- `StepProcessingController.cs` — 步骤处理空骨架；面板侧已有实现（TODO）
-- `TipsController.cs` — 提示条调度：步骤提示 / 操作提示与自动收起
-- `TitleController.cs` — 标题骨架：面板自读项目名，暂无调度
-- `StepQuestionController.cs` — 步骤答题：按 id 取全局题库并判题
-- `StepUIController.cs` — 步骤 UI 说明：分页正文与确认完成
+
+> 2026-09-30 清理：菜单 / 功能条 / 任务 / 步骤 / 提示 / 标题等业务控制器（`MenuController`、`FunctionController`、`ContentFunctionController`、`RoamingFunctionController`、`ResultSummitController`、`Task*Controller`、`Step*Controller`、`TipsController`、`TitleController`）已移除，框架只保留通用流程控制器；新菜单待重写。
 
 ## 跨文件约定
 - **控制器不是 MonoBehaviour、不挂场景**：`GlobalControllerMgr.DelayInit` 按类型表统一创建并常驻（`1_Content/ControllerRoot` 下的 27 个实例已删除）。生命周期只有 `OnInit`（登记后一次）与 `OnDispose`（销毁前一次），没有 Awake/OnDestroy 可依赖。

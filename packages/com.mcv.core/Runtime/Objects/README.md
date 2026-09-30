@@ -13,13 +13,13 @@
 ## 选文件
 
 - `ObjectBase.cs` — 场景对象最底层标识基类（无行为）
-- `Interactives/` — 交互物与元件层 → `Interactives/README.md`
-- `Tools/` — 元件动画与连线绘制 → `Tools/README.md`
+- `Interactives/` — 交互物基类层 → `Interactives/README.md`
+
+> 2026-09-30 清理：元件层（`Interactives/Elements`）、任务对象（`Interactives/TaskObj`）、漫游房间对象（`Interactives/RoomDynamic`）与 `Tools/`（元件动画 / 连线绘制）已移除，只保留基类。
 
 ## 跨文件约定
 
 - 交互方向单向：`GlobalInteractiveMgr` 射线 → `InvokeMo*()` → `Mo*Event` 虚钩子；对象侧不主动查询。
-- 注册表分工：元件/连线在 `Managers/ElementManagerBase`，射线检测与派发在 `Managers/GlobalInteractiveMgr`。
+- 射线检测与派发在 `Managers/GlobalInteractiveMgr`（元件/连线注册表 `ElementManagerBase` 已随业务移除）。
 - 场景对象不直接读 `Assets/StreamingAssets`，数据经 `Global*Mgr` 取。
 - 「关掉一个物体给别的让路」要连碰撞体一起切（只切 `IsInteractable` 射线仍被挡）。
-- 新增交互类型动 4 处：`ConditionType`（只能往后追加）+ `ConditionBase` + `StepHandler.CreateCondition` + `StepHandlerEditor.FieldsByType`。

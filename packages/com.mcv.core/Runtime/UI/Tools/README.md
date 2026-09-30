@@ -10,13 +10,12 @@
 
 ## 选文件
 - `VideoTool.cs` — Unity VideoPlayer 的静态封装（框架播放视频的唯一入口）
-- `MenuScrollLogic.cs` — 菜单封面流纯数值滚动状态机（已作废，见下）
-- `MenuDetailLogic.cs` — 菜单子目录按钮重建与交错动画（已作废，见下）
 - `AiBubbleStruct.cs` — AI 气泡封装：按预制体建气泡并写纯文本
 - `UILayoutRebuilder.cs` — 布局重建唯一实现：等一帧 + 按深度自下而上（文本 / 子物体改动后统一走它）
 - `UiAudioEffect.cs` — UI 音效基类：划过/离开/点击播 AudioEffectType
 - `TipsContentUtiliy.cs` — 单条提示的进出场动画与文本/图片切换
-- `ResultSummitViewData.cs` — 成绩预览视图数据 + 文案格式化唯一出口
+
+> 2026-09-30 清理：`MenuScrollLogic` / `MenuDetailLogic`（菜单封面流与子目录逻辑）与 `ResultSummitViewData`（成绩预览视图数据）随菜单 / 成绩业务移除。
 
 ## 跨文件约定
 - **改完文本 / 子物体显隐要刷布局，一律走 `UILayoutRebuilder`**（面板走 `PanelBase.RequestLayoutRebuild`，它再叠上防重入与失活跳过）：同帧直接 `LayoutRebuilder.ForceRebuildLayoutImmediate` 会量到 TMP 形态下"还没装配完的空文本"，而且必须**子先父后**（父级 LayoutGroup 的 `childControlWidth = false`，量的是子节点当前的 `sizeDelta`）。

@@ -3,7 +3,7 @@ using MCV_Module.Steps;
 using UnityEditor;
 using UnityEngine;
 
-/// <summary>StepHandler 的 Inspector 自定义绘制 —— 按 conditionType 显示不同字段：常显 id/displayName/description/conditionType/showObjs/hideObjs/animations/tipsId/audioId；type 相关 Click→targetObj、Drag→targetObj+dragObj、Tool→usingId+targetObj、UI/Question→usingId、LineConnect→lines。</summary>
+/// <summary>StepHandler 的 Inspector 自定义绘制 —— 按 conditionType 显示不同字段：常显 id/displayName/description/conditionType/showObjs/hideObjs/animations/tipsId/audioId；type 相关 Click→targetObj、Drag→targetObj+dragObj、Tool→usingId+targetObj、UI/Question→usingId。</summary>
 [CustomEditor(typeof(StepHandler))]
 public class StepHandlerEditor : Editor
 {
@@ -29,11 +29,8 @@ public class StepHandlerEditor : Editor
             case ConditionType.Question: return new[] { "usingId" };
             case ConditionType.UI:
             case ConditionType.Start:
-            case ConditionType.Finish: return new[] { "usingId" }; // WHY: 三者都弹 StepUIPanel，只是取的内容条目不同
-            case ConditionType.LineConnect: return new[] { "lines" };
-            case ConditionType.MeasurePair: return new[] { "points" }; // WHY: 测量点对（2 个检测点）
-            case ConditionType.GearAdjust: return new[] { "targetObj", "gearType" }; // WHY: 旋钮 + 正确档位
-            default: return System.Array.Empty<string>(); // WHY: None / Default / Finish 无额外参数
+            case ConditionType.Finish: return new[] { "usingId" }; // WHY: 三者都弹说明面板，只是取的内容条目不同
+            default: return System.Array.Empty<string>(); // WHY: None / Default 无额外参数
         }
     }
 
