@@ -2,7 +2,8 @@
     "name": "MCV.Editor.Common",
     "rootNamespace": "MCV_Module.EditorTools.Common",
     "references": [
-        "MCV.Core"],
+        "MCV.Core"
+    ],
     "includePlatforms": [
         "Editor"
     ],
