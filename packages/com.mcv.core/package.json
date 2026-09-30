@@ -5,8 +5,7 @@
     "description":  "MCV 框架运行时全量（单一程序集 MCV.Core）：Singleton/Event/Interfaces/Models/Utils、UI 基类与组件、交互件（Objects/Interactives）、业务域（Controllers/Steps/Managers/UI Panels）。core 与业务域互相引用（静态单例），故不再拆包。",
     "unity":  "2022.3",
     "testables":  [
-                      "MCV.Core.Tests",
-                      "MCV.Module.Tests"
+                      "MCV.Core.Tests"
                   ],
     "keywords":  [
                      "mcv",
