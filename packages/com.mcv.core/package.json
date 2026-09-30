@@ -2,7 +2,7 @@
     "name":  "com.mcv.core",
     "version": "0.1.22",
     "displayName":  "MCV Core",
-    "description":  "MCV 妗嗘灦杩愯鏃跺叏閲忥紙鍗曚竴绋嬪簭闆?MCV.Core锛夛細Singleton/Event/Interfaces/Models/Utils銆乁I 鍩虹被涓庣粍浠躲€佷氦浜掍欢锛圤bjects/Interactives锛夈€佷笟鍔″煙锛圕ontrollers/Steps/Managers/UI Panels锛夈€俢ore 涓庝笟鍔″煙浜掔浉寮曠敤锛堥潤鎬佸崟渚嬶級锛屾晠涓嶅啀鎷嗗寘銆?,
+    "description":  "MCV 框架运行时全量（单一程序集 MCV.Core）：Singleton/Event/Interfaces/Models/Utils、UI 基类与组件、交互件（Objects/Interactives）、业务域（Controllers/Steps/Managers/UI Panels）。core 与业务域互相引用（静态单例），故不再拆包。",
     "unity":  "2022.3",
     "testables":  [
                       "MCV.Core.Tests"
