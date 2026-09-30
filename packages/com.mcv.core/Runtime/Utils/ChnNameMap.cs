@@ -3,7 +3,7 @@ using MCV_Module.Models;
 
 namespace MCV_Module.Utils
 {
-    // WHY: 枚举新增取值必须在这里补中文名，缺项会静默回退成英文枚举名（ChnNameMapTests 兜底）；别与 ElementObjBase.ElementNameMap 的元件符号映射混用。
+    // WHY: 枚举新增取值必须在这里补中文名，缺项会静默回退成英文枚举名（测试兜底已于 2026-09-30 移除，需人工核对）。
     /// <summary>枚举 → 中文名映射中心（仅供界面与操作记录显示用）。</summary>
     public static class ChnNameMap
     {

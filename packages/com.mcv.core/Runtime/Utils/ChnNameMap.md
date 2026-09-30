@@ -14,4 +14,4 @@ Get(MultimeterGearType)  Chinese name for a gear; a missing key falls back to th
 
 Notes:
 - Distinct from ElementObjBase.ElementNameMap: that one maps element -> symbol (Resistor -> "R", used to name GameObjects and reverse-look-up types) while this class only supplies display text (Resistor -> "电阻").
-- The enums live in Models/EnumAll.cs; every new value must be added here or it silently falls back to the English enum name. ChnNameMapTests guards against misses.
+- The enums live in Models/EnumAll.cs; every new value must be added here or it silently falls back to the English enum name. (The former ChnNameMapTests guard was removed together with the whole test suite on 2026-09-30.)
