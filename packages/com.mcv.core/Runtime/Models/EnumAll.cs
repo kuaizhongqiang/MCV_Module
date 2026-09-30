@@ -52,13 +52,6 @@ namespace MCV_Module.Models
         [InspectorName("TextMeshPro")]
         TMP = 1,
     }
-    /// <summary>视频播放宿主（框架只用 Unity 原生播放器，故只保留这一种）。</summary>
-    [Serializable]
-    public enum VideoType
-    {
-        [InspectorName("传统")]
-        Legacy = 0,
-    }
     [Serializable]
     public enum OverrideAlignment
     {
