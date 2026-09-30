@@ -77,6 +77,12 @@ namespace MCV_Module.Models.System
     {
         public string[] clips;
 
+        // WHY: 路径式 key 的登记来源必须落在条目上才谈得上"反查与清理" —— 光有 key 无法回答"这个节点还在不在"。
+        /// <summary>登记来源：prefab 的资产路径（相对 Assets/，含 .prefab）；存量手写 key 为空。</summary>
+        public string prefabPath;
+        /// <summary>登记来源：prefab 的资产 GUID —— 改名 / 移动后路径会失效、GUID 不会，故孤儿判定先看它。</summary>
+        public string prefabGuid;
+
         public LanguageClip()
         {
             id = "LanguageClip";

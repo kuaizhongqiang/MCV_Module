@@ -1,6 +1,6 @@
 # Contract: EnumAll
 
-Role: the single home of every global enum; supplies the values used by JSON serialization and the inspector, grouped by #region (Rendering / Input / UI / Audio / Scene / User / Element / Interactive / Task / Animation / Language).
+Role: the single home of every global enum; supplies the values used by JSON serialization and the inspector, grouped by #region (Rendering / Input / UI / Audio / Scene / User / Element / Interactive / Task / Animation / Language / Text).
 
 Fields:
 PlayMode  Debug | Release
@@ -33,6 +33,9 @@ StepStutus  Ready | Waiting | Complete
 StepContentType  None | UI | Tips
 ObjAxis  X | Y | Z
 LanguageType  Chinese | English
+TextFinishLayer  Write = 0 | Typography = 1 | Layout = 2; how far a TextComponent has settled (Write = form fixed + text assigned, Typography = plus CJK line-break settling, Layout = plus the panel rebuild), consumed by TextComponent.OnFinished and PanelBase.WaitAllTextFinished
+AssemblePhase  None | Assembling | Ready | Failed; TextComponent's assembly stage — the only judge for the ready gate and for re-assembly (None means "before the data gate, do not read the form yet")
+PendingKind  None | Literal | Key | Clip; what a buffered write before assembly means, so a SetText(LanguageClip) is not lost
 
 Methods:
 (none)

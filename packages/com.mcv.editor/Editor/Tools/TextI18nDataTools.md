@@ -19,4 +19,4 @@ Notes:
 - Uses JObject/JToken instead of deserialize-then-write-back on purpose: a round trip would drop keys the models do not know (e.g. the legacy `questions[]` in the question bank); key-by-key addition is strictly additive (只加不改).
 - LanguageData.json is skipped: its displayName is a development label equal to the key, not user-facing copy, so it must not grow En columns.
 - Files are rewritten indented and UTF-8 without BOM; a JSON that fails to parse is skipped with a Warning.
-- This is the tool for the business-data English column channel described in `Docs/design_ai/Localization.md` §3 (`Localized.Pick` reads those columns at runtime).
+- This is the tool for the business-data English column channel described in `Docs/design_ai/Localization.md` §18 (`Localized.Pick` reads those columns at runtime).

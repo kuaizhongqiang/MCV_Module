@@ -1,6 +1,6 @@
-{
+﻿{
     "name":  "com.mcv.core",
-    "version": "0.1.25",
+    "version": "0.1.26",
     "displayName":  "MCV Core",
     "description":  "MCV 框架运行时全量（单一程序集 MCV.Core）：Singleton/Event/Interfaces/Models/Utils、UI 基类与组件、交互件基类（Objects/Interactives）、通用流程 Controllers/Panels。低压电气业务层已于 2026-09-30 剥离，此后不再拆包。",
     "unity":  "2022.3",

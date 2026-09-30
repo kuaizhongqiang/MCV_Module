@@ -68,6 +68,35 @@ namespace MCV_Module.Models
         Auto,
     }
 
+    #region Text（TextComponent 专用）
+    /// <summary>显示稳定的分层（TextComponent.OnFinished）：Write = ①定型＋②赋值；Typography = 再加 ③中文排版收敛；Layout = 再加 ④布局完成。</summary>
+    [Serializable]
+    public enum TextFinishLayer
+    {
+        Write = 0,
+        Typography = 1,
+        Layout = 2,
+    }
+    /// <summary>文本组件的装配阶段：None 未开始（就绪门前）/ Assembling 装配中（换向跨帧）/ Ready 完成 / Failed 换向两次均失败。</summary>
+    [Serializable]
+    public enum AssemblePhase
+    {
+        None = 0,
+        Assembling = 1,
+        Ready = 2,
+        Failed = 3,
+    }
+    /// <summary>TextComponent 装配期间缓冲的写入类型：None / 字面量 / key / 条目（三态缺一不可）。</summary>
+    [Serializable]
+    public enum PendingKind
+    {
+        None = 0,
+        Literal = 1,
+        Key = 2,
+        Clip = 3,
+    }
+    #endregion
+
     /// <summary>对话框身份（DialogRequestEvent / DialogResultEvent 的认领键）：只用于区分来源，不做显示，故不带 InspectorName；None = 无需认领的纯提示框。</summary>
     [Serializable]
     public enum DialogId

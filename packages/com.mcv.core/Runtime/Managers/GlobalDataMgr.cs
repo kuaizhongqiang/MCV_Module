@@ -41,19 +41,37 @@ namespace MCV_Module.Managers
         #endregion
 
         #region 语言（取文案的唯一实现，别处只调这里）
-        // WHY: 回退链只允许有一份实现 —— 文本组件、Lang、以后的业务数据取词都调这两个方法，避免两处逻辑漂移。
+        /// <summary>key → 条目 的运行态索引（懒建；LanguageData 实例一换即重建）。</summary>
+        Dictionary<string, LanguageClip> clipIndex;
+        /// <summary>上面那份索引是按哪个 LanguageData 实例建的（引用比较，用来判失效）。</summary>
+        LanguageData clipIndexSource;
+
+        // WHY: 条目只有几十条时线性查找并不慢，但取词在文本节点上是**每帧级**调用（Refresh / 动态文本），
+        // 且条目数只增不减 —— 用字典把 O(n) 降到 O(1)，代价是一份引用表。
         /// <summary>按 id（= LanguageClip.id）取语言条目；数据未就绪或不存在返回 false。</summary>
         public bool TryGetClip(string key, out LanguageClip clip)
         {
             clip = null;
             if (string.IsNullOrEmpty(key)) return false;
+
             List<LanguageClip> clips = languageData?.languageClips;
             if (clips == null) return false;
+
+            if (clipIndex == null || !ReferenceEquals(clipIndexSource, languageData)) RebuildClipIndex(clips);
+            return clipIndex.TryGetValue(key, out clip);
+        }
+
+        /// <summary>重建 key 索引（同 id 重复时**首个**胜出，与原来的线性查找口径一致）。</summary>
+        void RebuildClipIndex(List<LanguageClip> clips)
+        {
+            clipIndex = new Dictionary<string, LanguageClip>(clips.Count);
             for (int i = 0; i < clips.Count; i++)
             {
-                if (clips[i] != null && clips[i].id == key) { clip = clips[i]; return true; }
+                LanguageClip c = clips[i];
+                if (c == null || string.IsNullOrEmpty(c.id)) continue;
+                if (!clipIndex.ContainsKey(c.id)) clipIndex[c.id] = c;
             }
-            return false;
+            clipIndexSource = languageData;
         }
 
         // WHY: 界面语言的真源是设置类数据 SystemData.languageType（与画质同处），冷启动读一次、不做运行期热切；LanguageData 只管文案表。
@@ -83,6 +101,36 @@ namespace MCV_Module.Managers
             Instance.SystemData.languageType = type;
 
             SaveSystemData();
+        }
+        #endregion
+
+        #region 数据就绪（就绪门）
+        // WHY: 本管理器的 DelayInit 是**异步**读 JSON 的，而 TextComponent.Awake 是同步执行的 ⇒ 早起的组件读到的是字段初始值。
+        // 用它定型形态/语言等于把组件永久钉死成兜底值，故由这里在就绪后**广播一次**，组件订阅后补装（见 TextComponent.Awake）。
+        /// <summary>数据就绪事件（<see cref="DelayInit"/> 末尾广播一次）。订阅方须自行处理"订阅时已就绪"的情形。</summary>
+        public static event Action Ready;
+
+        /// <summary>数据是否已就绪（DelayInit 完成）。未就绪时**不得**用兜底值定型文本形态 / 语言。</summary>
+        public static bool IsReady => Exists && Instance != null && Instance.IsInit;
+
+        /// <summary>广播就绪；逐个 try/catch 隔离，一个订阅方抛异常不影响其余订阅方与后续流程。</summary>
+        static void RaiseReady()
+        {
+            Action handlers = Ready;
+            if (handlers == null) return;
+
+            Delegate[] list = handlers.GetInvocationList();
+            for (int i = 0; i < list.Length; i++)
+            {
+                try
+                {
+                    ((Action)list[i])();
+                }
+                catch (Exception e)
+                {
+                    Log.Error($"[GlobalDataMgr] 就绪事件订阅方抛异常：{e.Message}");
+                }
+            }
         }
         #endregion
 
@@ -148,6 +196,8 @@ namespace MCV_Module.Managers
 
             // WHY: 必须置 isInit=true，原实现漏置导致 Setup 启动链等待 15s 超时
             isInit = true;
+            // WHY: 就绪门 —— 广播放在 isInit 置位**之后**，订阅方在回调里读 IsReady / GetTextType 才拿得到真值。
+            RaiseReady();
             yield break;
         }
         #endregion

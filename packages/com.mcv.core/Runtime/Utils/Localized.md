@@ -13,4 +13,4 @@ Notes:
 - 集合列**不假设等长**：英文列短于中文列时按下标安全回退（设计上要求等长，运行期不因此崩）。
 - 翻译的落点是 `StreamingAssets/Data/*.json` 里的 `*En` 键（工具：`MCV Editor/文字/补齐业务数据英文列`），填好即生效、无需改代码。
 - **唯一例外：随模型预制体走的业务数据**（结构页零件名 `StructureTaskObj.structureNameEn`）——它属于某套结构模型的零件，翻不出 JSON，故英文列序列化在组件里；改完 **必须重建内容 AB 包**才在运行期生效。
-- **不适用**：弹框身份（已是 `DialogId` 枚举，不再是可翻译的 `Title` 串；弹框正文仍硬编码中文）、枚举显示名（`ChnNameMap` / `EnumAll`）、成绩档案的名称快照 —— 这些翻不得或另有归属，见 `Docs/design_ai/Localization.md` §5。
+- **不适用**：弹框身份（已是 `DialogId` 枚举，不再是可翻译的 `Title` 串；弹框正文仍硬编码中文）、枚举显示名（`ChnNameMap` / `EnumAll`）、成绩档案的名称快照 —— 这些翻不得或另有归属，见 `Docs/design_ai/Localization.md` §17。
