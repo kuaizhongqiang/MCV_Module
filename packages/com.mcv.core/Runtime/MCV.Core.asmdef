@@ -3,6 +3,7 @@
     "rootNamespace": "",
     "references": [
         "UnityEngine.UI",
+        "Unity.TextMeshPro",
         "Unity.InputSystem",
         "Cinemachine",
         "Unity.Addressables",

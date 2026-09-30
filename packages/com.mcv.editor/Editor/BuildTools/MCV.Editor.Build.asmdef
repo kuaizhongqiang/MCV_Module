@@ -2,7 +2,7 @@
     "name": "MCV.Editor.Build",
     "rootNamespace": "",
     "references": [
-        "MCV.Core", "MCV.Module",
+        "MCV.Core",
         "MCV.Editor.Common",
         "Unity.Addressables.Editor",
         "Unity.Addressables",

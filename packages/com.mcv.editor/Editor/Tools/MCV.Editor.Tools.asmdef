@@ -2,7 +2,7 @@
     "name": "MCV.Editor.Tools",
     "rootNamespace": "",
     "references": [
-        "MCV.Core", "MCV.Module",
+        "MCV.Core",
         "MCV.Editor.Common",
         "Unity.TextMeshPro",
         "UnityEngine.UI"
