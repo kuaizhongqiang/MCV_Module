@@ -5,8 +5,8 @@ using UnityEngine.Video;
 
 namespace MCV_Module.UI.Tools
 {
-    // WHY: 这里只封装 Unity 原生 VideoPlayer；任何第三方播放器都不得进包，播放器统一走 IVideoPlayer/VideoPlayerFactory。
-    /// <summary>Unity VideoPlayer 的静态封装（其它实现由 IVideoPlayer/VideoPlayerFactory 承担）。</summary>
+    // WHY: 框架只用引擎原生的 VideoPlayer，不引任何播放器插件，也不为插件留抽象
+    /// <summary>Unity VideoPlayer 的静态封装（框架播放视频的唯一入口）。</summary>
     public static class VideoTool
     {
         public static void InitVideoPlayer(VideoPlayer player)
@@ -107,10 +107,17 @@ namespace MCV_Module.UI.Tools
             return player.isPlaying;
         }
 
-        /// <summary>通过工厂创建统一播放器（Unity 原生 VideoPlayer）。</summary>
-        public static IVideoPlayer CreatePlayer(GameObject host)
+        // WHY: 承载对象上不一定有播放器组件，必须 AddComponent，否则调用方拿到的是 null 或死播放器
+        /// <summary>为承载对象准备一个已按约定初始化的 Unity VideoPlayer（没有就挂一个）。</summary>
+        public static VideoPlayer CreateVideoPlayer(GameObject host)
         {
-            return VideoPlayerFactory.Create(host);
+            if (host == null) return null;
+
+            var player = host.GetComponent<VideoPlayer>();
+            if (player == null) player = host.AddComponent<VideoPlayer>();
+
+            InitVideoPlayer(player);
+            return player;
         }
     }
 }

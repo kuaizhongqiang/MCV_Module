@@ -29,21 +29,7 @@ namespace MCV_Module.Objects.Interactives.Elements
             elementMoveAnimation.Reset();
             // WHY: 强制初始为抬起态，避免按位置推断出「已按下」导致流程要先点一次
             elementMoveAnimation.Open = true;
-
-            HighlightInit(elementMoveAnimation.moveObj.gameObject);
         }
-
-        
-
-        protected override void MoEnterEvent()
-        {
-            Highlight(true);
-        }
-
-        protected override void MoExitEvent()
-        {
-            Highlight(false);
-        }        
 
         protected override void MoDownEvent()
         {

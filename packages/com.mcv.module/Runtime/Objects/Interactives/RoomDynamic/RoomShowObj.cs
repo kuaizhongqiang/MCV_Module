@@ -7,7 +7,7 @@ using UnityEngine;
 namespace MCV_Module.Objects.Interactives.RoomDynamic
 {
     // WHY: minPos/maxPos 是「该轴上的绝对本地坐标」而非偏移（8 个实例 minPos=1.07 正对应摆放 localPos.y），只换 moveAxis 一个分量，另两轴保持 Awake 原值
-    /// <summary>房间展品的「悬浮 + 悬停」表现：常态上下浮动、悬停惯性减速+高亮、移出惯性加速、点击留口</summary>
+    /// <summary>房间展品的「悬浮 + 悬停」表现：常态上下浮动、悬停惯性减速、移出惯性加速、点击留口</summary>
     public class RoomShowObj : InteractiveBase
     {
         #region 序列化参数（原有字段，名字不可改 —— 场景里 8 个实例已按名字存了值）
@@ -60,8 +60,6 @@ namespace MCV_Module.Objects.Interactives.RoomDynamic
             base.Awake();
 
             m_BaseLocalPos = transform.localPosition;
-
-            HighlightInit(gameObject);
         }
 
         void OnEnable()
@@ -208,13 +206,11 @@ namespace MCV_Module.Objects.Interactives.RoomDynamic
         #region 事件重写
         protected override void MoEnterEvent()
         {
-            Highlight(true);
             StartInertia(hoverSpeedFactor);
         }
 
         protected override void MoExitEvent()
         {
-            Highlight(false);
             StartInertia(1f);
         }
 

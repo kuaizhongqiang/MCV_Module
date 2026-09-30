@@ -135,16 +135,6 @@ namespace MCV_Module.Objects.Interactives.Elements
             return (first == a && last == b) || (first == b && last == a);
         }
 
-        protected override void MoEnterEvent()
-        {
-            Highlight(true);
-        }
-
-        protected override void MoExitEvent()
-        {
-            Highlight(false);
-        }
-
         // WHY: 连线交互由控制器/任务模式（LineConnection）驱动，此处刻意留空。
         protected override void MoClickEvent()
         {

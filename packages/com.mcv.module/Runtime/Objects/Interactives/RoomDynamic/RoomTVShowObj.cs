@@ -52,8 +52,6 @@ namespace MCV_Module.Objects.Interactives.RoomDynamic
         {
             base.Awake();   // 交互注册与事件绑定不能省
             CacheTarget();
-
-            HighlightInit(gameObject);
         }
 
         void OnEnable()
@@ -223,16 +221,12 @@ namespace MCV_Module.Objects.Interactives.RoomDynamic
         #region 事件重写
         protected override void MoEnterEvent()
         {
-            Highlight(true);
-
             // 移入：暂停停留计时（正在切换动画时也置位，动画播完后的停留不再倒计时）
             isHovering = true;
         }
 
         protected override void MoExitEvent()
         {
-            Highlight(false);
-
             // 移出：从剩余时间继续计时
             isHovering = false;
         }

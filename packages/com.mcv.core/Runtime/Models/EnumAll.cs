@@ -52,7 +52,7 @@ namespace MCV_Module.Models
         [InspectorName("TextMeshPro")]
         TMP = 1,
     }
-    /// <summary>视频播放宿主（第三方播放器一律不进口包，故只保留 Unity 原生一种）。</summary>
+    /// <summary>视频播放宿主（框架只用 Unity 原生播放器，故只保留这一种）。</summary>
     [Serializable]
     public enum VideoType
     {

@@ -159,8 +159,6 @@ namespace MCV_Module.Objects.Interactives.TaskObj
             m_Visual = Visual;
             m_VisualRenderer = m_Visual != null ? m_Visual.GetComponentInChildren<Renderer>() : null;
 
-            HighlightInit(gameObject);
-
             if (gears.Count == 0)
             {
                 Log.Warning($"{name}: 档位表为空 —— 旋钮转不动，万用表也读不到任何档位");
@@ -197,10 +195,6 @@ namespace MCV_Module.Objects.Interactives.TaskObj
         #endregion
 
         #region 交互
-        protected override void MoEnterEvent() => Highlight(true);
-
-        protected override void MoExitEvent() => Highlight(false);
-
         protected override void MoDownEvent() => BeginDrag();
 
         protected override void MoUpEvent() => EndDrag();

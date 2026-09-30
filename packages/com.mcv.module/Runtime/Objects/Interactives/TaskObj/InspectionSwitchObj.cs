@@ -78,7 +78,6 @@ namespace MCV_Module.Objects.Interactives.TaskObj
             base.Awake();
 
             m_Visual = Visual;
-            HighlightInit(m_Visual != null ? m_Visual.gameObject : gameObject);
 
             if (m_Visual == null)
             {
@@ -129,10 +128,6 @@ namespace MCV_Module.Objects.Interactives.TaskObj
         #endregion
 
         #region 交互
-        protected override void MoEnterEvent() => Highlight(true);
-
-        protected override void MoExitEvent() => Highlight(false);
-
         protected override void MoDownEvent()
         {
             if (gesture == SwitchGesture.Drag) BeginDrag();

@@ -27,18 +27,6 @@ namespace MCV_Module.Objects.Interactives.Elements
             string tag = isOpen ? CloseTag : OpenTag;
             rotationAnimation.Play(tag);
             isOpen = !isOpen;
-
-            HighlightInit(rotationAnimation.rotateObj.gameObject);
-        }
-
-        protected override void MoEnterEvent()
-        {
-            Highlight(true);
-        }
-
-        protected override void MoExitEvent()
-        {
-            Highlight(false);
         }
 
         protected override void MoClickEvent()

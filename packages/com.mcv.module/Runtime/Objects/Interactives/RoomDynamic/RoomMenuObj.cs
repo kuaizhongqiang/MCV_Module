@@ -14,6 +14,8 @@ namespace MCV_Module.Objects.Interactives.RoomDynamic
     public class RoomMenuObj : InteractiveBase
     {
         [SerializeField] Color nomalColor = Color.white;
+        [Tooltip("悬停时项目名的颜色（高亮装饰件的显隐另见 SetHighlight）")]
+        [SerializeField] Color highlightColor = new Color(0, 1, 0, 0.5f);
         [Tooltip("对应 ProjectClip.id（如 clip_contactor）；也可填 displayName，脚本会兜底按名匹配")]
         [SerializeField] string projectName = "ProjectName";
         [SerializeField] Text projectNameText;
@@ -41,7 +43,6 @@ namespace MCV_Module.Objects.Interactives.RoomDynamic
             if (projectNameText != null) m_ProjectNameTextComp = projectNameText.GetComponent<TextComponent>();
 
             CacheHighlightObjs();
-            HighlightInit(gameObject);
 
             ApplyProject();
 

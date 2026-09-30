@@ -20,7 +20,6 @@ namespace MCV_Module.Objects.Interactives.Elements
         protected override void Awake()
         {
             base.Awake();
-            HighlightInit();
         }
 
         protected override IEnumerator DelayInit()
@@ -133,16 +132,6 @@ namespace MCV_Module.Objects.Interactives.Elements
                 };
             }
             return lineData;
-        }
-
-        protected override void MoEnterEvent()
-        {
-            Highlight(true);
-        }
-
-        protected override void MoExitEvent()
-        {
-            Highlight(false);
         }
 
         // WHY: 连线交互由控制器/任务模式（LineConnection）驱动，此处刻意留空，不要自行实现拖线循环。

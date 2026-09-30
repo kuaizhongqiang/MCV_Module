@@ -72,9 +72,6 @@ namespace MCV_Module.Objects.Interactives.TaskObj
         /// <summary>吸附中的点（脱离吸附时事件里要带上它 —— 那时 m_ContactPoint 可能已经变空）</summary>
         InspectionElementPointObj m_SnapPoint;
 
-        /// <summary>正被拖拽扫过而高亮的点（null = 没有）；只认拖拽中的接触</summary>
-        InspectionElementPointObj m_HighlightedPoint;
-
         /// <summary>候选点缓存（逐帧复用，避免 GC）</summary>
         readonly List<InspectionElementPointObj> m_Candidates = new List<InspectionElementPointObj>();
         /// <summary>检测区物理重叠缓冲区（逐帧复用）</summary>
@@ -108,8 +105,6 @@ namespace MCV_Module.Objects.Interactives.TaskObj
 
             if (areaCollider == null)
                 Log.Warning($"{name}: areaCollider 未赋值，表笔不会有任何接触判定");
-
-            HighlightInit(gameObject);
         }
 
         void Update()
@@ -122,7 +117,6 @@ namespace MCV_Module.Objects.Interactives.TaskObj
             }
 
             UpdateContact();
-            UpdateContactHighlight();   // 拖拽中扫到的点才高亮（放好就不亮）
             UpdateSnap();       // 接触 + 拖拽都算完了再判吸附态（吸附 = 接触且未拖拽）
             UpdateScale();      // 放在接触判定之后：本帧的吸附状态定了再决定缩放
         }
@@ -138,17 +132,6 @@ namespace MCV_Module.Objects.Interactives.TaskObj
             base.OnDestroy();
         }
         #endregion
-
-        protected override void MoEnterEvent()
-        {
-            Highlight(true);
-        }
-
-        protected override void MoExitEvent()
-        {
-            Highlight(false);
-        }
-
 
         #region 拖拽（二维移动）
         protected override void MoDownEvent()
@@ -311,20 +294,6 @@ namespace MCV_Module.Objects.Interactives.TaskObj
             EventBus<InspectionProbeEventData>.Publish(new InspectionProbeEventData(probeType, point, isContact));
         }
 
-        /// <summary>拖拽扫过高亮：把当前接触点同步给点自己，只有拖拽中才给、放好立即撤掉；逐帧比对，变了就撤旧点亮新点。</summary>
-        void UpdateContactHighlight()
-        {
-            // 不在拖拽就一律视为"没有要亮的点"（放好之后表笔还贴着点也不亮）
-            var target = m_Dragging ? m_ContactPoint : null;
-            if (target == m_HighlightedPoint) return;
-
-            if (m_HighlightedPoint != null) m_HighlightedPoint.SetContactHighlight(false);
-
-            m_HighlightedPoint = target;
-
-            if (m_HighlightedPoint != null) m_HighlightedPoint.SetContactHighlight(true);
-        }
-
         /// <summary>笔尖位置（未配置 probePoint 时用自身位置）</summary>
         Vector3 TipPosition => probePoint != null ? probePoint.position : transform.position;
 
@@ -377,13 +346,6 @@ namespace MCV_Module.Objects.Interactives.TaskObj
             StopReset();
             m_Dragging = false;
             ResetScale();               // 停用/销毁后别把缩小的状态留到下次
-
-            // 把"拖拽扫过"的点高亮撤掉，别让点停在亮着
-            if (m_HighlightedPoint != null)
-            {
-                m_HighlightedPoint.SetContactHighlight(false);
-                m_HighlightedPoint = null;
-            }
 
             // 收口时吸附、接触都算解除：两条事件各补发一次，订阅方（操作记录等）不至于停在"还在吸附"上
             if (m_Snapped)

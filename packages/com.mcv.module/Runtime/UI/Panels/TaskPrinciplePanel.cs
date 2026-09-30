@@ -7,10 +7,11 @@ using MCV_Module.Utils;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.Video;
 
 namespace MCV_Module.UI.Panels
 {
-    /// <summary>实验原理面板（View）—— 只负责视频播放与交互，播哪段视频由 TaskPrincipleController 决定，面板自身不读数据。</summary>
+    /// <summary>实验原理面板（View）—— 只负责视频播放与交互（播放器 = Unity 原生 VideoPlayer，统一经 VideoTool 调用），播哪段视频由 TaskPrincipleController 决定，面板自身不读数据。</summary>
     [RequireController(typeof(TaskPrincipleController))]
     public class TaskPrinciplePanel : TaskPanelBase
     {
@@ -27,7 +28,7 @@ namespace MCV_Module.UI.Panels
         /// <summary>鼠标静止后执行缩放收起的等待时长（秒）</summary>
         const float ControlIdleHideDelay = 3f;
 
-        IVideoPlayer player;
+        VideoPlayer player;
         Coroutine progressCoroutine;    // 播放期间的进度同步协程（面板不写 Update 生命周期）
         Coroutine ScaleChangeCoroutine; // 缩放动画（由 OnMouseMoveStateChanged 驱动）
         Coroutine controlHideCoroutine; // 鼠标静止后的等待计时（到点才执行 OnMouseMoveStateChanged）
@@ -56,7 +57,7 @@ namespace MCV_Module.UI.Panels
             }
 
             // 画面输出（RawImage / RenderTexture / VideoPlayer 的 renderMode）由编辑器侧配置
-            player = VideoTool.CreatePlayer(gameObject);
+            player = VideoTool.CreateVideoPlayer(gameObject);
             SetupVideoInput();
 
             // 鼠标静止 / 恢复移动：GlobalInputMgr 统一判定后发布（面板随 Canvas 重建，每次绑定重订）
@@ -76,7 +77,7 @@ namespace MCV_Module.UI.Panels
 
             if (player != null)
             {
-                player.Stop();
+                VideoTool.Stop(player);
                 player = null;
             }
 
@@ -122,10 +123,10 @@ namespace MCV_Module.UI.Panels
                 return;
             }
 #endif
-            player.Preload(path, () =>
+            VideoTool.VideoPlayerPreload(player, path, () =>
             {
                 // 预加载完成（失败也会回调）：按实际时长刷新进度条范围
-                float duration = player.GetDuration();
+                float duration = VideoTool.GetDuration(player);
                 if (processingSlider != null)
                 {
                     processingSlider.minValue = 0f;
@@ -143,7 +144,7 @@ namespace MCV_Module.UI.Panels
         {
             if (!m_Ready || player == null) return;
 
-            player.Play();
+            VideoTool.Play(player);
             isPlaying = true;
             SetButtonICO(true);
             StartProgressSync();
@@ -172,7 +173,7 @@ namespace MCV_Module.UI.Panels
             if (!m_Ready || player == null) return;
 
             StopProgressSync();
-            player.Stop();
+            VideoTool.Stop(player);
             isPlaying = false;
             SetButtonICO(false);
             if (processingSlider != null) processingSlider.SetValueWithoutNotify(0f);
@@ -182,7 +183,7 @@ namespace MCV_Module.UI.Panels
         /// <summary>暂停本体（供进度协程调用，不打断自身）。</summary>
         void PauseInternal()
         {
-            player.Pause();
+            VideoTool.Pause(player);
             isPlaying = false;
             SetButtonICO(false);
             OnPlayStateChanged?.Invoke(false);
@@ -212,7 +213,7 @@ namespace MCV_Module.UI.Panels
             if (dragging) return;
 
             // WHY: 松手才 seek，避免拖动过程中与每帧回写互相打架
-            if (player != null && processingSlider != null) player.SetTime(processingSlider.value);
+            if (player != null && processingSlider != null) VideoTool.SetTime(player, processingSlider.value);
         }
 
         /// <summary>启动进度同步协程（已启动则忽略，避免重复）。</summary>
@@ -278,10 +279,10 @@ namespace MCV_Module.UI.Panels
             {
                 if (!m_Seeking)
                 {
-                    float duration = player.GetDuration();
+                    float duration = VideoTool.GetDuration(player);
                     if (duration > 0f)
                     {
-                        float time = player.GetTime();
+                        float time = VideoTool.GetTime(player);
                         processingSlider.SetValueWithoutNotify(Mathf.Clamp(time, 0f, duration));
 
                         // 播到末尾：自动暂停，协程随之结束

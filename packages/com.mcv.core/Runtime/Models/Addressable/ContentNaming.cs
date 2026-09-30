@@ -16,7 +16,6 @@ namespace MCV_Module.Models.Addressable
         /// <summary>任务段：TaskType 的枚举名小写（<c>inspection</c> 的界面显示名是「测量」）。</summary>
         public const string TaskInfo = "info";
         public const string TaskStructure = "structure";
-        public const string TaskPrinciple = "principle";
         public const string TaskInspection = "inspection";
 
         /// <summary>资源段：模型预制体。</summary>
