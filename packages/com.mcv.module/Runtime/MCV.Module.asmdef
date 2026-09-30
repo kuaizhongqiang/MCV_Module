@@ -3,6 +3,7 @@
     "rootNamespace": "",
     "references": [
         "MCV.Core",
+        "MCV.Input",
         "UnityEngine.UI",
         "Unity.TextMeshPro",
         "Unity.InputSystem"
