@@ -1,62 +1,39 @@
-using System.Collections.Generic;
-using MCV_Module.Models.Project;
 using MCV_Module.Models.User;
 using NUnit.Framework;
 
 namespace MCV_Module.Tests
 {
     /// <summary>
-    /// UserData.ResultData.GetTaskScores 测试 —— 验证按 ProjectClip 任务过滤成绩（曾因变量遮蔽恒返回空）。
+    /// 成绩档案按 id 查询测试 —— 覆盖 ScoreData.GetClipScore 与 ClipScore.GetTaskScore。
+    /// 旧 ResultData.GetTaskScores(ProjectClip) 已随成绩模型重写移除（现为"档案 → 项目 → 步骤"三层按 id 取）。
     /// </summary>
     public class UserDataTests
     {
         [Test]
-        public void GetTaskScores_FiltersByClipTasks()
+        public void GetClipScore_ReturnsRecordById()
         {
-            var rd = new ResultData();
-            rd.taskScores = new List<TaskScore>
-            {
-                new TaskScore { taskId = "p_purpose", points = 10 },
-                new TaskScore { taskId = "p_training", points = 8 },
-                new TaskScore { taskId = "other_clip", points = 5 },
-            };
+            var data = new ScoreData();
+            var clip = new ClipScore { id = "p", displayName = "测试实验" };
+            data.clipScores.Add(clip);
 
-            var clip = new ProjectClip("p", "测试实验");
-            var result = rd.GetTaskScores(clip);
-
-            Assert.AreEqual(2, result.Count);
-            Assert.IsTrue(result.Exists(s => s.taskId == "p_purpose"));
-            Assert.IsTrue(result.Exists(s => s.taskId == "p_training"));
-            Assert.IsFalse(result.Exists(s => s.taskId == "other_clip"));
+            Assert.AreSame(clip, data.GetClipScore("p"));
+            Assert.IsNull(data.GetClipScore("other_clip"));
+            Assert.IsNull(data.GetClipScore(null));
+            Assert.IsNull(data.GetClipScore(string.Empty));
         }
 
         [Test]
-        public void GetTaskScores_NullClip_ReturnsEmpty()
+        public void GetTaskScore_ReturnsRecordById()
         {
-            var rd = new ResultData();
-            rd.taskScores = new List<TaskScore>
-            {
-                new TaskScore { taskId = "p_purpose", points = 10 },
-            };
+            var clip = new ClipScore();
+            var task = new TaskScore { id = "p_purpose", score = 10f };
+            clip.taskScores.Add(task);
+            clip.taskScores.Add(new TaskScore { id = "p_training", score = 8f });
 
-            var result = rd.GetTaskScores(null);
-            Assert.IsNotNull(result);
-            Assert.AreEqual(0, result.Count);
-        }
-
-        [Test]
-        public void GetTaskScores_NoMatch_ReturnsEmpty()
-        {
-            var rd = new ResultData();
-            rd.taskScores = new List<TaskScore>
-            {
-                new TaskScore { taskId = "zzz", points = 10 },
-            };
-
-            var clip = new ProjectClip("p", "测试实验");
-            var result = rd.GetTaskScores(clip);
-
-            Assert.AreEqual(0, result.Count);
+            Assert.AreSame(task, clip.GetTaskScore("p_purpose"));
+            Assert.AreEqual(8f, clip.GetTaskScore("p_training").score);
+            Assert.IsNull(clip.GetTaskScore("other_clip"));
+            Assert.IsNull(clip.GetTaskScore(null));
         }
     }
 }
