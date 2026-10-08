@@ -14,9 +14,9 @@ namespace MCV_Module.UI.Panels
     public class LoadingPanel : PanelBase
     {
         [SerializeField] Image bgImage;
-        [SerializeField] Text titleText;
-        [SerializeField] Text contentText;
-        [SerializeField] Text progressText;
+        [SerializeField] TextComponent titleText;
+        [SerializeField] TextComponent contentText;
+        [SerializeField] TextComponent progressText;
         [SerializeField] Slider progressSlider;
         [SerializeField] AnimationCurve breathCurve;
         [SerializeField] float lifeCycle = 5f;
@@ -70,9 +70,9 @@ namespace MCV_Module.UI.Panels
                 bgImage.sprite = Sprite.Create(bgTexture, new Rect(0, 0, bgTexture.width, bgTexture.height), Vector2.zero);
             }
             if (m_TitleTextComp != null) m_TitleTextComp.SetText(title);
-            else TextComponent.SetTextOn(titleText, title);
+            else titleText.SetText(title);
             if (m_ContentTextComp != null) m_ContentTextComp.SetText(content);
-            else TextComponent.SetTextOn(contentText, content);
+            else contentText.SetText(content);
             SetProgress(0f);
             StartBreath();
         }
@@ -81,7 +81,7 @@ namespace MCV_Module.UI.Panels
         {
             string progressLabel = Lang.Get("ui.loading.progress", string.Format("{0:0.00}%", progress * 100));
             if (m_ProgressTextComp != null) m_ProgressTextComp.SetText(progressLabel);
-            else TextComponent.SetTextOn(progressText, progressLabel);
+            else progressText.SetText(progressLabel);
             progressSlider.value = progress;
         }
 
@@ -129,8 +129,8 @@ namespace MCV_Module.UI.Panels
                 }
                 else if (progressText != null)   // 节点上没有 TextComponent（永远不会换形态），退回直写
                 {
-                    Color current = progressText.color;
-                    progressText.color = new Color(current.r, current.g, current.b, value);
+                    Color current = progressText.GetColor();
+                    progressText.SetColor(new Color(current.r, current.g, current.b, value));
                 }
 
                 yield return null;

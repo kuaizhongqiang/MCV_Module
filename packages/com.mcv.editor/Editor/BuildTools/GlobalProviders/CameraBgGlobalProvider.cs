@@ -22,8 +22,8 @@ public sealed class CameraBgGlobalProvider : IGlobalBundleProvider
 
     static readonly string[] AssetPaths =
     {
-        "Assets/Sprites/Public/Room_0609.png",
-        "Assets/Sprites/Public/Contactor_0915.png",
+        "Assets/Sprites/Public/CamBg_1.jpg",
+        "Assets/Sprites/Public/CamBg_2.jpg",
     };
 
     /// <summary>对账报告里的来源名与日志 tag（日志 tag = <c>[{Name}AB]</c>）。</summary>

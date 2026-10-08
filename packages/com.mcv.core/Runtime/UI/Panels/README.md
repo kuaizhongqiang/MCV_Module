@@ -3,7 +3,7 @@
 读者：AI
 类型：功能文档
 权威：说明
-状态：2026-09-24 压缩为定位层（细节指向同级 `A.md`）
+状态：2026-10-08 增 `MenuPanel` 骨架（细节指向同级 `A.md`）
 依赖：UI/{UIBase,PanelBase,TaskPanelBase}、Controllers/、UI/{Tools,Components}、Models/{Project,System}
 
 > 路径：`Assets/Scripts/UI/Panels/` ｜ 程序集：`MCV.Runtime` ｜ 命名空间：`MCV_Module.UI.Panels`
@@ -11,12 +11,13 @@
 ## 选文件
 - `StartPanel.cs` — 欢迎/开始界面：抛 `OnStartRequested`
 - `RenderQualityPanel.cs` — 画面质量三档 + 硬件信息与建议档位
-- `LoginPanel.cs` — 登录：账号/密码 + 用户类型下拉与必填校验
+- `LoginPanel.cs` — 登录：账号/密码 + 用户类型下拉与必填校验（提示与游客隐藏逻辑未实现，见其 `.md`）
 - `LoadingPanel.cs` — 加载遮罩：背景/文案/进度 + 呼吸文字
-- `DialogPanel.cs` — 通用对话框：标题正文 + 确认/取消
+- `MenuPanel.cs` — 菜单页：骨架（只收集 `menuRoot` 下的按钮，显示与交互未接线）
+- `DialogPanel.cs` — 通用对话框：正文 + 确认/取消（无标题节点）
 - `AiDialogPanel.cs` — AI 对话：气泡列表 + 输入发送（流式）
 
-> 2026-09-30 清理：菜单 / 功能条 / 标题 / 提示 / 内容页外壳 / 漫游外壳 / 成绩预览 / 任务 / 步骤等业务面板（`MenuPanel`、`FunctionPanel`、`TitlePanel`、`TipsPanel`、`ContentFunctionPanel`、`RoamingFunctionPanel`、`ResultSummitPanel`、`Task*Panel`、`Step*Panel`）已移除，框架只保留通用面板；新菜单待重写。
+> 2026-09-30 清理：功能条 / 标题 / 提示 / 内容页外壳 / 漫游外壳 / 成绩预览 / 任务 / 步骤等业务面板（`FunctionPanel`、`TitlePanel`、`TipsPanel`、`ContentFunctionPanel`、`RoamingFunctionPanel`、`ResultSummitPanel`、`Task*Panel`、`Step*Panel`）已移除；旧 `MenuPanel` 随该轮移除，**2026-10-08 由 `MCV Editor/创建/UI Panel` 重新生成骨架**（`Assets/Prefabs/UI/Panels/MenuPanel.prefab`，包条目 `ui_MenuPanel`）。
 
 ## 跨文件约定
 - **资源名 = 类名**：Prefab 必须在 `Assets/Prefabs/UI/Panels/`（包条目 id `ui_{类名}`，需跑 `MCV Build/UI prefab AB` 才进 UI 包），否则 `UIPrefabUtil.Get` 打 Error 且面板不出现。

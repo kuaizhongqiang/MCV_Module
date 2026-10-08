@@ -11,7 +11,7 @@
 ## 选文件
 - `StartCanvas.cs` — 开始页：StartPanel；本期未设置过画质时弹画质面板
 - `LoginCanvas.cs` — 登录页：LoginPanel
-- `MenuCanvas.cs` — 菜单页：骨架（旧 MenuPanel 已移除，新菜单待重写）
+- `MenuCanvas.cs` — 菜单页：重建时 `GetPanel<MenuPanel>()`（面板仍是骨架，见 `../Panels/MenuPanel.md`）
 - `ContentCanvas.cs` — 内容页：骨架（业务面板已移除，AI 开启时挂 AiDialogPanel）
 - `RoamingCanvas.cs` — 漫游页：骨架（AI 开启时挂 AiDialogPanel）
 - `LoadingCanvas.cs` — 常驻加载遮罩画布，不参与状态切换

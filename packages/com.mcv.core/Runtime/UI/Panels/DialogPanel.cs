@@ -16,13 +16,13 @@ namespace MCV_Module.UI.Panels
     public class DialogPanel : PanelBase
     {
         [Header("文本")]
-        [SerializeField] Text contentText;
+        [SerializeField] TextComponent contentText;
 
         [Header("按钮")]
         [SerializeField] Button confirmBtn;
-        [SerializeField] Text confirmBtnText;
+        [SerializeField] TextComponent confirmBtnText;
         [SerializeField] Button cancelBtn;
-        [SerializeField] Text cancelBtnText;
+        [SerializeField] TextComponent cancelBtnText;
 
         // WHY: 四个文本节点上的组件都要提前缓存 —— TMP 形态下组件会卸载节点上的 Legacy Text，字段随后成"假 null"，
         // 静态入口 SetTextOn / ReadRaw 会静默 no-op（读回空串），只有持有组件才读写得到。
@@ -81,14 +81,14 @@ namespace MCV_Module.UI.Panels
             m_CurrentId = request.Id;
 
             if (m_ContentTextComp != null) m_ContentTextComp.SetText(request.Content ?? "");
-            else TextComponent.SetTextOn(contentText, request.Content ?? "");
+            else contentText.SetText(request.Content ?? "");
 
             string confirmLabel = string.IsNullOrEmpty(request.ConfirmLabel) ? Lang.Get("ui.dialog.confirm") : request.ConfirmLabel;
             string cancelLabel = string.IsNullOrEmpty(request.CancelLabel) ? Lang.Get("ui.dialog.cancel") : request.CancelLabel;
             if (m_ConfirmBtnTextComp != null) m_ConfirmBtnTextComp.SetText(confirmLabel);
-            else TextComponent.SetTextOn(confirmBtnText, confirmLabel);
+            else contentText.SetText(confirmLabel);
             if (m_CancelBtnTextComp != null) m_CancelBtnTextComp.SetText(cancelLabel);
-            else TextComponent.SetTextOn(cancelBtnText, cancelLabel);
+            else contentText.SetText(cancelLabel);
 
             if (confirmBtn != null) confirmBtn.gameObject.SetActive(request.ShowConfirm);
             if (cancelBtn != null) cancelBtn.gameObject.SetActive(request.ShowCancel);

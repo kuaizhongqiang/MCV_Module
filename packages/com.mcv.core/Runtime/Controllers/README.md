@@ -3,7 +3,7 @@
 读者：AI
 类型：功能文档
 权威：说明
-状态：2026-09-24 压缩为定位层（细节指向同级 `A.md`）
+状态：2026-10-08 增 `MenuController` 骨架（细节指向同级 `A.md`）
 依赖：`Managers/GlobalControllerMgr`（注册与查找）、`Managers/GlobalDataMgr`（数据，唯一源）、`Managers/GlobalAiMgr`（AI 会话）、`Event/CoreEvent.cs`（事件载荷）、`UI/PanelBase.BindController()` / `UI/RequireControllerAttribute`
 
 > 路径：`Assets/Scripts/Controllers/` ｜ 程序集：`MCV.Runtime` ｜ 命名空间：`MCV_Module.Controllers`
@@ -12,12 +12,13 @@
 - `ControllerBase.cs` — 控制器基类：注册 / 按名绑定 View / 退注
 - `StartController.cs` — 开始界面：进入登录态（单向）
 - `LoginController.cs` — 登录流程：校验输入并写用户数据
+- `MenuController.cs` — 菜单页：骨架（`MenuPanel` 尚无事件可订，`OnViewBound` 为空）
 - `DialogController.cs` — 通用对话框：等收起动画播完再发结果
 - `AiDialogController.cs` — AI 对话调度：预热门控 + 流式回调重试
 - `LoadingController.cs` — 加载遮罩编排：进度与最短显示时长
 - `RenderQualityController.cs` — 画面质量：点选即确认并落盘 `renderQuality`
 
-> 2026-09-30 清理：菜单 / 功能条 / 任务 / 步骤 / 提示 / 标题等业务控制器（`MenuController`、`FunctionController`、`ContentFunctionController`、`RoamingFunctionController`、`ResultSummitController`、`Task*Controller`、`Step*Controller`、`TipsController`、`TitleController`）已移除，框架只保留通用流程控制器；新菜单待重写。
+> 2026-09-30 清理：功能条 / 任务 / 步骤 / 提示 / 标题等业务控制器（`FunctionController`、`ContentFunctionController`、`RoamingFunctionController`、`ResultSummitController`、`Task*Controller`、`Step*Controller`、`TipsController`、`TitleController`）已移除；旧 `MenuController` 随该轮移除，**2026-10-08 由 `MCV Editor/创建/UI Panel` 重新生成骨架**（与 `MenuPanel` 同期）。
 
 ## 跨文件约定
 - **控制器不是 MonoBehaviour、不挂场景**：`GlobalControllerMgr.DelayInit` 按类型表统一创建并常驻（`1_Content/ControllerRoot` 下的 27 个实例已删除）。生命周期只有 `OnInit`（登记后一次）与 `OnDispose`（销毁前一次），没有 Awake/OnDestroy 可依赖。

@@ -16,8 +16,9 @@ TaskInfoData.images:List<string>  the ordered intro image config ids (e.g. conta
 
 Methods:
 ProjectDescription()  concatenate every clip description
-MenuData.GetRootClip() / GetChildClips(parent) / GetChildClips(parentId) / GetParentClip(child) / GetParentClip(childId) / GetClip(clipId) / GetClipIndex(...) / HasChildren(clip)  menu lookups; missing entries return null or -1
-MenuData.GetClipDescription()  JSON description of the menu hierarchy (flat clips restored into an id / parentId tree)
+MenuData.GetRootClips() / GetChildClips(clip) / GetChildClips(parentId) / GetParentClip(clip) / GetParentClip(childId) / GetClip(clipId) / GetClipIndex(clipId) / GetClipIndex(clip) / HasChildren(clip)  menu lookups; missing entries return null or -1
+MenuData.GetClipIndex  returns the index inside the clip's own level (same parentId), not the index in the flat clips list
+MenuData.MenuDataDescription()  JSON description of the menu hierarchy (flat clips restored into an id / parentId tree through the MenuNodeDto DTO)
 ProjectClip.Tasks  the task list in TaskListPanel assembly order (four steps first, the legacy experiment line last)
 TaskDataConverter / ProjectClip.GetTaskData  dispatch by TaskType over the same field set
 

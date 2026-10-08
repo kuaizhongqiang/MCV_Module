@@ -174,7 +174,7 @@ namespace MCV_Module.Models.Project
         {
             [JsonProperty("id")] public string id;
             [JsonProperty("displayName")] public string displayName;
-        [JsonProperty("displayNameEn")] public string displayNameEn;   // 英文列（空 = 回退中文）
+            [JsonProperty("displayNameEn")] public string displayNameEn;   // 英文列（空 = 回退中文）
             [JsonProperty("parentId")] public string parentId;
             [JsonProperty("children")] public List<MenuNodeDto> children = new List<MenuNodeDto>();
         }

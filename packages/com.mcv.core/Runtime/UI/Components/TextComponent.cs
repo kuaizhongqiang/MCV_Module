@@ -405,6 +405,27 @@ namespace MCV_Module.UI.Components
             ApplyConfiguredText();
         }
 
+        public void SetColor(Color color)
+        {
+            if (!Ready)
+            {
+                pendingKind = PendingKind.None;
+                pendingValue = null;
+                pendingClip = null;
+                this.color = color;
+                return;
+            }
+            this.color = color;
+        }
+
+        public Color GetColor()
+        {
+            if (!Ready) return Color.black;
+            else if (WantsTmp()) return GetTextColor(tmpText);
+            else return GetTextColor(legacyText);
+        }
+        
+
         /// <summary>按 key / 字面量重取文案；装配未完成或外部驱动过时直接返回。</summary>
         public void Refresh()
         {
@@ -602,6 +623,20 @@ namespace MCV_Module.UI.Components
         {
             if (comp != null) return comp.transform;
             return legacy != null ? legacy.transform : null;
+        }
+
+        public static Color GetTextColor(Text target)
+        {
+            if (target == null) return Color.black;
+            if (target.TryGetComponent(out TextComponent comp)) return comp.ColorValue;
+            return target.color;
+        }
+
+        public static Color GetTextColor(TextMeshProUGUI target)
+        {
+            if (target == null) return Color.black;
+            if (target.TryGetComponent(out TextComponent comp)) return comp.ColorValue;
+            return target.color;
         }
 
         /// <summary>把本组件写过的排版还原成原文（实现见 <see cref="TextTypography"/>）。</summary>

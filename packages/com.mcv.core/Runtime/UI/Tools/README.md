@@ -3,7 +3,7 @@
 读者：AI
 类型：功能文档
 权威：说明
-状态：2026-09-24 压缩为定位层（细节指向同级 `A.md`）
+状态：2026-10-08 校正（删去已移除的 `MenuScrollLogic` / `MenuDetailLogic` 提法；细节指向同级 `A.md`）
 依赖：Managers/{GlobalDataMgr,GlobalAudioMgr,GlobalAddressableMgr}、Models/EnumAll.cs、Interfaces/IUiEffect
 
 > 路径：`Assets/Scripts/UI/Tools/` ｜ 程序集：`MCV.Runtime` ｜ 命名空间：`MCV_Module.UI.Tools`
@@ -19,9 +19,9 @@
 
 ## 跨文件约定
 - **改完文本 / 子物体显隐要刷布局，一律走 `UILayoutRebuilder`**（面板走 `PanelBase.RequestLayoutRebuild`，它再叠上防重入与失活跳过）：同帧直接 `LayoutRebuilder.ForceRebuildLayoutImmediate` 会量到 TMP 形态下"还没装配完的空文本"，而且必须**子先父后**（父级 LayoutGroup 的 `childControlWidth = false`，量的是子节点当前的 `sizeDelta`）。
-- **普通类不持有协程**：逐帧逻辑（`MenuScrollLogic` / `MenuDetailLogic`）返回 `IEnumerator`，由宿主面板 `StartCoroutine` + `Action` 回调刷新布局。
+- **普通类不持有协程**：逐帧逻辑返回 `IEnumerator`，由宿主面板 `StartCoroutine` + `Action` 回调刷新布局（旧 `MenuScrollLogic` / `MenuDetailLogic` 已随菜单业务删除）。
 - **第三方插件零依赖**：包内只用 Unity 原生播放器；框架**不提供播放器替换口**（原 `IVideoPlayer` 抽象已于 2026-09-30 删除），宿主若要换播放器就在自己的层里实现。
 - **资源路径用常量字符串**：预制体加载失败只打警告并降级，不抛异常。
 - 新增工具类：优先做普通类 + 回调，不要为了用协程而做成 MonoBehaviour。
-- **坑**：`MenuScrollLogic` / `MenuDetailLogic` 是 MenuPanel 旧环形封面流的残留实现，全工程已无引用（`MenuPanel` 改走 `btnsParent` 器件按钮）—— 改 MenuPanel 前先确认是否还需要它们。
+- **新 `MenuPanel` 不带中间层**：它是 2026-10-08 生成的骨架，只在 `Awake` 收集 `menuRoot` 的直接子按钮，没有封面流 / 子目录逻辑，故也不需要旧的两个工具类（已删除）。
 - **中文排版已并入 `UI/Components/TextComponent`**：`ChineseText`（连它的 `CoroutineRunner` / `TextUtils`）已删除；NBSP 缩进 + 标点避头改由节点上的 `cjkTypography` 开关控制（`TipsPanel` 的两个提示正文节点开着它）。写文案一律走 `TextComponent.SetTextOn`，读原文走 `TextComponent.ReadRaw`。

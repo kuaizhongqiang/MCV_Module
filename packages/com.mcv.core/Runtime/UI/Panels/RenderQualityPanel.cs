@@ -17,7 +17,7 @@ namespace MCV_Module.UI.Panels
         [SerializeField] Button low;
         [SerializeField] Button medium;
         [SerializeField] Button high;
-        [SerializeField] Text infoText;
+        [SerializeField] TextComponent infoText;
 
         /// <summary>硬件信息文本节点上的组件（TMP 形态下节点上的 Legacy Text 被卸载，字段随后成"假 null"，静态入口静默 no-op）。</summary>
         TextComponent m_InfoTextComp;
@@ -85,7 +85,7 @@ namespace MCV_Module.UI.Panels
         public void SetInfoText(string text)
         {
             if (m_InfoTextComp != null) m_InfoTextComp.SetText(text);
-            else TextComponent.SetTextOn(infoText, text);
+            else infoText.SetText(text);
         }
 
         /// <summary>按本机配置给建议档位（主要看显存）：无独显或显存 ≤ 2GB → 标清；≤ 6GB → 高清；> 6GB → 超清。</summary>
